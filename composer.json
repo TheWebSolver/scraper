@@ -1,0 +1,30 @@
+{
+  "name": "thewebsolver/scraper",
+  "description": "A simple and straight-forward PHP package to scrape content",
+  "type": "library",
+  "license": "GPL-3.0-or-later",
+  "autoload": {
+    "psr-4": {
+      "TheWebSolver\\Codegarage\\Scraper\\": "Src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "TheWebSolver\\Codegarage\\Test\\": "Tests/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "scripts": {
+    "test:unit": "vendor/bin/phpunit",
+    "analyze": "vendor/bin/phpstan",
+    "test:dev": [
+      "phpstan",
+      "phpunit"
+    ],
+    "test": [
+      "@test:unit",
+      "@analyze"
+    ]
+  }
+}
