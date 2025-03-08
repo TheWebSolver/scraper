@@ -19,7 +19,7 @@ trait TableNodeAware {
 	/** @var array<ArrayObject<array-key,string|array{0:string,1?:string,2?:DOMElement}>> */
 	private array $tableRows = array();
 	/** @var array<int,SplFixedArray<string>> */
-	private array $tableHeadNames;
+	private array $tableHeadNames = array();
 	/**  @var array<string,Marshaller> */
 	private array $marshallers;
 	private bool $onlyContents = false;
@@ -159,8 +159,8 @@ trait TableNodeAware {
 
 		$this->onlyContents && ( $data = $marshaller->content() );
 
-		/** @var string[] */
-		$heads = isset( $this->tableHeadNames ) ? $this->tableHeadNames[ $tableId ]->toArray() : array();
+		/** @var string[] $heads */
+		$heads = ( $names = ( $this->tableHeadNames[ $tableId ] ?? null ) ) ? $names->toArray() : array();
 
 		$marshaller->onlyContent( $toCollect )->reset();
 
