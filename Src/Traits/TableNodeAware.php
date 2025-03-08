@@ -152,10 +152,16 @@ trait TableNodeAware {
 	 */
 	private function tableDataSet( array $elements, Marshaller $marshaller, int $tableId ): array {
 		$toCollect = $marshaller->collectables()['onlyContent'];
+		$data      = array();
 
 		$marshaller->onlyContent( $this->onlyContents );
 
-		$data = array_map( $marshaller->collect( ... ), $elements );
+		foreach ( $elements as $tableData ) {
+			$data[] = $marshaller->collect( $tableData );
+
+			$tableData->childElementCount && ! $this->onlyContents
+				&& $this->scanTableBodyNodeIn( $tableData->childNodes );
+		}
 
 		$this->onlyContents && ( $data = $marshaller->content() );
 
