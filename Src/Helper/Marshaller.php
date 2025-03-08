@@ -37,7 +37,7 @@ class Marshaller {
 	}
 
 	public function collectElement(): self {
-		$this->collect['element'] = true;
+		$this->collect['node'] = true;
 
 		return $this;
 	}
