@@ -83,30 +83,35 @@ class TableNodeAwareTest extends TestCase {
 
 	#[Test]
 	public function itOnlyScansTargetedTable(): void {
-		$dom     = $this->getLoadedDom();
-		$scanner = new DOMNodeScanner(
-			static function ( DOMElement $node, DOMNodeScanner $scanner ) {
-				return $scanner->domElementHasId( $node, id: 'inner-content-table' );
-			}
-		);
+		$dom        = $this->getLoadedDom();
+		$innerTable = static function ( DOMElement $node, DOMNodeScanner $scanner ) {
+			return $scanner->domElementHasId( $node, id: 'inner-content-table' );
+		};
+
+		$scanner = new DOMNodeScanner( $innerTable );
 
 		$scanner->scanTableBodyNodeIn( $dom->childNodes );
 
 		$this->assertCount( 0, $scanner->getTableIds(), 'Cannot scan without marshaller' );
 
-		$scanner
-			->useMarshaller(
-				( new Marshaller( 'td' ) )->marshallWith(
-					static fn ( string|DOMElement $node )
-						=> substr( $node instanceof DOMElement ? $node->textContent : $node, offset: 3 )
-				)
-			)
+		$scanner->useMarshaller( new Marshaller( 'td' ) )->scanTableBodyNodeIn( $dom->childNodes );
+
+		$this->assertCount( 1, $tableIds = $scanner->getTableIds() );
+		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ] );
+
+		$onlyContentScanner = new DOMNodeScanner( $innerTable );
+		$tdMarshaller       = static fn ( string|DOMElement $node )
+			=> substr( $node instanceof DOMElement ? $node->textContent : $node, offset: 3 );
+
+		$onlyContentScanner
+			->useMarshaller( ( new Marshaller( 'td' ) )->marshallWith( $tdMarshaller ) )
 			->withOnlyContents()
 			->scanTableBodyNodeIn( $dom->childNodes );
 
-		$this->assertCount( 1, $tableIds = $scanner->getTableIds() );
-		$this->assertCount( 2, $tds = $scanner->getTableData()[ $tableIds[0] ] );
-		$this->assertSame( array( 'First Data', 'Second Data' ), $tds->getArrayCopy() );
+		$this->assertSame(
+			array( 'First Data', 'Second Data' ),
+			$onlyContentScanner->getTableData()[ $onlyContentScanner->getTableIds()[0] ]->getArrayCopy()
+		);
 	}
 
 	#[Test]
