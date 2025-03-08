@@ -73,7 +73,9 @@ trait TableNodeAware {
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
-	abstract protected function isTargetedTable( DOMElement $node ): bool;
+	protected function isTargetedTable( DOMElement $node ): bool {
+		return true;
+	}
 
 	protected function scanContentsOfTableBody( DOMNode $node ): void {
 		if ( ! $this->isDomElement( $node, tagName: 'table' ) ) {
