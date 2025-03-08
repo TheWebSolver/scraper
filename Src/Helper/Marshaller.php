@@ -7,43 +7,47 @@ use Closure;
 use DOMElement;
 
 class Marshaller {
+	final public const COLLECT_HTML         = 'html';
+	final public const COLLECT_NODE         = 'node';
+	final public const COLLECT_ONLY_CONTENT = 'onlyContent';
+
 	/** @var Closure(string|DomElement): string */
 	private Closure $callback;
 	/** @var array<int,string> $content */
 	private array $content;
-	/** @var array{html:bool,node:bool,onlyContent:bool} */
+	/** @var array<self::COLLECT_*,bool> */
 	private array $collect = array(
-		'html'        => false,
-		'node'        => false,
-		'onlyContent' => false,
+		self::COLLECT_HTML         => false,
+		self::COLLECT_NODE         => false,
+		self::COLLECT_ONLY_CONTENT => false,
 	);
 
 	public function __construct( public readonly string $tagName ) {}
 
-	/** @return array{html:bool,node:bool,onlyContent:bool} */
+	/** @return array<self::COLLECT_*,bool> */
 	public function collectables(): array {
 		return $this->collect;
 	}
 
 	/** @return array<int,string> */
 	public function content(): array {
-		return $this->content;
+		return $this->content ?? array();
 	}
 
 	public function collectHtml(): self {
-		$this->collect['html'] = true;
+		$this->collect[ self::COLLECT_HTML ] = true;
 
 		return $this;
 	}
 
 	public function collectElement(): self {
-		$this->collect['node'] = true;
+		$this->collect[ self::COLLECT_NODE ] = true;
 
 		return $this;
 	}
 
 	public function onlyContent( bool $toCollect = true ): self {
-		$this->collect['onlyContent'] = $toCollect;
+		$this->collect[ self::COLLECT_ONLY_CONTENT ] = $toCollect;
 
 		return $this;
 	}
@@ -65,16 +69,16 @@ class Marshaller {
 
 		$this->content[] = $content;
 
-		if ( $this->collect['onlyContent'] ) {
+		if ( $this->collect[ self::COLLECT_ONLY_CONTENT ] ) {
 			return $content;
 		}
 
 		$collection = array( $content );
 
-		$this->isCollectable( $element, type: 'html' )
+		$this->isCollectable( $element, type: self::COLLECT_HTML )
 			&& ( $collection[1] = $element->ownerDocument?->saveHTML( $element ) ?: '' );
 
-		$this->isCollectable( $element, type: 'node' ) && ( $collection[2] = $element );
+		$this->isCollectable( $element, type: self::COLLECT_NODE ) && ( $collection[2] = $element );
 
 		return $collection;
 	}
@@ -83,7 +87,10 @@ class Marshaller {
 		unset( $this->content );
 	}
 
-	/** @phpstan-assert-if-true =DOMElement $element */
+	/**
+	 * @param self::COLLECT_* $type
+	 * @phpstan-assert-if-true =DOMElement $element
+	 */
 	private function isCollectable( string|DOMElement $element, string $type ): bool {
 		return $this->collect[ $type ] && $element instanceof DOMElement;
 	}
