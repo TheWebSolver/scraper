@@ -55,9 +55,12 @@ class TableNodeAwareTest extends TestCase {
 		$this->assertCount( 1, $handler->getTableIds() );
 
 		$data  = $handler->getTableData();
-		$first = $data[ $handler->getTableIds()[0] ];
+		$first = $data[ $tableId = $handler->getTableIds()[0] ];
 
 		$this->assertInstanceOf( ArrayObject::class, $first );
-		$this->assertEqualsCanonicalizing( array_keys( $first->getArrayCopy() ), $handler->getTableHead( true )->toArray() );
+		$this->assertEqualsCanonicalizing(
+			array_keys( $first->getArrayCopy() ),
+			$handler->getTableHead( true )[ $tableId ]->toArray()
+		);
 	}
 }

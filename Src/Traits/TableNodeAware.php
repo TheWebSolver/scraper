@@ -3,9 +3,9 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Traits;
 
-use ArrayObject;
 use DOMNode;
 use DOMElement;
+use ArrayObject;
 use DOMNodeList;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Helper\Marshaller;
@@ -18,8 +18,8 @@ trait TableNodeAware {
 	private array $tableHeads;
 	/** @var array<ArrayObject<array-key,string|array{0:string,1?:string,2?:DOMElement}>> */
 	private array $tableRows = array();
-	/** @var SplFixedArray<string> */
-	private SplFixedArray $tableHeadNames;
+	/** @var array<int,SplFixedArray<string>> */
+	private array $tableHeadNames;
 	/**  @var array<string,Marshaller> */
 	private array $marshallers;
 	private bool $onlyContents = false;
@@ -29,8 +29,12 @@ trait TableNodeAware {
 		return $this->tableIds;
 	}
 
-	/** @return ($namesOnly is true ? SplFixedArray<string> : array<int,ArrayObject<int,string|array{0:string,1?:string,2?:DOMElement}>>) */
-	public function getTableHead( bool $namesOnly = false ): SplFixedArray|array {
+	/**
+	 * @return ($namesOnly is true
+	 *   ? array<int,SplFixedArray<string>>
+	 *   : array<int,ArrayObject<int,string|array{0:string,1?:string,2?:DOMElement}>>)
+	 */
+	public function getTableHead( bool $namesOnly = false ): array {
 		return $namesOnly ? $this->tableHeadNames : $this->tableHeads;
 	}
 
@@ -57,7 +61,7 @@ trait TableNodeAware {
 		return $this;
 	}
 
-	/** @param DomNodeList<DomNode> $nodes */
+	/** @param DOMNodeList<DOMNode> $nodes */
 	public function scanTableBodyNodeIn( DOMNodeList $nodes ): void {
 		if ( empty( $this->marshallers ) ) {
 			return;
@@ -100,7 +104,7 @@ trait TableNodeAware {
 		}
 	}
 
-	/** @param DomNodeList<DomNode> $nodes */
+	/** @param DOMNodeList<DOMNode> $nodes */
 	protected function scanTableHead( DOMNodeList $nodes, int $tableId ): bool {
 		if ( ! $marshaller = ( $this->marshallers['th'] ?? null ) ) {
 			return false;
@@ -114,21 +118,16 @@ trait TableNodeAware {
 			return false;
 		}
 
-		$heads                = array_map( $marshaller->collect( ... ), $heads );
-		$this->tableHeadNames = SplFixedArray::fromArray( $names = array_values( $marshaller->content() ) );
-
-		if ( $this->onlyContents ) {
-			$heads = $names;
-		}
-
-		$this->tableHeads[ $tableId ] = new ArrayObject( $heads );
+		$heads                            = array_map( $marshaller->collect( ... ), $heads );
+		$this->tableHeadNames[ $tableId ] = SplFixedArray::fromArray( $names = $marshaller->content() );
+		$this->tableHeads[ $tableId ]     = new ArrayObject( $this->onlyContents ? $names : $heads );
 
 		$marshaller->reset();
 
 		return true;
 	}
 
-	/** @param DOMNodeList<DomNode> $nodes */
+	/** @param DOMNodeList<DOMNode> $nodes */
 	protected function scanTableData( DOMNodeList $nodes, int $tableId ): bool {
 		if ( ! $marshaller = ( $this->marshallers['td'] ?? null ) ) {
 			return false;
@@ -142,30 +141,37 @@ trait TableNodeAware {
 			return false;
 		}
 
-		/** @var string[] */
-		$heads = isset( $this->tableHeadNames ) ? $this->tableHeadNames->toArray() : array();
-		$row   = count( $heads ) === count( $data )
-			? array_combine( $heads, array_map( $marshaller->collect( ... ), $data ) )
-			: array_map( $marshaller->collect( ... ), $data );
-
-		if ( $this->onlyContents ) {
-			$row = count( $heads ) === count( $marshaller->content() )
-				? array_combine( $heads, $marshaller->content() )
-				: $marshaller->content();
-		}
-
-		$this->tableRows[ $tableId ] = new ArrayObject( $row );
-
-		$marshaller->reset();
+		$this->tableRows[ $tableId ] = new ArrayObject( $this->tableDataSet( $data, $marshaller, $tableId ) );
 
 		return true;
+	}
+
+	/**
+	 * @param DOMElement[] $elements
+	 * @return array<string|int,string|array{0:string,1?:string,2?:DOMElement}>
+	 */
+	private function tableDataSet( array $elements, Marshaller $marshaller, int $tableId ): array {
+		$toCollect = $marshaller->collectables()['onlyContent'];
+
+		$marshaller->onlyContent( $this->onlyContents );
+
+		$data = array_map( $marshaller->collect( ... ), $elements );
+
+		$this->onlyContents && ( $data = $marshaller->content() );
+
+		/** @var string[] */
+		$heads = isset( $this->tableHeadNames ) ? $this->tableHeadNames[ $tableId ]->toArray() : array();
+
+		$marshaller->onlyContent( $toCollect )->reset();
+
+		return $heads && count( $heads ) === count( $data ) ? array_combine( $heads, $data ) : $data;
 	}
 
 	private function registerMarshaller( Marshaller $marshaller ): void {
 		$this->marshallers[ $marshaller->tagName ] = $marshaller;
 	}
 
-	/** @param DomNodeList<DomNode> $nodes */
+	/** @param DOMNodeList<DOMNode> $nodes */
 	private function scanForTableBodyNodeIn( DOMNodeList $nodes ): void {
 		( ! $this->tableIds || $this->scanAllTables )
 			&& $nodes->count() && $this->scanTableBodyNodeIn( $nodes );
