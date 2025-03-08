@@ -9,22 +9,23 @@ use DOMElement;
 class Marshaller {
 	/** @var Closure(string|DomElement): string */
 	private Closure $callback;
-	/** @var string[] $content */
+	/** @var array<int,string> $content */
 	private array $content;
-	/** @var array{html:bool,node:bool} */
+	/** @var array{html:bool,node:bool,onlyContent:bool} */
 	private array $collect = array(
-		'html' => false,
-		'node' => false,
+		'html'        => false,
+		'node'        => false,
+		'onlyContent' => false,
 	);
 
 	public function __construct( public readonly string $tagName ) {}
 
-	/** @return array{html:bool,node:bool} */
+	/** @return array{html:bool,node:bool,onlyContent:bool} */
 	public function collectables(): array {
 		return $this->collect;
 	}
 
-	/** @return string[] */
+	/** @return array<int,string> */
 	public function content(): array {
 		return $this->content;
 	}
@@ -41,6 +42,12 @@ class Marshaller {
 		return $this;
 	}
 
+	public function onlyContent( bool $toCollect = true ): self {
+		$this->collect['onlyContent'] = $toCollect;
+
+		return $this;
+	}
+
 	/** @param callable(string|DomElement): string $callback */
 	public function marshallWith( callable $callback ): self {
 		$this->callback = $callback( ... );
@@ -48,25 +55,26 @@ class Marshaller {
 		return $this;
 	}
 
-	/** @return array{0:string,1?:string,2?:DomElement} */
-	public function collect( string|DOMElement $element ): array {
-		$content    = $element instanceof DOMElement ? $element->textContent : $element;
-		$marshaller = $this->callback ?? null;
-		$content    = trim(
-			Normalize::nonBreakingSpaceToWhitespace( $marshaller ? $marshaller( $element ) : $content )
+	/** @return string|array{0:string,1?:string,2?:DomElement} */
+	public function collect( string|DOMElement $element ): string|array {
+		$content  = $element instanceof DOMElement ? $element->textContent : $element;
+		$marshall = $this->callback ?? null;
+		$content  = trim(
+			Normalize::nonBreakingSpaceToWhitespace( $marshall ? $marshall( $element ) : $content )
 		);
+
+		$this->content[] = $content;
+
+		if ( $this->collect['onlyContent'] ) {
+			return $content;
+		}
 
 		$collection = array( $content );
 
-		if ( $this->isCollectable( $element, type: 'html' ) ) {
-			$collection[1] = $element->ownerDocument?->saveHTML( $element ) ?: '';
-		}
+		$this->isCollectable( $element, type: 'html' )
+			&& ( $collection[1] = $element->ownerDocument?->saveHTML( $element ) ?: '' );
 
-		if ( $this->isCollectable( $element, type: 'node' ) ) {
-			$collection[2] = $element;
-		}
-
-		$this->content[] = $content;
+		$this->isCollectable( $element, type: 'node' ) && ( $collection[2] = $element );
 
 		return $collection;
 	}
