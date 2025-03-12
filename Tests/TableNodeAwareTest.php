@@ -8,9 +8,9 @@ use DOMElement;
 use DOMDocument;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Helper\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
-use TheWebSolver\Codegarage\Scraper\Traits\DOMAttributeAware;
 
 class TableNodeAwareTest extends TestCase {
 	private const HTML = <<<WITH_TABLE
@@ -84,8 +84,8 @@ class TableNodeAwareTest extends TestCase {
 	#[Test]
 	public function itOnlyScansTargetedTable(): void {
 		$dom        = $this->getLoadedDom();
-		$innerTable = static function ( DOMElement $node, DOMNodeScanner $scanner ) {
-			return $scanner->domElementHasId( $node, id: 'inner-content-table' );
+		$innerTable = static function ( DOMElement $node ) {
+			return AssertDOMElement::hasId( $node, id: 'inner-content-table' );
 		};
 
 		$scanner = new DOMNodeScanner( $innerTable );
@@ -147,7 +147,7 @@ class TableNodeAwareTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class DOMNodeScanner {
-	use TableNodeAware, DOMAttributeAware;
+	use TableNodeAware;
 
 	/** @param Closure(DOMElement, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}
