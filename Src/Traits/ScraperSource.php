@@ -3,14 +3,11 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Traits;
 
-use BackedEnum;
 use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 
 trait ScraperSource {
-	/** @var array<string,string> */
-	protected array $columnNames;
-	private ScrapeFrom $source;
+	private ScrapeFrom $scraperSource;
 	private string $sourceUrl;
 
 	public function getSourceUrl(): string {
@@ -18,37 +15,17 @@ trait ScraperSource {
 	}
 
 	protected function getSource(): ScrapeFrom {
-		return $this->source;
-	}
-
-	/** @return array<string,string> */
-	protected function getColumNames(): array {
-		return $this->columnNames;
-	}
-
-	protected function setColumnNames(): void {
-		$this->columnNames = $this->source->scraperEnum::toArray( ...$this->nonMappableCases() );
-	}
-
-	/**
-	 * Allows exhibit to exclude non-mappable enum case(s) as column name.
-	 *
-	 * @return array<BackedEnum>
-	 */
-	protected function nonMappableCases(): array {
-		return array();
+		return $this->scraperSource;
 	}
 
 	final protected function sourceFromAttribute( string $customUrl = '' ): static {
-		if ( $this->source ?? null ) {
+		if ( $this->scraperSource ?? null ) {
 			return $this;
 		}
 
-		$attribute       = ( new ReflectionClass( static::class ) )->getAttributes( ScrapeFrom::class )[0];
-		$this->source    = $attribute->newInstance();
-		$this->sourceUrl = $customUrl ?: $this->source->url;
-
-		$this->setColumnNames();
+		$attribute           = ( new ReflectionClass( static::class ) )->getAttributes( ScrapeFrom::class )[0];
+		$this->scraperSource = $attribute->newInstance();
+		$this->sourceUrl     = $customUrl ?: $this->scraperSource->url;
 
 		return $this;
 	}

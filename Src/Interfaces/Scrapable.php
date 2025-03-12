@@ -75,16 +75,6 @@ interface Scrapable {
 	public function setDiacritic( ?int $operationType ): void;
 
 	/**
-	 * Sets keys to be used for collecting parsed data.
-	 *
-	 * @param string[] $keys     If keys are provided, the `Scrapable::parse()` must use
-	 *                           only provided ones to collect data from parsed content.
-	 * @param ?string  $indexKey One of the `$keys` whose value to be used as the key.
-	 *                           If provided, it must be used as the collection key.
-	 */
-	public function useKeys( array $keys, ?string $indexKey = null ): void;
-
-	/**
 	 * Gets the resource URL from where content should be scraped.
 	 */
 	public function getSourceUrl(): string;
@@ -100,18 +90,6 @@ interface Scrapable {
 	 * @return null|self::DIACRITICS*
 	 */
 	public function getDiacritic(): ?int;
-
-	/**
-	 * Gets keys to be used for collecting parsed data.
-	 *
-	 * @return string[]
-	 */
-	public function getKeys(): array;
-
-	/**
-	 * Gets the index key used as the collection key of a set.
-	 */
-	public function getIndexKey(): ?string;
 
 	/**
 	 * Clears any garbage collected data during scraping.

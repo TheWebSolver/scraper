@@ -14,28 +14,11 @@ trait ScrapeYard {
 
 	/** @var null|Scrapable::DIACRITICS* */
 	private ?int $diacriticOperationType = null;
-	/** @var string[] */
-	private array $collectionKeys = array();
-	private ?string $indexKey     = null;
 
 	abstract public function getSourceUrl(): string;
 	abstract protected function getSource(): ScrapeFrom;
 	/** @return array<string,string> */
 	abstract protected function getDiacritics(): array;
-
-	public function useKeys( array $keys, ?string $indexKey = null ): void {
-		$this->collectionKeys = $keys;
-
-		! is_null( $indexKey ) && $this->indexKey = $indexKey;
-	}
-
-	public function getKeys(): array {
-		return $this->collectionKeys;
-	}
-
-	public function getIndexKey(): ?string {
-		return $this->indexKey;
-	}
 
 	public function hasCache(): bool {
 		return is_readable( $this->getCachePath() );
@@ -78,15 +61,6 @@ trait ScrapeYard {
 			replace: array_values( $this->getDiacritics() ),
 			subject: $text
 		);
-	}
-
-	/**
-	 * @param array<string,TValue> $collected Full data collected after parsing.
-	 * @return array<string,TValue>
-	 * @template TValue
-	 */
-	private function withRequestedKeys( array $collected ): array {
-		return array_intersect_key( $collected, array_flip( $this->getKeys() ) );
 	}
 
 	private function notFound( string $source ): never {
