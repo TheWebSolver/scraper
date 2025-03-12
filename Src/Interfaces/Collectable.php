@@ -6,7 +6,7 @@ namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 use Closure;
 use BackedEnum;
 
-interface ScraperEnum extends BackedEnum {
+interface Collectable extends BackedEnum {
 	/** @placeholder: **1:** expected number of columns, **2:** expected column names (usually enum case values). */
 	public const INVALID_COUNT_MESSAGE = 'parsed data invalid. It must be at least "%1$s" columns with names: "%2$s".';
 
