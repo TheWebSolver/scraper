@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\Scraper;
+namespace TheWebSolver\Codegarage\Scraper\Error;
 
 use Closure;
 use RuntimeException;
