@@ -94,17 +94,20 @@ class TableNodeAwareTest extends TestCase {
 
 		$this->assertCount( 0, $scanner->getTableIds(), 'Cannot scan without marshaller' );
 
-		$scanner->useMarshaller( new Marshaller( 'td' ) )->scanTableBodyNodeIn( $dom->childNodes );
+		$scanner->useTransformers( array( 'td' => new Marshaller() ) )->scanTableBodyNodeIn( $dom->childNodes );
 
 		$this->assertCount( 1, $tableIds = $scanner->getTableIds() );
 		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ] );
 
 		$onlyContentScanner = new DOMNodeScanner( $innerTable );
-		$tdMarshaller       = static fn ( string|DOMElement $node )
-			=> substr( $node instanceof DOMElement ? $node->textContent : $node, offset: 3 );
+		$tdMarshaller       = new Marshaller();
+		$tdMarshaller->marshallWith(
+			fn ( string|DOMElement $node )
+			=> substr( $node instanceof DOMElement ? $node->textContent : $node, offset: 3 )
+		);
 
 		$onlyContentScanner
-			->useMarshaller( ( new Marshaller( 'td' ) )->marshallWith( $tdMarshaller ) )
+			->useTransformers( array( 'td' => $tdMarshaller ) )
 			->withOnlyContents()
 			->scanTableBodyNodeIn( $dom->childNodes );
 
@@ -122,14 +125,17 @@ class TableNodeAwareTest extends TestCase {
 
 		$this->assertTrue( $dom->loadHTML( self::HTML, LIBXML_NOERROR | LIBXML_NOBLANKS ) );
 
-		$thMarshaller = function ( string|DOMElement $e ) {
-			return explode( '[', $e instanceof DOMElement ? $e->textContent : $e )[0];
-		};
+		$thMarshaller = new Marshaller();
+		$thMarshaller->marshallWith(
+			fn ( string|DOMElement $e ) => explode( '[', $e instanceof DOMElement ? $e->textContent : $e )[0]
+		);
 
 		$handler
-			->useMarshaller(
-				( new Marshaller( 'th' ) )->marshallWith( $thMarshaller ),
-				( new Marshaller( 'td' ) )
+			->useTransformers(
+				array(
+					'th' => $thMarshaller,
+					'td' => ( new Marshaller() ),
+				)
 			)->withAllTableNodes()
 			->scanTableBodyNodeIn( $dom->childNodes );
 

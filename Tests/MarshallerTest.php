@@ -11,71 +11,57 @@ use TheWebSolver\Codegarage\Scraper\Helper\Marshaller;
 class MarshallerTest extends TestCase {
 	#[Test]
 	public function itCollectsContentOnly(): void {
-		$marshaller = new Marshaller( 'div' );
+		$marshaller = new Marshaller();
 		$element    = new DOMElement( 'div', 'This is a div content.' );
-		$collection = $marshaller->onlyContent( false )->collect( $element );
+		$collection = $marshaller->collect( $element );
 
-		$this->assertSame( 'div', $marshaller->tagName );
 		$this->assertSame(
 			array(
-				Marshaller::COLLECT_HTML         => false,
-				Marshaller::COLLECT_NODE         => false,
-				Marshaller::COLLECT_ONLY_CONTENT => false,
+				Marshaller::COLLECT_HTML => false,
+				Marshaller::COLLECT_NODE => false,
 			),
 			$marshaller->collectables()
 		);
 
-		$this->assertIsArray( $collection );
 		$this->assertSame( 'This is a div content.', $collection[0] );
-
 		$this->assertSame(
 			'This is a div content.',
-			$marshaller->onlyContent()->collect( $element ),
+			$marshaller->collect( $element, onlyContent: true ),
 			'Only returns content as string when onlyContent is enabled'
 		);
 
-		$this->assertSame(
-			array(
-				Marshaller::COLLECT_HTML         => false,
-				Marshaller::COLLECT_NODE         => false,
-				Marshaller::COLLECT_ONLY_CONTENT => true,
-			),
-			$marshaller->collectables()
-		);
+		$marshaller = new Marshaller();
 
-		$this->assertSame( 'content', ( new Marshaller( '' ) )->onlyContent()->collect( 'content' ) );
+		$this->assertSame( 'content', $marshaller->collect( 'content', onlyContent: true ) );
 	}
 
 	#[Test]
 	public function itCollectContentBasedOnCollectableData(): void {
-		$marshaller = ( new Marshaller( 'div' ) )->collectHtml()->collectElement();
-		$element    = new DOMElement( 'div', 'This is a div content.' );
+		$marshaller = new Marshaller();
+
+		$marshaller->collectHtml();
+		$marshaller->collectElement();
+
+		$element = new DOMElement( 'div', 'This is a div content.' );
 
 		$this->assertSame(
 			array(
-				Marshaller::COLLECT_HTML         => true,
-				Marshaller::COLLECT_NODE         => true,
-				Marshaller::COLLECT_ONLY_CONTENT => false,
+				Marshaller::COLLECT_HTML => true,
+				Marshaller::COLLECT_NODE => true,
 			),
 			$marshaller->collectables()
 		);
 
 		$this->assertIsArray( $collection = $marshaller->collect( $element ) );
 		$this->assertCount( 3, $collection );
-
-		$this->assertSame(
-			array(
-				Marshaller::COLLECT_HTML         => true,
-				Marshaller::COLLECT_NODE         => true,
-				Marshaller::COLLECT_ONLY_CONTENT => true,
-			),
-			$marshaller->onlyContent()->collectables()
-		);
 	}
 
 	#[Test]
 	public function itOnlyCollectContentWhenCollectParamIsString(): void {
-		$marshaller = ( new Marshaller( 'div' ) )->collectHtml()->collectElement();
+		$marshaller = new Marshaller();
+
+		$marshaller->collectHtml();
+		$marshaller->collectElement();
 
 		$this->assertIsArray( $collection = $marshaller->collect( 'This is div content.' ) );
 		$this->assertCount( 1, $collection );
@@ -83,7 +69,9 @@ class MarshallerTest extends TestCase {
 
 	#[Test]
 	public function itTransformsContentWhenMarshallerIsProvided(): void {
-		$marshaller = ( new Marshaller( '' ) )->marshallWith(
+		$marshaller = new Marshaller();
+
+		$marshaller->marshallWith(
 			static fn( string|DOMElement $v ) => substr( is_string( $v ) ? $v : $v->textContent, 0, -1 )
 		);
 
@@ -92,14 +80,14 @@ class MarshallerTest extends TestCase {
 
 	#[Test]
 	public function itEnsuresCollectedContentGetterAndResetterWorks(): void {
-		$marshaller = new Marshaller( '' );
+		$marshaller = new Marshaller();
 
 		$marshaller->collect( 'content' );
 
-		$this->assertSame( array( 'content' ), $marshaller->content() );
+		$this->assertSame( array( 'content' ), $marshaller->getContent() );
 
-		$marshaller->reset();
+		$marshaller->flushContent();
 
-		$this->assertEmpty( $marshaller->content() );
+		$this->assertEmpty( $marshaller->getContent() );
 	}
 }

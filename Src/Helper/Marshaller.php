@@ -5,24 +5,19 @@ namespace TheWebSolver\Codegarage\Scraper\Helper;
 
 use Closure;
 use DOMElement;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
-class Marshaller {
-	final public const COLLECT_HTML         = 'html';
-	final public const COLLECT_NODE         = 'node';
-	final public const COLLECT_ONLY_CONTENT = 'onlyContent';
-
+/** @template-implements Transformer<string> */
+class Marshaller implements Transformer {
 	/** @var Closure(string|DomElement): string */
 	private Closure $callback;
 	/** @var array<int,string> $content */
 	private array $content;
 	/** @var array<self::COLLECT_*,bool> */
 	private array $collect = array(
-		self::COLLECT_HTML         => false,
-		self::COLLECT_NODE         => false,
-		self::COLLECT_ONLY_CONTENT => false,
+		self::COLLECT_HTML => false,
+		self::COLLECT_NODE => false,
 	);
-
-	public function __construct( public readonly string $tagName ) {}
 
 	/** @return array<self::COLLECT_*,bool> */
 	public function collectables(): array {
@@ -30,37 +25,24 @@ class Marshaller {
 	}
 
 	/** @return array<int,string> */
-	public function content(): array {
+	public function getContent(): array {
 		return $this->content ?? array();
 	}
 
-	public function collectHtml(): self {
+	public function collectHtml(): void {
 		$this->collect[ self::COLLECT_HTML ] = true;
-
-		return $this;
 	}
 
-	public function collectElement(): self {
+	public function collectElement(): void {
 		$this->collect[ self::COLLECT_NODE ] = true;
-
-		return $this;
-	}
-
-	public function onlyContent( bool $toCollect = true ): self {
-		$this->collect[ self::COLLECT_ONLY_CONTENT ] = $toCollect;
-
-		return $this;
 	}
 
 	/** @param callable(string|DomElement): string $callback */
-	public function marshallWith( callable $callback ): self {
+	public function marshallWith( callable $callback ): void {
 		$this->callback = $callback( ... );
-
-		return $this;
 	}
 
-	/** @return string|array{0:string,1?:string,2?:DomElement} */
-	public function collect( string|DOMElement $element ): string|array {
+	public function collect( string|DOMElement $element, bool $onlyContent = false ): string|array {
 		$content  = $element instanceof DOMElement ? $element->textContent : $element;
 		$marshall = $this->callback ?? null;
 		$content  = trim(
@@ -69,7 +51,7 @@ class Marshaller {
 
 		$this->content[] = $content;
 
-		if ( $this->collect[ self::COLLECT_ONLY_CONTENT ] ) {
+		if ( $onlyContent ) {
 			return $content;
 		}
 
@@ -83,7 +65,7 @@ class Marshaller {
 		return $collection;
 	}
 
-	public function reset(): void {
+	public function flushContent(): void {
 		unset( $this->content );
 	}
 

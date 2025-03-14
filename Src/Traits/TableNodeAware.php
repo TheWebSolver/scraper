@@ -8,7 +8,8 @@ use DOMElement;
 use ArrayObject;
 use DOMNodeList;
 use SplFixedArray;
-use TheWebSolver\Codegarage\Scraper\Helper\Marshaller;
+use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 trait TableNodeAware {
 	private bool $scanAllTables = false;
@@ -20,8 +21,8 @@ trait TableNodeAware {
 	private array $tableRows = array();
 	/** @var array<int,SplFixedArray<string>> */
 	private array $tableHeadNames = array();
-	/**  @var array<string,Marshaller> */
-	private array $marshallers;
+	/**  @var array{tr?:Transformer<?DOMNode[]>,th?:Transformer<string>,td?:Transformer<string>} */
+	private array $transformers;
 	private bool $onlyContents = false;
 
 	/** @return int[] List of scanned tables' `spl_object_id()`. */
@@ -43,8 +44,9 @@ trait TableNodeAware {
 		return $this->tableRows;
 	}
 
-	public function useMarshaller( Marshaller ...$marshallers ): static {
-		array_walk( $marshallers, $this->registerMarshaller( ... ) );
+	/** @param array{tr?:Transformer<?DOMNode[]>,th?:Transformer<string>,td?:Transformer<string>} $transformers */
+	public function useTransformers( array $transformers ): static {
+		$this->transformers = $transformers;
 
 		return $this;
 	}
@@ -63,7 +65,7 @@ trait TableNodeAware {
 
 	/** @param DOMNodeList<DOMNode> $nodes */
 	public function scanTableBodyNodeIn( DOMNodeList $nodes ): void {
-		if ( empty( $this->marshallers ) ) {
+		if ( empty( $this->transformers ) ) {
 			return;
 		}
 
@@ -95,51 +97,52 @@ trait TableNodeAware {
 			return;
 		}
 
-		foreach ( $nodes as $tableBodyNode ) {
-			$this->tableIds[] = $id = spl_object_id( $tableBodyNode );
+		$rowMarshaller = $this->transformers['tr'] ?? null;
 
-			foreach ( $tableBodyNode->childNodes as $contentNode ) {
-				$this->isDomElement( $contentNode, tagName: 'tr' )
-					&& ( $this->scanTableHead( $contentNode->childNodes, tableId: $id )
-						|| $this->scanTableData( $contentNode->childNodes, tableId: $id ) );
+		foreach ( $nodes as $tableBodyNode ) {
+			$this->tableIds[] = $tableId = spl_object_id( $tableBodyNode );
+
+			foreach ( $tableBodyNode->childNodes as $tableRow ) {
+				if ( ! $this->isTableRowWithTableData( $tableRow ) ) {
+					continue;
+				}
+
+				$nodes = $rowMarshaller?->collect( $tableRow, onlyContent: true )
+					?? Normalize::nodesToArray( $tableRow->childNodes );
+
+				$nodes && ( $this->scanTableHead( $nodes, $tableId ) || $this->scanTableData( $nodes, $tableId ) );
 			}
 		}
 	}
 
-	/** @param DOMNodeList<DOMNode> $nodes */
-	protected function scanTableHead( DOMNodeList $nodes, int $tableId ): bool {
-		if ( ! $marshaller = ( $this->marshallers['th'] ?? null ) ) {
+	/** @param DOMNode[] $nodes */
+	protected function scanTableHead( array $nodes, int $tableId ): bool {
+		if ( ! $marshaller = ( $this->transformers['th'] ?? null ) ) {
 			return false;
 		}
 
-		if ( ! $nodesArray = $nodes->count() ? iterator_to_array( $nodes ) : array() ) {
+		if ( ! $heads = array_filter( $nodes, $this->isTableHeadElement( ... ) ) ) {
 			return false;
 		}
 
-		if ( ! $heads = array_filter( $nodesArray, $this->isTableHeadElement( ... ) ) ) {
-			return false;
-		}
+		/** @var bool[] */
+		$contentsOnly                     = array_pad( array(), count( $heads ), $this->onlyContents );
+		$heads                            = array_map( $marshaller->collect( ... ), $heads, $contentsOnly );
+		$this->tableHeadNames[ $tableId ] = SplFixedArray::fromArray( $marshaller->getContent() );
+		$this->tableHeads[ $tableId ]     = new ArrayObject( $heads );
 
-		$heads                            = array_map( $marshaller->collect( ... ), $heads );
-		$this->tableHeadNames[ $tableId ] = SplFixedArray::fromArray( $names = $marshaller->content() );
-		$this->tableHeads[ $tableId ]     = new ArrayObject( $this->onlyContents ? $names : $heads );
-
-		$marshaller->reset();
+		$marshaller->flushContent();
 
 		return true;
 	}
 
-	/** @param DOMNodeList<DOMNode> $nodes */
-	protected function scanTableData( DOMNodeList $nodes, int $tableId ): bool {
-		if ( ! $marshaller = ( $this->marshallers['td'] ?? null ) ) {
+	/** @param DOMNode[] $nodes */
+	protected function scanTableData( array $nodes, int $tableId ): bool {
+		if ( ! $marshaller = ( $this->transformers['td'] ?? null ) ) {
 			return false;
 		}
 
-		if ( ! $nodesArray = $nodes->count() ? iterator_to_array( $nodes ) : array() ) {
-			return false;
-		}
-
-		if ( ! $data = array_filter( $nodesArray, $this->isTableDataElement( ... ) ) ) {
+		if ( ! $data = array_filter( $nodes, $this->isTableDataElement( ... ) ) ) {
 			return false;
 		}
 
@@ -149,34 +152,26 @@ trait TableNodeAware {
 	}
 
 	/**
-	 * @param DOMElement[] $elements
+	 * @param DOMElement[]        $elements
+	 * @param Transformer<string> $marshaller
 	 * @return array<string|int,string|array{0:string,1?:string,2?:DOMElement}>
 	 */
-	private function tableDataSet( array $elements, Marshaller $marshaller, int $tableId ): array {
-		$toCollect = $marshaller->collectables()['onlyContent'];
-		$data      = array();
-
-		$marshaller->onlyContent( $this->onlyContents );
+	private function tableDataSet( array $elements, Transformer $marshaller, int $tableId ): array {
+		$data = array();
 
 		foreach ( $elements as $tableData ) {
-			$data[] = $marshaller->collect( $tableData );
+			$data[] = $marshaller->collect( $tableData, $this->onlyContents );
 
 			$tableData->childElementCount && ! $this->onlyContents
 				&& $this->scanTableBodyNodeIn( $tableData->childNodes );
 		}
 
-		$this->onlyContents && ( $data = $marshaller->content() );
-
 		/** @var string[] $heads */
 		$heads = ( $names = ( $this->tableHeadNames[ $tableId ] ?? null ) ) ? $names->toArray() : array();
 
-		$marshaller->onlyContent( $toCollect )->reset();
+		$marshaller->flushContent();
 
 		return $heads && count( $heads ) === count( $data ) ? array_combine( $heads, $data ) : $data;
-	}
-
-	private function registerMarshaller( Marshaller $marshaller ): void {
-		$this->marshallers[ $marshaller->tagName ] = $marshaller;
 	}
 
 	/** @param DOMNodeList<DOMNode> $nodes */
@@ -203,5 +198,10 @@ trait TableNodeAware {
 	/** @phpstan-assert-if-true =DOMElement $node */
 	private function isTableDataElement( mixed $node ): bool {
 		return $this->isDomElement( $node, tagName: 'td' );
+	}
+
+	/** @phpstan-assert-if-true =DOMElement $node */
+	private function isTableRowWithTableData( DOMNode $node ): bool {
+		return $node->childNodes->count() && $this->isDomElement( $node, tagName: 'tr' );
 	}
 }
