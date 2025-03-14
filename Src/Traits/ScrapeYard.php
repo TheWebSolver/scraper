@@ -17,14 +17,17 @@ trait ScrapeYard {
 
 	abstract public function getSourceUrl(): string;
 	abstract protected function getSource(): ScrapeFrom;
+
 	/** @return array<string,string> */
-	abstract protected function getDiacritics(): array;
+	protected function getDiacritics(): array {
+		return array();
+	}
 
 	public function hasCache(): bool {
 		return is_readable( $this->getCachePath() );
 	}
 
-	public function clearCache(): bool {
+	public function invalidateCache(): bool {
 		return $this->hasCache() && unlink( $this->getCachePath() );
 	}
 
