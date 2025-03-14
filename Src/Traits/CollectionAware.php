@@ -14,6 +14,7 @@ trait CollectionAware {
 	private array $collectionKeys = array();
 	private ?string $indexKey     = null;
 
+	/** @param class-string<Collectable>|string[] $keys */
 	public function useKeys( string|array $keys, string|Collectable|null $indexKey = null ): void {
 		$this->collectionKeys = match ( true ) {
 			is_array( $keys )                 => $keys,
@@ -25,6 +26,7 @@ trait CollectionAware {
 			&& ( $this->indexKey = $indexKey instanceof Collectable ? (string) $indexKey->value : $indexKey );
 	}
 
+	/** @return string[] */
 	public function getKeys(): array {
 		return $this->collectionKeys;
 	}
@@ -60,12 +62,21 @@ trait CollectionAware {
 	}
 
 	/**
-	 * @param array<string,TValue> $collected The raw data to be filtered with collection keys.
+	 * @param array<string,TValue> $set The raw data to be filtered with collection keys.
 	 * @return array<string,TValue>
 	 * @template TValue
 	 */
-	final protected function toCollectionSet( array $collected ): array {
-		return array_intersect_key( $collected, array_flip( $this->getKeys() ) );
+	final protected function onlyCollectable( array $set ): array {
+		return array_intersect_key( $set, array_values( $this->getCollectableNames() ) );
+	}
+
+	/**
+	 * @param array<string,TValue> $set The raw data to be filtered with collection keys.
+	 * @return array<string,TValue>
+	 * @template TValue
+	 */
+	final protected function withRequestedKeys( array $set ): array {
+		return array_intersect_key( $set, array_flip( $this->getKeys() ) );
 	}
 
 	// phpcs:disable Squiz.Commenting.FunctionComment.InvalidNoReturn
