@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use DOMElement;
+use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /** @template TReturn */
 interface Transformer {
@@ -45,6 +46,7 @@ interface Transformer {
 	 * Collects data based on collection datatype set.
 	 *
 	 * @return ($onlyContent is true ? TReturn : array{0:TReturn,1?:string,2?:DomElement})
+	 * @throws InvalidSource When $element is string and cannot be inferred to DOMElement.
 	 */
 	public function collect( string|DOMElement $element, bool $onlyContent = false ): mixed;
 
