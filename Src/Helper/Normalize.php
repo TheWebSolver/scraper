@@ -18,4 +18,10 @@ class Normalize {
 	public static function nodesToArray( DOMNodeList $nodes ): array {
 		return iterator_to_array( $nodes, preserve_keys: false );
 	}
+
+	public static function toHtmlDecodedSingleWhitespace( string $value ): string {
+		return trim(
+			html_entity_decode( preg_replace( '!\s+!', replacement: ' ', subject: $value ) ?? $value )
+		);
+	}
 }
