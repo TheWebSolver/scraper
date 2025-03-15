@@ -62,8 +62,8 @@ trait CollectionAware {
 	}
 
 	/**
-	 * @param array<string,TValue> $set The raw data to be filtered with collection keys.
-	 * @return array<string,TValue>
+	 * @param array<TValue> $set The raw data to be filtered with collection keys.
+	 * @return array<TValue>
 	 * @template TValue
 	 */
 	final protected function onlyCollectable( array $set ): array {
