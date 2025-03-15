@@ -90,14 +90,10 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner = new DOMNodeScanner( $innerTable );
 
-		$scanner->scanTableBodyNodeIn( $dom->childNodes );
-
-		$this->assertCount( 0, $scanner->getTableIds(), 'Cannot scan without marshaller' );
-
 		$scanner->useTransformers( array( 'td' => new Marshaller() ) )->scanTableBodyNodeIn( $dom->childNodes );
 
 		$this->assertCount( 1, $tableIds = $scanner->getTableIds() );
-		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ] );
+		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ][0] );
 
 		$onlyContentScanner = new DOMNodeScanner( $innerTable );
 		$tdMarshaller       = new Marshaller();
@@ -113,7 +109,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$this->assertSame(
 			array( 'First Data', 'Second Data' ),
-			$onlyContentScanner->getTableData()[ $onlyContentScanner->getTableIds()[0] ]->getArrayCopy()
+			$onlyContentScanner->getTableData()[ $onlyContentScanner->getTableIds()[0] ][0]->getArrayCopy()
 		);
 	}
 
@@ -141,13 +137,21 @@ class TableNodeAwareTest extends TestCase {
 
 		$this->assertCount( 3, $handler->getTableIds() );
 
-		$tableId = $handler->getTableIds()[0];
-		$th      = $handler->getTableHead( true )[ $tableId ]->toArray();
-		$data    = $handler->getTableData();
-		$td      = $data[ $tableId ]->getArrayCopy();
+		$ids  = $handler->getTableIds();
+		$th   = $handler->getTableHead( true )[ $ids[0] ]->toArray();
+		$data = $handler->getTableData();
 
 		$this->assertSame( array( 'Name', 'Title', 'Address' ), $th );
-		$this->assertEqualsCanonicalizing( array_keys( $td ), $th );
+		$this->assertEqualsCanonicalizing( array_keys( $first = $data[ $ids[0] ][0]->getArrayCopy() ), $th );
+		$this->assertSame( array( 'John Doe', 'PHP Developer', 'Ktm' ), array_column( $first, column_key: 0 ) );
+		$this->assertSame(
+			array( 'Lorem Ipsum', 'JS Developer', 'Bkt' ),
+			array_column( $data[ $ids[0] ][1]->getArrayCopy(), column_key: 0 )
+		);
+		$this->assertSame(
+			array( '1: First Data', '2: Second Data' ),
+			array_column( $data[ $ids[2] ][0]->getArrayCopy(), column_key: 0 )
+		);
 	}
 }
 
