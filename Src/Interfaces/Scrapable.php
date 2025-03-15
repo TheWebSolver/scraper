@@ -3,6 +3,7 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
+use Iterator;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
@@ -26,10 +27,10 @@ interface Scrapable {
 	 * Parses the scraped content.
 	 *
 	 * @param string $content The scraped content.
-	 * @return array<TKey,TValue>
+	 * @return Iterator<TKey,TValue>
 	 * @throws ScraperError When cannot parse the content.
 	 */
-	public function parse( string $content ): iterable;
+	public function parse( string $content ): Iterator;
 
 	/**
 	 * Caches the scraped content to a cache file.

@@ -3,6 +3,8 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test;
 
+use Iterator;
+use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
@@ -64,8 +66,8 @@ class Scraper implements Scrapable {
 		ScraperSource::sourceFromAttribute as public;
 	}
 
-	public function parse( string $content ): iterable {
-		return array();
+	public function parse( string $content ): Iterator {
+		return ( new ArrayObject() )->getIterator();
 	}
 
 	public function invalidateCache(): bool {
