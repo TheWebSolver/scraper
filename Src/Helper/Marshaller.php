@@ -45,9 +45,7 @@ class Marshaller implements Transformer {
 	public function collect( string|DOMElement $element, bool $onlyContent = false ): string|array {
 		$content  = $element instanceof DOMElement ? $element->textContent : $element;
 		$marshall = $this->callback ?? null;
-		$content  = trim(
-			Normalize::nonBreakingSpaceToWhitespace( $marshall ? $marshall( $element ) : $content )
-		);
+		$content  = trim( $marshall ? $marshall( $element ) : $content );
 
 		$this->content[] = $content;
 
