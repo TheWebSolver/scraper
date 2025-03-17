@@ -15,8 +15,9 @@ class Normalize {
 	}
 
 	/**
-	 * @param DOMNodeList<DOMNode> $nodes
-	 * @return DOMNode[]
+	 * @param DOMNodeList<TNode> $nodes
+	 * @return TNode[]
+	 * @template TNode of DOMNode
 	 */
 	public static function nodesToArray( DOMNodeList $nodes ): array {
 		return iterator_to_array( $nodes, preserve_keys: false );
