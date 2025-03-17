@@ -5,92 +5,26 @@ namespace TheWebSolver\Codegarage\Test;
 
 use Closure;
 use DOMElement;
-use DOMDocument;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Helper\Marshaller;
+use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 
 class TableNodeAwareTest extends TestCase {
-	private const HTML = <<<WITH_TABLE
-	<div id="content">
-		<table id="developer-list" class="sortable collapsible">
-			<caption>
-				Some caption<b id="some">bold</b>
-			</caption>
-			<tbody>
-				<tr>
-					<th>Name</th>
-					<th>
-						<span class="nowrap">Title</span>
-					</th>
-					<th>
-						<span>
-							Address
-								<a href="#location-anchor">&#91;b&#93;</a>
-						</span>
-					</th>
-				</tr>
-				<tr>
-					<td>John Doe</td>
-					<td>PHP Developer</td>
-					<td>
-						<a
-							href="/location"
-							title="Developer location"
-							>Ktm</a
-						>
-					</td>
-				</tr>
-				<tr>
-					<td>Lorem Ipsum</td>
-					<td>JS Developer</td>
-					<td>
-						<table id="inside-td">
-							<tbody>
-								<tr>
-									<td>Bkt</td>
-								</tr>
-							</tbody>
-						</table>
-					</td>
-				</tr>
-			</tbody>
-		</table>
-		<div id="inner-content">
-			<div class="table-wrapper">
-				<table id="inner-content-table">
-					<tbody>
-						<tr>
-							<td>1: First Data</td>
-							<td>2: Second Data</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		</div>
-	</div>
-	WITH_TABLE;
-
-	private function getLoadedDom(): DOMDocument {
-		$dom = new DOMDocument();
-
-		$dom->loadHTML( self::HTML, LIBXML_NOERROR | LIBXML_NOBLANKS );
-
-		return $dom;
-	}
+	final public const TABLE_SOURCE = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR . 'table.html';
 
 	#[Test]
 	public function itOnlyScansTargetedTable(): void {
-		$dom        = $this->getLoadedDom();
+		$dom        = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
 		$innerTable = static function ( DOMElement $node ) {
 			return AssertDOMElement::hasId( $node, id: 'inner-content-table' );
 		};
 
 		$scanner = new DOMNodeScanner( $innerTable );
 
-		$scanner->useTransformers( array( 'td' => new Marshaller() ) )->scanTableBodyNodeIn( $dom->childNodes );
+		$scanner->scanTableBodyNodeIn( $dom->childNodes );
 
 		$this->assertCount( 1, $tableIds = $scanner->getTableIds() );
 		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ][0] );
@@ -115,24 +49,18 @@ class TableNodeAwareTest extends TestCase {
 
 	#[Test]
 	public function itGetsTheTargetedTableNode(): void {
-		$dom               = new DOMDocument();
-		$handler           = new DOMNodeScanner();
-		$dom->formatOutput = false;
-
-		$this->assertTrue( $dom->loadHTML( self::HTML, LIBXML_NOERROR | LIBXML_NOBLANKS ) );
+		$handler = new DOMNodeScanner();
+		$dom     = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
 
 		$thMarshaller = new Marshaller();
+
 		$thMarshaller->marshallWith(
 			fn ( string|DOMElement $e ) => explode( '[', $e instanceof DOMElement ? $e->textContent : $e )[0]
 		);
 
 		$handler
-			->useTransformers(
-				array(
-					'th' => $thMarshaller,
-					'td' => ( new Marshaller() ),
-				)
-			)->withAllTableNodes()
+			->useTransformers( array( 'th' => $thMarshaller ) )
+			->withAllTableNodes()
 			->scanTableBodyNodeIn( $dom->childNodes );
 
 		$this->assertCount( 3, $handler->getTableIds() );
@@ -143,14 +71,14 @@ class TableNodeAwareTest extends TestCase {
 
 		$this->assertSame( array( 'Name', 'Title', 'Address' ), $th );
 		$this->assertEqualsCanonicalizing( array_keys( $first = $data[ $ids[0] ][0]->getArrayCopy() ), $th );
-		$this->assertSame( array( 'John Doe', 'PHP Developer', 'Ktm' ), array_column( $first, column_key: 0 ) );
+		$this->assertSame( array( 'John Doe', 'PHP Developer', 'Ktm' ), array_values( $first ) );
 		$this->assertSame(
 			array( 'Lorem Ipsum', 'JS Developer', 'Bkt' ),
-			array_column( $data[ $ids[0] ][1]->getArrayCopy(), column_key: 0 )
+			array_values( $data[ $ids[0] ][1]->getArrayCopy() )
 		);
 		$this->assertSame(
 			array( '1: First Data', '2: Second Data' ),
-			array_column( $data[ $ids[2] ][0]->getArrayCopy(), column_key: 0 )
+			array_values( $data[ $ids[2] ][0]->getArrayCopy() )
 		);
 	}
 }

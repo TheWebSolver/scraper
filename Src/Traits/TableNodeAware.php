@@ -116,7 +116,9 @@ trait TableNodeAware {
 			return false;
 		}
 
-		if ( ! $heads = array_filter( iterator_to_array( $nodes ), $this->isTableHeadElement( ... ) ) ) {
+		$heads = array_filter( iterator_to_array( $nodes ), $this->isTableHeadElement( ... ) );
+
+		if ( count( $heads ) !== $nodes->count() ) {
 			return false;
 		}
 
@@ -137,8 +139,7 @@ trait TableNodeAware {
 			return false;
 		}
 
-		$marshaller                    = $this->transformers['td'] ?? null;
-		$this->tableRows[ $tableId ][] = new ArrayObject( $this->tableDataSet( $rows, $marshaller, $tableId ) );
+		$this->tableRows[ $tableId ][] = new ArrayObject( $this->tableDataSet( $rows, $tableId ) );
 
 		return true;
 	}
@@ -169,15 +170,15 @@ trait TableNodeAware {
 	}
 
 	/**
-	 * @param DOMElement[]        $tableRows
-	 * @param Transformer<string> $marshaller
+	 * @param DOMElement[] $tableRows
 	 * @return array<string|int,string|array{0:string,1?:string,2?:DOMElement}>
 	 */
-	private function tableDataSet( array $tableRows, ?Transformer $marshaller, int $tableId ): array {
-		$data = array();
+	private function tableDataSet( array $tableRows, int $tableId ): array {
+		$data       = array();
+		$marshaller = $this->transformers['td'] ?? null;
 
 		foreach ( $tableRows as $tableData ) {
-			$data[] = $marshaller?->collect( $tableData, $this->onlyContents ) ?? $tableData->textContent;
+			$data[] = $marshaller?->collect( $tableData, $this->onlyContents ) ?? trim( $tableData->textContent );
 
 			$tableData->childElementCount && ! $this->onlyContents
 				&& $this->scanTableBodyNodeIn( $tableData->childNodes );
