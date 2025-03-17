@@ -54,6 +54,6 @@ class TableRowMarshaller implements Transformer {
 
 	/** @phpstan-assert-if-true =DOMElement $element */
 	private function isCollectable( mixed $element ): bool {
-		return $element instanceof DOMElement && $element->childNodes->count() >= count( $this->collectionNames );
+		return $element instanceof DOMElement && $element->childNodes->length >= count( $this->collectionNames );
 	}
 }
