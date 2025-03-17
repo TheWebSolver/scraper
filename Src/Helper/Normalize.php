@@ -7,8 +7,10 @@ use DOMNode;
 use DOMNodeList;
 
 class Normalize {
+	final public const NON_BREAKING_SPACES = array( '&nbsp;', /* "&" entity is "&amp;" + "nbsp;" */ '&amp;nbsp;' );
+
 	public static function nonBreakingSpaceToWhitespace( string $value ): string {
-		return html_entity_decode( str_replace( '&nbsp;', ' ', htmlentities( $value ) ) );
+		return html_entity_decode( str_replace( self::NON_BREAKING_SPACES, ' ', htmlentities( $value ) ) );
 	}
 
 	/**
