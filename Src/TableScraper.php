@@ -1,0 +1,68 @@
+<?php
+declare( strict_types = 1 );
+
+namespace TheWebSolver\Codegarage\Scraper;
+
+use Iterator;
+use DOMElement;
+use ArrayObject;
+use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
+use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
+use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
+
+/** @template-extends Scraper<array-key,array<string|array{0:string,1?:string,2?:DOMElement}>> */
+abstract class TableScraper extends Scraper {
+	use TableNodeAware, CollectionAware;
+
+	/** @param class-string<Collectable> $collectable */
+	public function __construct(
+		string $collectable,
+		$sourceUrl = '',
+		string $dirPath = '',
+		string $filename = ''
+	) {
+		$this->setCollectableNames( $collectable );
+
+		parent::__construct( $sourceUrl, $dirPath, $filename );
+
+		$this->useKeys( $this->getCollectableNames() );
+	}
+
+	/** @return ArrayObject<array-key,string> */
+	public function tableRowParser( string|DOMElement $element ): ArrayObject {
+		$keys  = $this->getCollectableNames();
+		$nodes = Normalize::nodesToArray( TableRowMarshaller::validate( $element )->childNodes );
+
+		return new ArrayObject( $this->tableDataSet( $nodes, $keys ) );
+	}
+
+	public function parse( string $content ): Iterator {
+		! empty( $this->getKeys() ) || $this->useKeys( $this->getCollectableNames() );
+
+		$rowTransformer = new TableRowMarshaller();
+
+		$rowTransformer->marshallWith( $this->tableRowParser( ... ) );
+
+		$this->useTransformers(
+			array( 'tr' => $rowTransformer )
+		);
+
+		$this->withOnlyContents()
+			->withAllTableNodes( scan: false )
+			->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $content )->childNodes );
+
+		$tableId = $this->getTableIds()[ array_key_last( $this->getTableIds() ) ];
+		$data    = $this->getTableData()[ $tableId ] ?? throw ScraperError::trigger(
+			'Could not find parsable content. ' . $this->getSource()->errorMsg()
+		);
+
+		$this->flush();
+
+		foreach ( $data as $arrayObject ) {
+			yield $arrayObject->getArrayCopy();
+		}
+	}
+}
