@@ -24,7 +24,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner = new DOMNodeScanner( $innerTable );
 
-		$scanner->scanTableBodyNodeIn( $dom->childNodes );
+		$scanner->scanTableNodeIn( $dom->childNodes );
 
 		$this->assertCount( 1, $tableIds = $scanner->getTableIds() );
 		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ][0] );
@@ -39,7 +39,7 @@ class TableNodeAwareTest extends TestCase {
 		$onlyContentScanner
 			->useTransformers( array( 'td' => $tdMarshaller ) )
 			->withOnlyContents()
-			->scanTableBodyNodeIn( $dom->childNodes );
+			->scanTableNodeIn( $dom->childNodes );
 
 		$this->assertSame(
 			array( 'First Data', 'Second Data' ),
@@ -61,7 +61,7 @@ class TableNodeAwareTest extends TestCase {
 		$handler
 			->useTransformers( array( 'th' => $thMarshaller ) )
 			->withAllTableNodes()
-			->scanTableBodyNodeIn( $dom->childNodes );
+			->scanTableNodeIn( $dom->childNodes );
 
 		$this->assertCount( 3, $handler->getTableIds() );
 
@@ -80,6 +80,56 @@ class TableNodeAwareTest extends TestCase {
 			array( '1: First Data', '2: Second Data' ),
 			array_values( $data[ $ids[2] ][0]->getArrayCopy() )
 		);
+	}
+
+	#[Test]
+	public function itScrapesDataFromTableHeadAndBodyElement(): void {
+		$data = '
+		<table>
+			  <caption>This is a test with Table Head</caption>
+
+				<thead> <!-- This is a comment. -->
+				 <tr>
+				<!-- This is a comment. -->
+					   <th>Title</th>
+				   <!-- This is a comment. -->
+						 <th>  Another
+						 Title </th>
+						   </tr>
+					</thead>
+
+					<tbody>
+					<!-- This is a comment. -->
+					<tr><th>Heading 1</th>
+					<!-- This is a comment. -->
+					<td>Value One</td>
+					<!-- This is a comment. -->
+					</tr>
+					<!-- This is a comment. -->
+					<tr><th>Heading 2</th><td>     Value 				Two   </td></tr>
+					</tbody>
+
+				</table>
+		';
+
+		$scanner = new DOMNodeScanner();
+
+		$scanner->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $data )->childNodes );
+
+		$tableIds  = $scanner->getTableIds();
+		$fixedHead = $scanner->getTableHead( namesOnly: true )[ $tableIds[0] ];
+		$data      = $scanner->getTableData()[ $tableIds[0] ];
+
+		$this->assertCount( 1, $tableIds );
+		$this->assertCount( 2, $data );
+		$this->assertSame( $headers = array( 'Title', 'Another Title' ), $fixedHead->toArray() );
+
+		foreach ( $data as $index => $tableData ) {
+			$value = 0 === $index ? array( 'Heading 1', 'Value One' ) : array( 'Heading 2', 'Value Two' );
+
+			$this->assertSame( $headers, array_keys( $arrayCopy = $tableData->getArrayCopy() ) );
+			$this->assertSame( $value, array_values( $arrayCopy ) );
+		}
 	}
 }
 

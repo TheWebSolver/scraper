@@ -75,10 +75,11 @@ trait TableNodeAware {
 	}
 
 	/** @param DOMNodeList<DOMNode> $nodes */
-	public function scanTableBodyNodeIn( DOMNodeList $nodes ): void {
+	public function scanTableNodeIn( DOMNodeList $nodes ): void {
 		foreach ( $nodes as $node ) {
-			$id                     = spl_object_id( $node );
-			$this->tableRows[ $id ] = iterator_to_array( $this->scanTableContents( $node, $id ) );
+			if ( $contents = $this->validateContentsOf( $node, $id = spl_object_id( $node ) ) ) {
+				$this->tableRows[ $id ] = iterator_to_array( $this->fromTableContents( $id, ...$contents ) );
+			}
 		}
 	}
 
@@ -87,120 +88,120 @@ trait TableNodeAware {
 		return true;
 	}
 
-	/** @return iterable<int,ArrayObject<array-key,string|array{0:string,1?:string,2?:DOMElement}>> */
-	protected function scanTableContents( DOMNode $node, int $tableId ): iterable {
-		if ( ! $content = $this->tableContentFrom( $node, $tableId ) ) {
-			return;
+	final protected function setTableId( int $id ): void {
+		if ( ! in_array( $id, $this->tableIds, true ) ) {
+			$this->tableIds[] = $id;
 		}
+	}
 
-		[$tableHead, $tableBody] = $content;
+	/** @param DOMNodeList<DOMNode> $nodes */
+	final protected function findTableNodeIn( DOMNodeList $nodes ): void {
+		( ! $this->tableIds || $this->scanAllTables )
+			&& $nodes->count() && $this->scanTableNodeIn( $nodes );
+	}
 
-		if ( ! $tableBody ) {
-			return;
-		}
+	/** @phpstan-assert-if-true =DOMElement $node */
+	final protected function isDomElement( mixed $node, string $tagName ): bool {
+		return $node instanceof DOMElement && $tagName === $node->tagName;
+	}
 
-		$this->tableIds[] = $tableId;
-		$rowMarshaller    = $this->transformers['tr'] ?? null;
+	/** @phpstan-assert-if-true =DOMElement $node */
+	final protected function isNodeTRWithTDContent( DOMNode $node ): bool {
+		return $node->childNodes->count() && $this->isDomElement( $node, tagName: 'tr' );
+	}
 
-		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
-		$rowIterator = $tableBody->childNodes->getIterator();
-		$tableHead ??= ( $tableHeadInBody = $this->scanTableHead( $rowIterator->current(), $tableId ) );
-
-		if ( $tableHeadInBody ?? null ) {
-			// We'll advance to next Table Row so that the current Table Row already collected
-			// as Table Head MUST BE OMITTED and MUST NOT BE COLLECTED as a Table Data also.
-			$rowIterator->next();
-		}
-
-		while ( $rowIterator->valid() ) {
-			$current  = $rowIterator->current();
-			$tableRow = $rowMarshaller?->collect( $current, onlyContent: true )
-				?? Normalize::nodesToArray( $current->childNodes );
-
-			$rowIterator->next();
-
-			if ( $tableRow && '#comment' !== $current->nodeName ) {
-				yield new ArrayObject( $this->tableDataSet( $tableRow, $tableHead ) );
-			}
-		}
+	/** @phpstan-assert-if-true =DOMElement $node */
+	final protected function isNodeTHorTD( DOMNode $node ): bool {
+		return $node instanceof DOMElement && in_array( $node->tagName, array( 'th', 'td' ), strict: true );
 	}
 
 	/** @return ?array<int,string> */
 	protected function scanTableHead( DOMNode $node, int $tableId ): ?array {
-		if ( ! $marshaller = ( $this->transformers['th'] ?? null ) ) {
+		$marshaller = $this->transformers['th'] ?? null;
+		$collection = new ArrayObject();
+
+		foreach ( $node->childNodes as $node ) {
+			$this->isDomElement( $node, 'th' ) && $collection->append(
+				$marshaller?->collect( $node, $this->onlyContents ) ?? trim( $node->textContent )
+			);
+		}
+
+		if ( ! $collection->count() ) {
 			return null;
 		}
 
-		$nodes = $node->childNodes;
-		$heads = array_filter( Normalize::nodesToArray( $nodes ), $this->isTableHeadElement( ... ) );
+		$this->setTableId( $tableId );
 
-		if ( count( $heads ) !== $nodes->length ) {
-			return null;
-		}
+		$content                          = $marshaller?->getContent() ?? $collection->getArrayCopy();
+		$this->tableHeadNames[ $tableId ] = SplFixedArray::fromArray( $content );
+		$this->tableHeads[ $tableId ]     = $collection;
 
-		/** @var bool[] */
-		$contentsOnly                     = array_pad( array(), count( $heads ), $this->onlyContents );
-		$heads                            = array_map( $marshaller->collect( ... ), $heads, $contentsOnly );
-		$this->tableHeadNames[ $tableId ] = SplFixedArray::fromArray( $content = $marshaller->getContent() );
-		$this->tableHeads[ $tableId ]     = new ArrayObject( $heads );
-
-		$marshaller->flushContent();
+		$marshaller?->flushContent();
 
 		return $content;
 	}
 
-	/** @return ?array{0:?array<int,string>,1:?DOMElement} */
-	private function tableContentFrom( DOMNode $node, int $tableId ): ?array {
+	/** @return ?Iterator<int,DOMNode> */
+	protected function fromTargetedHtmlTable( DOMNode $node ): ?Iterator {
 		if ( ! $this->isDomElement( $node, tagName: 'table' ) ) {
-			$this->scanTableNodeIn( $node->childNodes );
+			$this->findTableNodeIn( $node->childNodes );
 
 			return null;
 		}
 
-		if ( ! $this->isTargetedTable( $node ) ) {
-			return null;
-		}
-
-		/** @var Iterator<int,DOMNode> */
-		$tableIterator = $node->childNodes->getIterator();
-
-		if ( 'caption' === $tableIterator->current()->nodeName ) {
-			// Skip scraping content for Table Caption <caption>.
-			$tableIterator->next();
-		}
-
-		if ( $tableHead = $this->tableHeadContentFrom( $tableIterator->current(), $tableId ) ) {
-			$tableIterator->next();
-		}
-
-		$tableBody = null;
-
-		while ( ! $tableBody && $tableIterator->valid() ) {
-			$tableBody = $this->isTableBodyElement( $current = $tableIterator->current() ) ? $current : null;
-
-			$tableIterator->next();
-		}
-
-		return array( $tableHead, $tableBody );
+		/** @var ?Iterator<int,DOMNode> */
+		return $this->isTargetedTable( $node ) && $node->hasChildNodes()
+			? $node->childNodes->getIterator()
+			: null;
 	}
 
 	/** @return ?array<int,string> */
-	protected function tableHeadContentFrom( DOMNode $node, int $tableId ): ?array {
+	protected function tableHeadContentFrom( DOMNode $node, int $tableId, ?DOMElement $row = null ): ?array {
 		if ( 'thead' !== $node->nodeName ) {
 			return null;
 		}
 
 		/** @var Iterator<int,DOMNode> */
 		$headIterator = $node->childNodes->getIterator();
-		$headerRow    = null;
 
-		while ( ! $headerRow && $headIterator->valid() ) {
-			$this->isDomElement( $node = $headIterator->current(), tagName: 'tr' ) && $headerRow = $node;
+		while ( ! $row && $headIterator->valid() ) {
+			$this->isNodeTRWithTDContent( $node = $headIterator->current() ) && $row = $node;
 
 			$headIterator->next();
 		}
 
-		return $headerRow ? $this->scanTableHead( $headerRow, $tableId ) : null;
+		return $row ? $this->scanTableHead( $row, $tableId ) : null;
+	}
+
+	/** @return ?array{0:?array<int,string>,1:?DOMElement} */
+	protected function tableContentFrom( DOMNode $node, int $tableId, ?DOMElement $body = null ): ?array {
+		if ( ! $tableIterator = $this->fromTargetedHtmlTable( $node ) ) {
+			return null;
+		}
+
+		// Currently, <caption> element is skipped.
+		if ( $this->isDomElement( $tableIterator->current(), tagName: 'caption' ) ) {
+			$tableIterator->next();
+		}
+
+		if ( $head = $this->tableHeadContentFrom( $tableIterator->current(), $tableId ) ) {
+			$tableIterator->next();
+		}
+
+		while ( ! $body && $tableIterator->valid() ) {
+			$this->isDomElement( $node = $tableIterator->current(), tagName: 'tbody' ) && $body = $node;
+
+			$tableIterator->next();
+		}
+
+		return array( $head, $body );
+	}
+
+	/** @return ?array{0:?array<int,string>,1:DOMElement} */
+	protected function validateContentsOf( DOMNode $node, int $tableId ): ?array {
+		$content = $this->tableContentFrom( $node, $tableId );
+
+		return ! $content || ! $content[1] ? null : $content;
 	}
 
 	/**
@@ -208,20 +209,20 @@ trait TableNodeAware {
 	 * @param ?array<int,string> $tableHead
 	 * @return array<string|int,string|array{0:string,1?:string,2?:DOMElement}>
 	 */
-	private function tableDataSet( array $tableRow, ?array $tableHead ): array {
+	protected function tableDataSet( array $tableRow, ?array $tableHead ): array {
 		$data       = array();
 		$marshaller = $this->transformers['td'] ?? null;
 
 		foreach ( $tableRow as $tableData ) {
-			// If not "td", must be a HTML Node with "#comment" as nodeName. Other nodes shouldn't even be here.
-			if ( ! $tableData instanceof DOMElement || 'td' !== $tableData->nodeName ) {
+			// If not "th" or "td", must be a comment Node. Other nodes shouldn't even be here.
+			if ( ! $this->isNodeTHorTD( $tableData ) ) {
 				continue;
 			}
 
 			$data[] = $marshaller?->collect( $tableData, $this->onlyContents ) ?? trim( $tableData->textContent );
 
-			$tableData->childElementCount && ! $this->onlyContents
-				&& $this->scanTableBodyNodeIn( $tableData->childNodes );
+			$tableData->hasChildNodes() && ! $this->onlyContents
+				&& $this->scanTableNodeIn( $tableData->childNodes );
 		}
 
 		$marshaller?->flushContent();
@@ -229,34 +230,35 @@ trait TableNodeAware {
 		return $tableHead && count( $tableHead ) === count( $data ) ? array_combine( $tableHead, $data ) : $data;
 	}
 
-	/** @param DOMNodeList<DOMNode> $nodes */
-	private function scanTableNodeIn( DOMNodeList $nodes ): void {
-		( ! $this->tableIds || $this->scanAllTables )
-			&& $nodes->count() && $this->scanTableBodyNodeIn( $nodes );
-	}
+	/**
+	 * @param ?array<int,string> $head
+	 * @param DOMElement         $body
+	 * @return iterable<int,ArrayObject<array-key,string|array{0:string,1?:string,2?:DOMElement}>>
+	 */
+	protected function fromTableContents( int $tableId, ?array $head, DOMElement $body ): iterable {
+		$this->setTableId( $tableId );
 
-	/** @phpstan-assert-if-true =DOMElement $node */
-	private function isDomElement( mixed $node, string $tagName ): bool {
-		return $node instanceof DOMElement && $tagName === $node->tagName;
-	}
+		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
+		$rowIterator   = $body->childNodes->getIterator();
+		$rowMarshaller = $this->transformers['tr'] ?? null;
+		$head        ??= ( $headInBody = $this->scanTableHead( $rowIterator->current(), $tableId ) );
 
-	/** @phpstan-assert-if-true =DOMElement $node */
-	private function isTableBodyElement( mixed $node ): bool {
-		return $this->isDomElement( $node, tagName: 'tbody' );
-	}
+		if ( $headInBody ?? null ) {
+			// We'll advance to next Table Row so that the current Table Row already collected
+			// as Table Head WILL BE OMITTED and WILL NOT BE COLLECTED as a Table Data also.
+			$rowIterator->next();
+		}
 
-	/** @phpstan-assert-if-true =DOMElement $node */
-	private function isTableHeadElement( mixed $node ): bool {
-		return $this->isDomElement( $node, tagName: 'th' );
-	}
+		while ( $rowIterator->valid() ) {
+			$current = $rowIterator->current();
+			$row     = $rowMarshaller?->collect( $current, onlyContent: true )
+				?? Normalize::nodesToArray( $current->childNodes );
 
-	/** @phpstan-assert-if-true =DOMElement $node */
-	private function isTableDataElement( mixed $node ): bool {
-		return $this->isDomElement( $node, tagName: 'td' );
-	}
+			$rowIterator->next();
 
-	/** @phpstan-assert-if-true =DOMElement $node */
-	private function isTableRowWithTableData( DOMNode $node ): bool {
-		return $node->childNodes->count() && $this->isDomElement( $node, tagName: 'tr' );
+			if ( $row && '#comment' !== $current->nodeName ) {
+				yield new ArrayObject( $this->tableDataSet( $row, $head ) );
+			}
+		}
 	}
 }
