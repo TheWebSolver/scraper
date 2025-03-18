@@ -4,3 +4,6 @@ parameters:
 		- Src/
 		- Tests/
 	ignoreErrors:
+		- # Row Transformer only returns string (contentOnly).
+			path: Src/Traits/TableNodeAware.php
+			identifier: generator.valueType

@@ -22,7 +22,7 @@ trait TableNodeAware {
 	private array $tableRows = array();
 	/** @var array<int,SplFixedArray<string>> */
 	private array $tableHeadNames = array();
-	/** @var array{tr?:Transformer<DOMNode[]>,th?:Transformer<string>,td?:Transformer<string>} */
+	/** @var array{tr?:Transformer<ArrayObject<array-key,string>|DOMNode[]>,th?:Transformer<string>,td?:Transformer<string>} */
 	private array $transformers;
 	private bool $onlyContents = false;
 
@@ -55,7 +55,13 @@ trait TableNodeAware {
 		return $this->tableRows;
 	}
 
-	/** @param array{tr?:Transformer<DOMNode[]>,th?:Transformer<string>,td?:Transformer<string>} $transformers */
+	/**
+	 * @param array{
+	 *   tr ?: Transformer<ArrayObject<array-key,string>|DOMNode[]>,
+	 *   th ?: Transformer<string>,
+	 *   td ?: Transformer<string>
+	 * } $transformers
+	 */
 	public function useTransformers( array $transformers ): static {
 		$this->transformers = $transformers;
 
@@ -205,29 +211,28 @@ trait TableNodeAware {
 	}
 
 	/**
-	 * @param DOMNode[]          $tableRow
-	 * @param ?array<int,string> $tableHead
+	 * @param DOMNode[] $tableRow HTML Table Row containing Table Data.
+	 * @param ?string[] $keys     Corresponding index keys for each Table Data.
 	 * @return array<string|int,string|array{0:string,1?:string,2?:DOMElement}>
 	 */
-	protected function tableDataSet( array $tableRow, ?array $tableHead ): array {
+	protected function tableDataSet( array $tableRow, ?array $keys ): array {
 		$data       = array();
 		$marshaller = $this->transformers['td'] ?? null;
 
-		foreach ( $tableRow as $tableData ) {
-			// If not "th" or "td", must be a comment Node. Other nodes shouldn't even be here.
-			if ( ! $this->isNodeTHorTD( $tableData ) ) {
+		foreach ( $tableRow as $node ) {
+			// Skip if not a <th> or <td>. Possibly is a comment node. Other nodes shouldn't even be here.
+			if ( ! $this->isNodeTHorTD( $node ) ) {
 				continue;
 			}
 
-			$data[] = $marshaller?->collect( $tableData, $this->onlyContents ) ?? trim( $tableData->textContent );
+			$data[] = $marshaller?->collect( $node, $this->onlyContents ) ?? trim( $node->textContent );
 
-			$tableData->hasChildNodes() && ! $this->onlyContents
-				&& $this->scanTableNodeIn( $tableData->childNodes );
+			$node->hasChildNodes() && ! $this->onlyContents && $this->scanTableNodeIn( $node->childNodes );
 		}
 
 		$marshaller?->flushContent();
 
-		return $tableHead && count( $tableHead ) === count( $data ) ? array_combine( $tableHead, $data ) : $data;
+		return $keys && count( $keys ) === count( $data ) ? array_combine( $keys, $data ) : $data;
 	}
 
 	/**
@@ -250,15 +255,19 @@ trait TableNodeAware {
 		}
 
 		while ( $rowIterator->valid() ) {
+			// Skip if not a <tr>. Possibly is a comment node. Other nodes shouldn't even be here.
+			if ( ! $this->isDomElement( $rowIterator->current(), tagName: 'tr' ) ) {
+				$rowIterator->next();
+			}
+
 			$current = $rowIterator->current();
-			$row     = $rowMarshaller?->collect( $current, onlyContent: true )
-				?? Normalize::nodesToArray( $current->childNodes );
 
 			$rowIterator->next();
 
-			if ( $row && '#comment' !== $current->nodeName ) {
-				yield new ArrayObject( $this->tableDataSet( $row, $head ) );
-			}
+			$row = $rowMarshaller?->collect( $current, onlyContent: true )
+				?? Normalize::nodesToArray( $current->childNodes );
+
+			yield $row instanceof ArrayObject ? $row : new ArrayObject( $this->tableDataSet( $row, $head ) );
 		}
 	}
 }

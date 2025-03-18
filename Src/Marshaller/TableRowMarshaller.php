@@ -5,20 +5,18 @@ namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 
 use Closure;
 use DOMNode;
-use Countable;
 use DOMElement;
+use ArrayObject;
+use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
-/** @template-implements Transformer<DOMNode[]> */
+/** @template-implements Transformer<ArrayObject<array-key,string>|DOMNode[]> */
 class TableRowMarshaller implements Transformer {
-	/** @var Closure(string|DOMElement): DOMNode[] */
+	/** @var Closure(string|DOMElement): (ArrayObject<array-key,string>|DOMNode[]) */
 	private Closure $marshaller;
-
-	/** @param mixed[]|Countable $collectionNames */
-	public function __construct( private readonly array|Countable $collectionNames ) {}
 
 	public function marshallWith( callable $callback ): void {
 		$this->marshaller = $callback( ... );
@@ -29,7 +27,7 @@ class TableRowMarshaller implements Transformer {
 			return ( $this->marshaller )( $element );
 		}
 
-		return Normalize::nodesToArray( $this->infer( $element )->childNodes );
+		return Normalize::nodesToArray( self::validate( $element )->childNodes );
 	}
 
 	public function collectHtml(): void {}
@@ -40,20 +38,17 @@ class TableRowMarshaller implements Transformer {
 	public function getContent(): array {
 		return array();
 	}
+
 	public function flushContent(): void {}
 
-	public function infer( string|DOMElement $element ): DOMElement {
+	/** @throws InvalidSource When given $element does not have Table Data <td>. */
+	public static function validate( string|DOMElement $element, int $dataCount = 0 ): DOMElement {
 		if ( ! $element instanceof DOMElement ) {
 			$element = DOMDocumentFactory::createFromHtml( $element )->firstChild;
 		}
 
-		return $this->isCollectable( $element )
+		return $element && AssertDOMElement::isValid( $element, $dataCount )
 			? $element
 			: throw new InvalidSource( 'Impossible to infer as <tr> DOM Element from given string.' );
-	}
-
-	/** @phpstan-assert-if-true =DOMElement $element */
-	private function isCollectable( mixed $element ): bool {
-		return $element instanceof DOMElement && $element->childNodes->length >= count( $this->collectionNames );
 	}
 }
