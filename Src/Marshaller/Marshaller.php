@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\Scraper\Helper;
+namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 
 use Closure;
 use DOMElement;

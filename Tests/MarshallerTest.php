@@ -6,7 +6,7 @@ namespace TheWebSolver\Codegarage\Test;
 use DOMElement;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use TheWebSolver\Codegarage\Scraper\Helper\Marshaller;
+use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 
 class MarshallerTest extends TestCase {
 	#[Test]

@@ -8,8 +8,8 @@ use DOMElement;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
-use TheWebSolver\Codegarage\Scraper\Helper\Marshaller;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
+use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 
 class TableNodeAwareTest extends TestCase {
