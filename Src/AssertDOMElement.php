@@ -3,6 +3,7 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper;
 
+use Iterator;
 use DOMElement;
 
 class AssertDOMElement {
@@ -17,6 +18,18 @@ class AssertDOMElement {
 	/** @phpstan-assert-if-true =DOMElement $node */
 	public static function isValid( mixed $node, string $type = '' ): bool {
 		return $node instanceof DOMElement && ( ! $type || $type === $node->tagName );
+	}
+
+	public static function isNextIn( Iterator $iterator, string $type ): bool {
+		while ( ! self::isValid( $iterator->current(), $type ) ) {
+			if ( ! $iterator->valid() ) {
+				return false;
+			}
+
+			$iterator->next();
+		}
+
+		return true;
 	}
 
 	private static function has( DOMElement $element, string $value, string $type ): bool {

@@ -3,11 +3,13 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test;
 
+use Iterator;
 use DOMElement;
 use DOMDocument;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\Depends;
+use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 
 class AssertDOMElementTest extends TestCase {
@@ -40,5 +42,26 @@ class AssertDOMElementTest extends TestCase {
 		foreach ( array( 'one', 'two', 'three' ) as $class ) {
 			$this->assertTrue( AssertDOMElement::hasClass( $element, $class ) );
 		}
+	}
+
+	#[Test]
+	#[DataProvider( 'provideHtmlString' )]
+	public function itVerifiesWhetherGivenElementIsFound( bool $expected, string $html, string $type ): void {
+		$this->dom->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOBLANKS | LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED );
+
+		/** @var Iterator */
+		$iterator = $this->dom->childNodes->getIterator();
+
+		$this->assertSame( $expected, AssertDOMElement::isNextIn( $iterator, $type ) );
+	}
+
+	/** @return mixed[] */
+	public static function provideHtmlString(): array {
+		return array(
+			array( false, '<div></div>', 'ul' ),
+			array( true, '<div></div>', 'div' ),
+			array( false, '<div><!-- only comment --></div>', 'ul' ),
+			array( true, '<!-- comment --><ul></ul>', 'ul' ),
+		);
 	}
 }
