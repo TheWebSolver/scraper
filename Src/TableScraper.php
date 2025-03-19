@@ -6,15 +6,15 @@ namespace TheWebSolver\Codegarage\Scraper;
 use Iterator;
 use DOMElement;
 use ArrayObject;
-use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
-/** @template-extends Scraper<array-key,array<string|array{0:string,1?:string,2?:DOMElement}>> */
+/** @template-extends Scraper<array-key,array<string>> */
 abstract class TableScraper extends Scraper {
+	/** @use TableNodeAware<string,string> */
 	use TableNodeAware, CollectionAware;
 
 	/** @param class-string<Collectable> $collectable */
@@ -33,10 +33,9 @@ abstract class TableScraper extends Scraper {
 
 	/** @return ArrayObject<array-key,string> */
 	public function tableRowParser( string|DOMElement $element ): ArrayObject {
-		$keys  = $this->getCollectableNames();
-		$nodes = Normalize::nodesToArray( TableRowMarshaller::validate( $element )->childNodes );
-
-		return new ArrayObject( $this->tableDataSet( $nodes, $keys ) );
+		return new ArrayObject(
+			$this->tableDataSet( TableRowMarshaller::validate( $element ), $this->getCollectableNames() )
+		);
 	}
 
 	public function parse( string $content ): Iterator {
@@ -44,14 +43,13 @@ abstract class TableScraper extends Scraper {
 
 		$rowTransformer = new TableRowMarshaller();
 
-		$rowTransformer->marshallWith( $this->tableRowParser( ... ) );
+		$rowTransformer->with( $this->tableRowParser( ... ) );
 
 		$this->useTransformers(
 			array( 'tr' => $rowTransformer )
 		);
 
-		$this->withOnlyContents()
-			->withAllTableNodes( scan: false )
+		$this->withAllTableNodes( scan: false )
 			->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $content )->childNodes );
 
 		$tableId = $this->getTableIds()[ array_key_last( $this->getTableIds() ) ];

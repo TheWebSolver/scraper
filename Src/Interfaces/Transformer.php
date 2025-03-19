@@ -8,47 +8,19 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /** @template TReturn */
 interface Transformer {
-	public const COLLECT_HTML = 'html';
-	public const COLLECT_NODE = 'node';
-
 	/**
-	 * Returns the collectable data after transformation.
-	 *
-	 * @return array<self::COLLECT_*,bool>
-	 */
-	public function collectables(): array;
-
-	/**
-	 * Returns the transformed contents.
-	 *
-	 * @return array<int,TReturn>
-	 */
-	public function getContent(): array;
-
-	/**
-	 * Sets whether full HTML content should be collected.
-	 */
-	public function collectHtml(): void;
-
-	/**
-	 * Sets whether the current DOM Element should be collected.
-	 */
-	public function collectElement(): void;
-
-	/**
-	 * Transforms the element to be collected using the provided marshaller.
+	 * Transforms element using the provided callback.
 	 *
 	 * @param callable(string|DomElement): TReturn $callback
+	 * @return self<TReturn>
 	 */
-	public function marshallWith( callable $callback ): void;
+	public function with( callable $callback ): self;
 
 	/**
-	 * Collects data based on collection datatype set.
+	 * Transforms given element to the generic datatype.
 	 *
-	 * @return ($onlyContent is true ? TReturn : array{0:TReturn,1?:string,2?:DomElement})
+	 * @return TReturn
 	 * @throws InvalidSource When $element is string and cannot be inferred to DOMElement.
 	 */
-	public function collect( string|DOMElement $element, bool $onlyContent = false ): mixed;
-
-	public function flushContent(): void;
+	public function transform( string|DOMElement $element ): mixed;
 }

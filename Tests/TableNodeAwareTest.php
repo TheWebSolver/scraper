@@ -31,14 +31,13 @@ class TableNodeAwareTest extends TestCase {
 
 		$onlyContentScanner = new DOMNodeScanner( $innerTable );
 		$tdMarshaller       = new Marshaller();
-		$tdMarshaller->marshallWith(
+		$tdMarshaller->with(
 			fn ( string|DOMElement $node )
 			=> substr( $node instanceof DOMElement ? $node->textContent : $node, offset: 3 )
 		);
 
 		$onlyContentScanner
 			->useTransformers( array( 'td' => $tdMarshaller ) )
-			->withOnlyContents()
 			->scanTableNodeIn( $dom->childNodes );
 
 		$this->assertSame(
@@ -54,7 +53,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$thMarshaller = new Marshaller();
 
-		$thMarshaller->marshallWith(
+		$thMarshaller->with(
 			fn ( string|DOMElement $e ) => explode( '[', $e instanceof DOMElement ? $e->textContent : $e )[0]
 		);
 
@@ -135,6 +134,7 @@ class TableNodeAwareTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
 class DOMNodeScanner {
+	/** @use TableNodeAware<string,string> */
 	use TableNodeAware;
 
 	/** @param Closure(DOMElement, self): bool $validator */
