@@ -20,9 +20,9 @@ abstract class Scraper implements Scrapable {
 	private Closure $unsubscribeError;
 
 	/** @param string $sourceUrl The source URL from which the HTML data should be scraped. */
-	public function __construct( string $sourceUrl = '', string $dirPath = '', string $filename = '' ) {
+	public function __construct( string $sourceUrl = '' ) {
 		$this->sourceFromAttribute( $sourceUrl )
-			->withCachePath( $dirPath ?: $this->defaultCachePath(), $filename ?: $this->getSource()->filename );
+			->withCachePath( $this->defaultCachePath(), $this->getSource()->filename );
 
 		$this->unsubscribeError = ScraperError::for( $this->getSource() );
 	}

@@ -21,12 +21,10 @@ abstract class TableScraper extends Scraper {
 	public function __construct(
 		string $collectable,
 		$sourceUrl = '',
-		string $dirPath = '',
-		string $filename = ''
 	) {
 		$this->setCollectableNames( $collectable );
 
-		parent::__construct( $sourceUrl, $dirPath, $filename );
+		parent::__construct( $sourceUrl );
 
 		$this->useKeys( $this->getCollectableNames() );
 	}
