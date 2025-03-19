@@ -76,9 +76,15 @@ trait TableNodeAware {
 	/** @param DOMNodeList<DOMNode> $nodes */
 	public function scanTableNodeIn( DOMNodeList $nodes ): void {
 		foreach ( $nodes as $node ) {
-			if ( $contents = $this->validateContentsOf( $node, $id = spl_object_id( $node ) ) ) {
-				$iterator                                     = $this->fromTableContents( $id, ...$contents );
-				$iterator->valid() && $this->tableRows[ $id ] = iterator_to_array( $iterator );
+			if ( ! $contents = $this->validateContentsOf( $node, $id = spl_object_id( $node ) ) ) {
+				continue;
+			}
+
+			$iterator                                     = $this->fromTableContents( $id, ...$contents );
+			$iterator->valid() && $this->tableRows[ $id ] = iterator_to_array( $iterator );
+
+			if ( $this->foundTargetedTable( $node ) ) {
+				break;
 			}
 		}
 	}
@@ -220,7 +226,7 @@ trait TableNodeAware {
 
 			$data[] = $tdTransformer?->transform( $node ) ?? trim( $node->textContent );
 
-			$node->hasChildNodes() && $this->scanTableNodeIn( $node->childNodes );
+			$this->scanAllTables && $node->hasChildNodes() && $this->scanTableNodeIn( $node->childNodes );
 		}
 
 		return $keys && count( $keys ) === count( $data ) ? array_combine( $keys, $data ) : $data;
@@ -240,12 +246,8 @@ trait TableNodeAware {
 		$scannedFirst   = false;
 
 		while ( $rowIterator->valid() ) {
-			while ( ! AssertDOMElement::isValid( $rowIterator->current(), type: 'tr' ) ) {
-				if ( ! $rowIterator->valid() ) {
-					return;
-				}
-
-				$rowIterator->next();
+			if ( ! AssertDOMElement::isNextIn( $rowIterator, type: 'tr' ) ) {
+				return;
 			}
 
 			if ( ! $head && ! $scannedFirst ) {
@@ -256,19 +258,7 @@ trait TableNodeAware {
 				$head && $rowIterator->next();
 			}
 
-			if ( ! $rowIterator->valid() ) {
-				return;
-			}
-
-			while ( ! AssertDOMElement::isValid( $rowIterator->current(), type: 'tr' ) ) {
-				if ( ! $rowIterator->valid() ) {
-					return;
-				}
-
-				$rowIterator->next();
-			}
-
-			if ( ! $rowIterator->valid() ) {
+			if ( ! AssertDOMElement::isNextIn( $rowIterator, type: 'tr' ) ) {
 				return;
 			}
 
@@ -283,5 +273,9 @@ trait TableNodeAware {
 				yield $row instanceof ArrayObject ? $row : new ArrayObject( $this->tableDataSet( $row, $head ) );
 			}
 		}//end while
+	}
+
+	private function foundTargetedTable( mixed $node ): bool {
+		return ! $this->scanAllTables && AssertDOMElement::isValid( $node ) && $this->isTargetedTable( $node );
 	}
 }
