@@ -77,7 +77,8 @@ trait TableNodeAware {
 	public function scanTableNodeIn( DOMNodeList $nodes ): void {
 		foreach ( $nodes as $node ) {
 			if ( $contents = $this->validateContentsOf( $node, $id = spl_object_id( $node ) ) ) {
-				$this->tableRows[ $id ] = iterator_to_array( $this->fromTableContents( $id, ...$contents ) );
+				$iterator                                     = $this->fromTableContents( $id, ...$contents );
+				$iterator->valid() && $this->tableRows[ $id ] = iterator_to_array( $iterator );
 			}
 		}
 	}
@@ -125,7 +126,6 @@ trait TableNodeAware {
 			$names[] = is_string( $content ) ? $content : $trimmed;
 
 			$collection->append( $content );
-
 		}
 
 		if ( ! $collection->count() ) {
@@ -229,35 +229,59 @@ trait TableNodeAware {
 	/**
 	 * @param ?array<int,string> $head
 	 * @param DOMElement         $body
-	 * @return iterable<int,ArrayObject<array-key,TdReturn>>
+	 * @return Iterator<int,ArrayObject<array-key,TdReturn>>
 	 */
-	protected function fromTableContents( int $tableId, ?array $head, DOMElement $body ): iterable {
+	protected function fromTableContents( int $tableId, ?array $head, DOMElement $body ): Iterator {
 		$this->setTableId( $tableId );
 
 		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
 		$rowIterator    = $body->childNodes->getIterator();
 		$rowTransformer = $this->transformers['tr'] ?? null;
-		$head         ??= ( $headInBody = $this->scanTableHead( $rowIterator->current(), $tableId ) );
-
-		if ( $headInBody ?? null ) {
-			// We'll advance to next Table Row so that the current Table Row already collected
-			// as Table Head WILL BE OMITTED and WILL NOT BE COLLECTED as a Table Data also.
-			$rowIterator->next();
-		}
+		$scannedFirst   = false;
 
 		while ( $rowIterator->valid() ) {
-			// Skip if not a <tr>. Possibly is a comment node. Other nodes shouldn't even be here.
-			if ( ! AssertDOMElement::isValid( $rowIterator->current(), type: 'tr' ) ) {
+			while ( ! AssertDOMElement::isValid( $rowIterator->current(), type: 'tr' ) ) {
+				if ( ! $rowIterator->valid() ) {
+					return;
+				}
+
 				$rowIterator->next();
+			}
+
+			if ( ! $head && ! $scannedFirst ) {
+				$scannedFirst = true;
+				$head       ??= $this->scanTableHead( $rowIterator->current(), $tableId );
+
+				// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
+				$head && $rowIterator->next();
+			}
+
+			if ( ! $rowIterator->valid() ) {
+				return;
+			}
+
+			while ( ! AssertDOMElement::isValid( $rowIterator->current(), type: 'tr' ) ) {
+				if ( ! $rowIterator->valid() ) {
+					return;
+				}
+
+				$rowIterator->next();
+			}
+
+			if ( ! $rowIterator->valid() ) {
+				return;
 			}
 
 			$current = $rowIterator->current();
 
 			$rowIterator->next();
 
-			$row = $rowTransformer?->transform( $current ) ?? $current;
+			// TODO: add support whether to skip yielding empty <tr> or not.
+			if ( trim( $current->textContent ) ) {
+				$row = $rowTransformer?->transform( $current ) ?? $current;
 
-			yield $row instanceof ArrayObject ? $row : new ArrayObject( $this->tableDataSet( $row, $head ) );
-		}
+				yield $row instanceof ArrayObject ? $row : new ArrayObject( $this->tableDataSet( $row, $head ) );
+			}
+		}//end while
 	}
 }

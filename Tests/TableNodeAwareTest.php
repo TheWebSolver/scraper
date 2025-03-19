@@ -7,6 +7,7 @@ use Closure;
 use DOMElement;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
@@ -129,6 +130,31 @@ class TableNodeAwareTest extends TestCase {
 			$this->assertSame( $headers, array_keys( $arrayCopy = $tableData->getArrayCopy() ) );
 			$this->assertSame( $value, array_values( $arrayCopy ) );
 		}
+	}
+
+	#[Test]
+	#[DataProvider( 'provideInvalidHtmlTable' )]
+	public function itParsesInvalidTableGracefully( string $html, bool $hasHead = false ): void {
+		$scanner = new DOMNodeScanner();
+
+		$scanner->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $html )->childNodes );
+
+		$this->assertEmpty( $scanner->getTableData() );
+
+		if ( $hasHead ) {
+			$this->assertNotEmpty( $scanner->getTableHead() );
+		}
+	}
+
+	/** @return mixed[] */
+	public static function provideInvalidHtmlTable(): array {
+		return array(
+			array( '<table><tbody><!-- only heads --><tr><th>head</th></tr></tbody></table>', true ),
+			array( '<table><tbody><!-- empty rows --><tr></tr><tr></tr></tbody></table>' ),
+			array( '<table><tbody><!-- no rows --></tbody></table>' ),
+			array( '<table><tbody id="no-childNodes"></tbody></table>' ),
+			array( '<table></table>' ),
+		);
 	}
 }
 
