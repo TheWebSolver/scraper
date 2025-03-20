@@ -11,8 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
  * @template TKey
  * @template TValue
  */
-interface Scrapable {
-	public const REMOVABLE_NODES     = array( "\n", "\t", "\r", "\v" );
+interface Scrapable extends CollectionSet {
 	public const DIACRITICS_ESCAPE   = 1;
 	public const DIACRITICS_TRANSLIT = 2;
 
