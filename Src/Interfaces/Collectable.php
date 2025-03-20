@@ -7,8 +7,8 @@ use Closure;
 use BackedEnum;
 
 interface Collectable extends BackedEnum {
-	/** @placeholder: **1:** expected number of columns, **2:** expected column names (usually enum case values). */
-	public const INVALID_COUNT_MESSAGE = 'parsed data invalid. It must be at least "%1$s" columns with names: "%2$s".';
+	/** @placeholder: **1:** expected number of items, **2:** expected item names (usually enum case values). */
+	public const INVALID_COUNT_MESSAGE = 'parsed data invalid. Collection must have atleast "%1$s" items: "%2$s".';
 
 	/**
 	 * Gets character length of the scraped data parsed.
@@ -31,11 +31,11 @@ interface Collectable extends BackedEnum {
 	public static function type(): string;
 
 	/**
-	 * Gets the error message if scraped data's collection set (columns) does not match the expected length.
+	 * Gets the error message if scraped data's collection set (items) does not match the expected length.
 	 *
 	 * Error message must support following placeholders:
-	 * - **1:** expected number of columns, and
-	 * - **2:** expected column names (usually enum case values).
+	 * - **1:** expected number of items, and
+	 * - **2:** expected item names (usually enum case values).
 	 */
 	public static function invalidCountMsg(): string;
 
