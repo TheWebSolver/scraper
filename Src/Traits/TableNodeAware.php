@@ -62,7 +62,9 @@ trait TableNodeAware {
 	 * } $transformers
 	 */
 	public function useTransformers( array $transformers ): static {
-		$this->transformers = $transformers;
+		isset( $transformers['tr'] ) && $this->transformers['tr'] = $transformers['tr'];
+		isset( $transformers['th'] ) && $this->transformers['th'] = $transformers['th'];
+		isset( $transformers['td'] ) && $this->transformers['td'] = $transformers['td'];
 
 		return $this;
 	}
