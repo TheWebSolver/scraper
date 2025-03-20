@@ -21,31 +21,35 @@ abstract class TableScraper extends Scraper {
 	}
 
 	/**
-	 * @param class-string<Collectable>                             $collectable
+	 * @param class-string<Collectable>                             $collectableClass
 	 * @param Transformer<ArrayObject<array-key,string>|DOMElement> $rowTransformer
 	 */
 	public function __construct(
-		string $collectable,
+		private readonly string $collectableClass,
 		Transformer $rowTransformer = new TableRowMarshaller(),
 		$sourceUrl = '',
 	) {
-		$this->setCollectableNames( $collectable );
-
 		parent::__construct( $sourceUrl );
 
-		$this->useKeys( $this->getCollectableNames() );
+		$this->setCollectionItemsFrom( $collectableClass )
+			->withAllTableNodes( scan: false )
+			->useTransformers( array( 'tr' => $rowTransformer->with( $this->tableRowParser( ... ) ) ) );
 
-		$this->withAllTableNodes( scan: false )
-			->useTransformers(
-				array( 'tr' => $rowTransformer->with( $this->tableRowParser( ... ) ) )
-			);
+		$this->useKeys( $this->getCollectableNames() );
 	}
 
-	/** @return ArrayObject<array-key,string> */
+	/** @return ArrayObject<string,string> */
 	public function tableRowParser( string|DOMElement $element ): ArrayObject {
-		return new ArrayObject(
-			$this->tableDataSet( TableRowMarshaller::validate( $element ), $this->getCollectableNames() )
-		);
+		$keys = $this->getCollectableNames();
+		$set  = $this->tableDataSet( TableRowMarshaller::validate( $element ), $keys );
+
+		$this->ensureAllKeysExistsInCollection( $set );
+
+		$set = $this->withRequestedKeys( $set );
+
+		array_walk( $set, $this->collectableClass::validate( ... ), $this->throwError( ... ) );
+
+		return new ArrayObject( $set );
 	}
 
 	public function parse( string $content ): Iterator {
@@ -65,5 +69,25 @@ abstract class TableScraper extends Scraper {
 		}
 
 		unset( $data );
+	}
+
+	/** @return class-string<Collectable> */
+	protected function collectableClass(): string {
+		return $this->collectableClass;
+	}
+
+	protected function throwError( string $msg, string|int ...$args ): never {
+		throw ScraperError::trigger( sprintf( $msg, ...$args ) . " {$this->getSource()->errorMsg()}" );
+	}
+
+	/**
+	 * @param string[] $set
+	 * @phpstan-assert array<string,string> $set
+	 */
+	private function ensureAllKeysExistsInCollection( array $set ): void {
+		$msg = $this->collectableClass()::invalidCountMsg();
+
+		empty( array_diff_key( $keys = $this->getCollectableNames(), $set ) )
+			|| $this->throwError( $msg, count( $keys ), implode( '", "', $keys ) );
 	}
 }

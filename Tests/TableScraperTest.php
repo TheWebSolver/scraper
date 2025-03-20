@@ -6,10 +6,13 @@ namespace TheWebSolver\Codegarage\Test;
 use Closure;
 use BackedEnum;
 use DOMElement;
+use ValueError;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\Depends;
+use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\TableScraper;
+use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
@@ -21,7 +24,7 @@ class TableScraperTest extends TestCase {
 		$this->scraper = new #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )] class()
 			extends TableScraper {
 			public function __construct() {
-				parent::__construct( collectable: DeveloperType::class );
+				parent::__construct( collectableClass: DeveloperType::class );
 			}
 
 			protected function defaultCachePath(): string {
@@ -88,6 +91,54 @@ class TableScraperTest extends TestCase {
 
 		$this->assertFalse( $iterator->valid() );
 	}
+
+	#[Test]
+	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
+		$table = '
+		<table>
+
+		  <caption></caption>
+		  <!-- above caption required as first child to be targeted for this test scraper. -->
+
+		  <tbody>
+				<tr>
+				  <!-- "DeveloperType::Name" -->
+				  <td>John Doe</td>
+
+				  <!-- "DeveloperType::Title" -->
+				  <td>Developer</td>
+
+				  <!-- third <td> also required for "DeveloperType::Address". Hence, exception thrown. -->
+				</tr>
+		  </tbody>
+		</table>
+		';
+
+		$this->expectException( ScraperError::class );
+		$this->expectExceptionMessage(
+			sprintf( Collectable::INVALID_COUNT_MESSAGE, 3, implode( '", "', $this->scraper->getKeys() ) )
+		);
+
+		$this->scraper->parse( $table )->current();
+	}
+
+	#[Test]
+	#[DataProvider( 'providesInvalidTableData' )]
+	public function itThrowsExceptionWhenEachScrapedDataIsValidated( string $content, DeveloperType $type ): void {
+		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
+
+		$this->expectExceptionMessage( $type->errorMsg() );
+		$this->scraper->parse( $table )->current();
+	}
+
+	/** @return mixed[] */
+	public static function providesInvalidTableData(): array {
+		return array(
+			array( '<tr><td>FirstName-LastName</td><td>Title</td><td>Address</td></tr>', DeveloperType::Name ),
+			array( '<tr><td>FirstName LastName</td><td>This is a very long developer title</td><td>Address</td></tr>', DeveloperType::Title ),
+			array( '<tr><td>FirstName LastName</td><td>Title</td><td>Addr3ss</td></tr>', DeveloperType::Address ),
+		);
+	}
 }
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
@@ -97,35 +148,37 @@ enum DeveloperType: string implements Collectable {
 	case Title   = 'title';
 	case Address = 'address';
 
-	public static function type(): string {
+	public function errorMsg(): string {
+		return match ( $this ) {
+			self::Name    => 'First & Last name must be separated by space.',
+			self::Title   => 'Title must be less than or equal to 15 characters',
+			self::Address => 'Address can only be alpha characters.',
+		};
+	}
+
+	public static function label(): string {
 		return 'Developer Names';
 	}
 
-	public function length(): int {
-		return 30;
-	}
-
-	public function errorMsg(): string {
-		return 'This is an error msg';
-	}
-
 	public static function invalidCountMsg(): string {
-		return self::type() . ' ' . self::INVALID_COUNT_MESSAGE;
+		return self::label() . ' ' . self::INVALID_COUNT_MESSAGE;
 	}
 
-	public static function toArray( BackedEnum ...$filter ): array {
-		$cases = ! $filter
+	public static function toArray( string|BackedEnum ...$except ): array {
+		$cases = ! $except
 			? self::cases()
-			: array_filter( self::cases(), static fn( self $i ) => ! in_array( $i, $filter, strict: true ) );
+			: array_filter( self::cases(), static fn( self $i ) => ! in_array( $i, $except, strict: true ) );
 
-		return array_column( $cases, column_key: 'value', index_key: 'name' );
+		return array_column( $cases, column_key: 'value' );
 	}
 
-	public function isCharacterTypeAndLength( string $value ): bool {
-		return ! empty( $value );
-	}
+	public static function validate( mixed $data, string $item, ?Closure $handler = null ): bool {
+		is_string( $data ) || throw new ValueError( 'Data must be string.' );
 
-	public static function walkForTypeVerification( string $data, string $key, Closure $handler ): bool {
-		return true;
+		return match ( self::from( $item ) ) {
+			self::Name    => str_contains( $data, ' ' ) || ( $handler && $handler( self::Name->errorMsg() ) ),
+			self::Title   => strlen( $data ) <= 15 || ( $handler && $handler( self::Title->errorMsg() ) ),
+			self::Address => ctype_alpha( $data ) || ( $handler && $handler( self::Address->errorMsg() ) ),
+		};
 	}
 }
