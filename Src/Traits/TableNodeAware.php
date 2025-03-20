@@ -29,6 +29,9 @@ trait TableNodeAware {
 	/** @var array{tr?:Transformer<ArrayObject<array-key,TdReturn>|DOMElement>,th?:Transformer<ThReturn>,td?:Transformer<TdReturn>} */
 	private array $transformers;
 
+	private int $currentTableRowIterationCount = 0;
+	private ?string $currentTableDataKey       = null;
+
 	/** @return int[] List of scanned tables' `spl_object_id()`. */
 	public function getTableIds(): array {
 		return $this->tableIds;
@@ -96,6 +99,14 @@ trait TableNodeAware {
 		return true;
 	}
 
+	final protected function getCurrentTableDataKey(): ?string {
+		return $this->currentTableDataKey;
+	}
+
+	final protected function getCurrentTableRowCount(): int {
+		return $this->currentTableRowIterationCount;
+	}
+
 	final protected function setTableId( int $id ): void {
 		if ( ! in_array( $id, $this->tableIds, true ) ) {
 			$this->tableIds[] = $id;
@@ -123,6 +134,7 @@ trait TableNodeAware {
 		$thTransformer = $this->transformers['th'] ?? null;
 		$collection    = new ArrayObject();
 		$names         = array();
+		$position      = 0;
 
 		foreach ( $node->childNodes as $node ) {
 			if ( ! AssertDOMElement::isValid( $node, type: 'th' ) ) {
@@ -130,7 +142,7 @@ trait TableNodeAware {
 			}
 
 			$trimmed = trim( $node->textContent );
-			$content = $thTransformer?->transform( $node ) ?? $trimmed;
+			$content = $thTransformer?->transform( $node, $position++ ) ?? $trimmed;
 			$names[] = is_string( $content ) ? $content : $trimmed;
 
 			$collection->append( $content );
@@ -217,8 +229,9 @@ trait TableNodeAware {
 	 * @return TdReturn[]
 	 */
 	protected function tableDataSet( DOMElement $tableRow, ?array $keys ): array {
-		$data          = array();
-		$tdTransformer = $this->transformers['td'] ?? null;
+		$data                                = array();
+		$tdTransformer                       = $this->transformers['td'] ?? null;
+		$this->currentTableRowIterationCount = 0;
 
 		foreach ( $tableRow->childNodes as $node ) {
 			// Skip if not a <th> or <td>. Possibly is a comment node. Other nodes shouldn't even be here.
@@ -226,10 +239,21 @@ trait TableNodeAware {
 				continue;
 			}
 
-			$data[] = $tdTransformer?->transform( $node ) ?? trim( $node->textContent );
+			$position                  = $this->currentTableRowIterationCount;
+			$this->currentTableDataKey = $keys && isset( $keys[ $position ] ) ? $keys[ $position ] : null;
 
-			$this->scanAllTables && $node->hasChildNodes() && $this->scanTableNodeIn( $node->childNodes );
+			if ( ! $tdTransformer ) {
+				$data[] = $val = trim( $node->textContent );
+			} else {
+				( $val = $tdTransformer->transform( $node, $position ) ) && ( $data[] = $val );
+			}
+
+			$val && $this->scanAllTables && $node->hasChildNodes() && $this->scanTableNodeIn( $node->childNodes );
+
+			++$this->currentTableRowIterationCount;
 		}
+
+		$this->currentTableDataKey = null;
 
 		return $keys && count( $keys ) === count( $data ) ? array_combine( $keys, $data ) : $data;
 	}
@@ -246,6 +270,7 @@ trait TableNodeAware {
 		$rowIterator    = $body->childNodes->getIterator();
 		$rowTransformer = $this->transformers['tr'] ?? null;
 		$scannedFirst   = false;
+		$position       = 0;
 
 		while ( $rowIterator->valid() ) {
 			if ( ! AssertDOMElement::isNextIn( $rowIterator, type: 'tr' ) ) {
@@ -270,7 +295,7 @@ trait TableNodeAware {
 
 			// TODO: add support whether to skip yielding empty <tr> or not.
 			if ( trim( $current->textContent ) ) {
-				$row = $rowTransformer?->transform( $current ) ?? $current;
+				$row = $rowTransformer?->transform( $current, $position++ ) ?? $current;
 
 				yield $row instanceof ArrayObject ? $row : new ArrayObject( $this->tableDataSet( $row, $head ) );
 			}

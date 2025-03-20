@@ -13,7 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /** @template-implements Transformer<ArrayObject<array-key,string>|DOMElement> */
 class TableRowMarshaller implements Transformer {
-	/** @var Closure(string|DOMElement): (ArrayObject<array-key,string>|DOMElement) */
+	/** @var Closure(string|DOMElement, int): (ArrayObject<array-key,string>|DOMElement) */
 	private Closure $marshaller;
 
 	public function with( callable $callback ): static {
@@ -22,9 +22,9 @@ class TableRowMarshaller implements Transformer {
 		return $this;
 	}
 
-	public function transform( string|DOMElement $element ): ArrayObject|DOMElement {
+	public function transform( string|DOMElement $element, int $position ): ArrayObject|DOMElement {
 		if ( isset( $this->marshaller ) ) {
-			return ( $this->marshaller )( $element );
+			return ( $this->marshaller )( $element, $position );
 		}
 
 		return self::validate( $element );

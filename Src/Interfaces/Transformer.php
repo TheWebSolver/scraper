@@ -11,7 +11,7 @@ interface Transformer {
 	/**
 	 * Transforms element using the provided callback.
 	 *
-	 * @param callable(string|DomElement): TReturn $callback
+	 * @param callable(string|DomElement, int): TReturn $callback
 	 * @return self<TReturn>
 	 */
 	public function with( callable $callback ): self;
@@ -22,5 +22,5 @@ interface Transformer {
 	 * @return TReturn
 	 * @throws InvalidSource When $element is string and cannot be inferred to DOMElement.
 	 */
-	public function transform( string|DOMElement $element ): mixed;
+	public function transform( string|DOMElement $element, int $position ): mixed;
 }

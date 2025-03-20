@@ -13,7 +13,7 @@ class MarshallerTest extends TestCase {
 	public function itCollectsContentOnly(): void {
 		$marshaller = new Marshaller();
 		$element    = new DOMElement( 'div', 'This is a div content.' );
-		$collection = $marshaller->transform( $element );
+		$collection = $marshaller->transform( $element, 0 );
 
 		$this->assertSame( 'This is a div content.', $collection );
 	}
@@ -26,6 +26,6 @@ class MarshallerTest extends TestCase {
 			static fn( string|DOMElement $v ) => substr( is_string( $v ) ? $v : $v->textContent, 0, -1 )
 		);
 
-		$this->assertSame( 'onlyText', $marshaller->transform( 'onlyText.' ) );
+		$this->assertSame( 'onlyText', $marshaller->transform( 'onlyText.', 0 ) );
 	}
 }

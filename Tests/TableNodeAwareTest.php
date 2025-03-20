@@ -84,7 +84,7 @@ class TableNodeAwareTest extends TestCase {
 
 	#[Test]
 	public function itScrapesDataFromTableHeadAndBodyElement(): void {
-		$data = '
+		$table = '
 		<table>
 			  <caption>This is a test with Table Head</caption>
 
@@ -114,7 +114,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner = new DOMNodeScanner();
 
-		$scanner->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $data )->childNodes );
+		$scanner->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
 		$tableIds  = $scanner->getTableIds();
 		$fixedHead = $scanner->getTableHead( namesOnly: true )[ $tableIds[0] ];
@@ -155,6 +155,35 @@ class TableNodeAwareTest extends TestCase {
 			array( '<table><tbody id="no-childNodes"></tbody></table>' ),
 			array( '<table></table>' ),
 		);
+	}
+
+	#[Test]
+	public function itDoesNotCollectValueIfTransformerReturnsFalsyValue(): void {
+		$scanner = new DOMNodeScanner();
+		$table   = '
+			<table>
+				<thead><tr><th>First</th><th>Last</th><tr></thead>
+				<tbody>
+					<tr>
+						<-- will not be ignored -->
+						<-- non-transformed value -->
+						<td>Value One</td>
+						<-- will be ignored -->
+						<td>Value Two</td>
+					</tr><
+				/tbody>
+			</table>
+		';
+
+		$tdMarshaller = static function ( string|DOMElement $node ): string {
+			return is_string( $node ) ? $node : ( str_contains( $text = $node->textContent, 'Two' ) ? '' : $text );
+		};
+
+		$scanner->useTransformers( array( 'td' => ( new Marshaller() )->with( $tdMarshaller ) ) )
+			->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+
+		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableIds()[0] ][0]->getArrayCopy() );
+		$this->assertCount( 1, $data, 'Skips falsy (empty string) transformed value.' );
 	}
 }
 

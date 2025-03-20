@@ -9,7 +9,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /** @template-implements Transformer<string> */
 class Marshaller implements Transformer {
-	/** @var Closure(string|DomElement): string */
+	/** @var Closure(string|DomElement, int): string */
 	private Closure $callback;
 
 	public function with( callable $callback ): static {
@@ -18,10 +18,10 @@ class Marshaller implements Transformer {
 		return $this;
 	}
 
-	public function transform( string|DOMElement $element ): string {
+	public function transform( string|DOMElement $element, int $position ): string {
 		$content  = $element instanceof DOMElement ? $element->textContent : $element;
 		$marshall = $this->callback ?? null;
 
-		return trim( $marshall ? $marshall( $element ) : $content );
+		return trim( $marshall ? $marshall( $element, $position ) : $content );
 	}
 }
