@@ -16,9 +16,7 @@ trait CachePath {
 		$this->cacheDirPath  = $dirpath;
 		$this->cacheFileName = $filename;
 
-		if ( $filename ) {
-			$this->cacheRealPath = $this->getDirPath() . $filename;
-		}
+		$this->ensureCacheablePath();
 
 		return $this;
 	}
@@ -53,10 +51,20 @@ trait CachePath {
 		return $this->cacheFileName;
 	}
 
+	private function ensureCacheablePath(): void {
+		if ( $this->isCachingDisabled() ) {
+			unset( $this->cacheRealPath );
+
+			return;
+		}
+
+		if ( $this->cacheFileName ) {
+			$this->cacheRealPath = $this->getDirPath() . $this->cacheFileName;
+		}
+	}
+
 	private function getRealDirPath(): ?string {
-		return ( $p = ( $this->cacheDirPath ?: $this->defaultCachePath() ) )
-			? ( realpath( $p ) ?: null )
-			: null;
+		return realpath( $this->cacheDirPath ?: $this->defaultCachePath() ) ?: null;
 	}
 
 	private function withTrailingSeparator( string $path ): string {
