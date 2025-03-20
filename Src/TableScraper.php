@@ -7,6 +7,7 @@ use Iterator;
 use DOMElement;
 use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -22,34 +23,50 @@ abstract class TableScraper extends Scraper {
 
 	/**
 	 * @param class-string<Collectable>                             $collectableClass
-	 * @param Transformer<ArrayObject<array-key,string>|DOMElement> $rowTransformer
+	 * @param Transformer<ArrayObject<array-key,string>|DOMElement> $trTransformer
+	 * @param Transformer<string>                                   $tdTransformer
 	 */
 	public function __construct(
 		private readonly string $collectableClass,
-		Transformer $rowTransformer = new TableRowMarshaller(),
+		Transformer $trTransformer = new TableRowMarshaller(),
+		Transformer $tdTransformer = new Marshaller(),
 		$sourceUrl = '',
 	) {
 		parent::__construct( $sourceUrl );
 
 		$this->setCollectionItemsFrom( $collectableClass )
 			->withAllTableNodes( scan: false )
-			->useTransformers( array( 'tr' => $rowTransformer->with( $this->tableRowParser( ... ) ) ) );
+			->useTransformers(
+				array(
+					'tr' => $trTransformer->with( $this->trParser( ... ) ),
+					'td' => $tdTransformer->with( $this->tdParser( ... ) ),
+				)
+			);
 
 		$this->useKeys( $this->getCollectableNames() );
 	}
 
 	/** @return ArrayObject<string,string> */
-	public function tableRowParser( string|DOMElement $element ): ArrayObject {
+	public function trParser( string|DOMElement $element ): ArrayObject {
 		$keys = $this->getCollectableNames();
 		$set  = $this->tableDataSet( TableRowMarshaller::validate( $element ), $keys );
+		$msg  = $this->collectableClass()::invalidCountMsg();
 
-		$this->ensureAllKeysExistsInCollection( $set );
+		count( $keys ) === $this->getCurrentTableRowCount()
+			|| $this->throwError( $msg, count( $keys ), implode( '", "', $keys ) );
 
-		$set = $this->withRequestedKeys( $set );
-
-		array_walk( $set, $this->collectableClass::validate( ... ), $this->throwError( ... ) );
-
+		// TODO: implement logic when $this->getCollectableNames() & $this->getKeys() are not same.
 		return new ArrayObject( $set );
+	}
+
+	public function tdParser( string|DOMElement $element, int $position ): string {
+		$content = trim( is_string( $element ) ? $element : $element->textContent );
+		$item    = $this->getCurrentTableDataKey() ?? ''; // Always exists from ::trParser().
+		$value   = $this->isRequestedItem( $item ) ? trim( $content ) : '';
+
+		$value && $this->collectableClass()::validate( $value, $item, $this->throwError( ... ) );
+
+		return $value;
 	}
 
 	public function parse( string $content ): Iterator {
@@ -78,16 +95,5 @@ abstract class TableScraper extends Scraper {
 
 	protected function throwError( string $msg, string|int ...$args ): never {
 		throw ScraperError::trigger( sprintf( $msg, ...$args ) . " {$this->getSource()->errorMsg()}" );
-	}
-
-	/**
-	 * @param string[] $set
-	 * @phpstan-assert array<string,string> $set
-	 */
-	private function ensureAllKeysExistsInCollection( array $set ): void {
-		$msg = $this->collectableClass()::invalidCountMsg();
-
-		empty( array_diff_key( $keys = $this->getCollectableNames(), $set ) )
-			|| $this->throwError( $msg, count( $keys ), implode( '", "', $keys ) );
 	}
 }

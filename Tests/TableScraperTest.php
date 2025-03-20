@@ -46,20 +46,17 @@ class TableScraperTest extends TestCase {
 	}
 
 	#[Test]
-	public function itReturnsDefaultValuesUsingGetters(): string {
-		$this->assertIsString( $table = $this->scraper->fromCache() );
+	public function itReturnsDefaultValuesUsingGetters(): void {
+		$this->assertNotEmpty( $this->scraper->fromCache() );
 		$this->assertSame( DOMDocumentFactoryTest::RESOURCE_PATH . 'table.html', $this->scraper->getCachePath() );
 		$this->assertSame( 'https://scraper.test', $this->scraper->getSourceUrl() );
 		$this->assertTrue( $this->scraper->hasCache() );
 		$this->assertNull( $this->scraper->getDiacritic() );
-
-		return $table;
 	}
 
 	#[Test]
-	#[Depends( 'itReturnsDefaultValuesUsingGetters' )]
-	public function itGeneratesTableDataOneAtATime( string $htmlTable ): void {
-		$iterator = $this->scraper->parse( $htmlTable );
+	public function itGeneratesTableDataOneAtATime(): void {
+		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 
 		$this->assertSame(
 			array(

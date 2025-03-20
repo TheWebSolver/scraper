@@ -56,22 +56,12 @@ trait CollectionAware {
 		return $this->collectableItems ?? array();
 	}
 
-	/**
-	 * @param array<TValue> $set The raw data to be filtered with collection keys.
-	 * @return array<TValue>
-	 * @template TValue
-	 */
-	final protected function onlyCollectable( array $set ): array {
-		return array_intersect_key( $set, array_values( $this->getCollectableNames() ) );
+	final protected function isCollectionItem( string $key ): bool {
+		return in_array( $key, $this->getCollectableNames(), strict: true );
 	}
 
-	/**
-	 * @param array<string,TValue> $set The raw data to be filtered with collection keys.
-	 * @return array<string,TValue>
-	 * @template TValue
-	 */
-	final protected function withRequestedKeys( array $set ): array {
-		return array_intersect_key( $set, array_flip( $this->getKeys() ) );
+	final protected function isRequestedItem( string $key ): bool {
+		return in_array( $key, $this->getKeys(), strict: true );
 	}
 
 	// phpcs:disable Squiz.Commenting.FunctionComment.InvalidNoReturn
