@@ -35,12 +35,6 @@ class TableScraperTest extends TestCase {
 				return 'caption' === $node->firstChild?->nodeName;
 			}
 
-			protected function getCollectableNames(): array {
-				$keys = array( 'name', 'title', 'address' );
-
-				return array_combine( $keys, $keys );
-			}
-
 			protected function collectableEnum(): string {
 				return DeveloperType::class;
 			}
