@@ -18,11 +18,11 @@ class CollectionSetTest extends TestCase {
 	protected function setUp(): void {
 		$this->collector = new class() implements CollectionSet {
 			use CollectionAware {
-				CollectionAware::useKeysFromCollectableEnum as public;
+				CollectionAware::getKeysFromCollectableClass as public;
 			}
 
 			/** @return class-string<Collectable> */
-			protected function collectableEnum(): string {
+			protected function collectableClass(): string {
 				return SetEnumStub::class;
 			}
 		};
@@ -39,15 +39,15 @@ class CollectionSetTest extends TestCase {
 	}
 
 	/**
-	 * @param array{0:string[],1:?string}        $expected
-	 * @param class-string<Collectable>|string[] $keys
+	 * @param array{0:string[],1:?string}       $expected
+	 * @param class-string<BackedEnum>|string[] $keys
 	 */
 	#[Test]
 	#[DataProvider( 'provideCollectionKeys' )]
 	public function itSetsScrapedDataCollectSetKeysAndIndexKeyBasedOnArgPassed(
 		array $expected,
 		string|array $keys,
-		string|Collectable|null $key = null,
+		string|BackedEnum|null $key = null,
 	): void {
 		[$expectedKeys, $expectedKey] = $expected;
 
@@ -72,7 +72,7 @@ class CollectionSetTest extends TestCase {
 		$this->collector->useKeys( array(), SetEnumStub::Test );
 
 		// @phpstan-ignore-next-line
-		/** @disregard P1013 Undefined method */ $this->collector->useKeysFromCollectableEnum();
+		/** @disregard P1013 Undefined method */ $this->collector->useKeys( $this->collector->getKeysFromCollectableClass() );
 
 		$this->assertSame( array( 'test' ), $this->collector->getKeys() );
 		$this->assertSame( 'test', $this->collector->getIndexKey() );
@@ -84,34 +84,20 @@ class CollectionSetTest extends TestCase {
 enum SetEnumStub: string implements Collectable {
 	case Test = 'test';
 
-	public function length(): int {
-		return match ( $this ) {
-			self::Test => 4,
-		};
-	}
-
-	public function errorMsg(): string {
+	public static function label(): string {
 		return '';
-	}
-
-	public static function type(): string {
-		return '';
-	}
-
-	public function isCharacterTypeAndLength( string $value ): bool {
-		return ! ! $value;
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-	public static function toArray( BackedEnum ...$filter ): array {
-		return array_column( self::cases(), column_key: 'value', index_key: 'name' );
+	public static function toArray( string|BackedEnum ...$except ): array {
+		return array_column( self::cases(), column_key: 'value' );
 	}
 
 	public static function invalidCountMsg(): string {
 		return '';
 	}
 
-	public static function walkForTypeVerification( string $data, string $key, Closure $handler ): bool {
+	public static function validate( mixed $data, string $item, Closure $handler = null ): bool {
 		return true;
 	}
 }

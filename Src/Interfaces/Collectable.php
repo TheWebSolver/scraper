@@ -6,53 +6,40 @@ namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 use Closure;
 use BackedEnum;
 
-interface Collectable extends BackedEnum {
-	/** @placeholder: **1:** expected number of items, **2:** expected item names (usually enum case values). */
+interface Collectable {
+	/** @placeholder: **1:** collection items count, **2:** stringified collection items. */
 	public const INVALID_COUNT_MESSAGE = 'parsed data invalid. Collection must have atleast "%1$s" items: "%2$s".';
 
 	/**
-	 * Gets character length of the scraped data parsed.
-	 */
-	public function length(): int;
-
-	/**
-	 * Ensures scraped data's character type and length is valid.
-	 */
-	public function isCharacterTypeAndLength( string $value ): bool;
-
-	/**
-	 * Gets the error message if scraped data is not of expected character type or length.
-	 */
-	public function errorMsg(): string;
-
-	/**
-	 * Explains the type of enum.
-	 */
-	public static function type(): string;
-
-	/**
-	 * Gets the error message if scraped data's collection set (items) does not match the expected length.
+	 * Gets the error message if collection items's count does not match with collected data.
 	 *
 	 * Error message must support following placeholders:
-	 * - **1:** expected number of items, and
-	 * - **2:** expected item names (usually enum case values).
+	 * - **1:** collection items count, and
+	 * - **2:** stringified collection items.
 	 */
 	public static function invalidCountMsg(): string;
 
 	/**
-	 * Gets the key/value pair of a backed enum case name and its value.
-	 *
-	 * @param BackedEnum ...$filter The enum case(s) to filter from being included as an array.
-	 * @return array<string,string>
+	 * Provides details/scope about the collection.
 	 */
-	public static function toArray( BackedEnum ...$filter ): array;
+	public static function label(): string;
 
 	/**
-	 * Walks a given data and its index key to handle if verification fails.
+	 * Gets collection items.
 	 *
-	 * @param string                    $data    The value to verify.
-	 * @param string                    $key     One of the backed enum case value.
-	 * @param Closure(self): bool|never $handler Accepts enum instance. It is only invoked if data cannot be verified.
+	 * @param string|BackedEnum ...$except The item(s) to be excluded from collection set.
+	 * @return string[]
 	 */
-	public static function walkForTypeVerification( string $data, string $key, Closure $handler ): bool;
+	public static function toArray( string|BackedEnum ...$except ): array;
+
+	/**
+	 * Walks given data for validation.
+	 *
+	 * @param mixed                  $data The data to verify.
+	 * @param string                 $item One of the item of collection set. It must be
+	 *                                     used as an index value of the provided $data.
+	 * @param Closure(string, string ...$args): bool|never $handler Must only be invoked if provided
+	 *                                                              and data cannot be verified.
+	 */
+	public static function validate( mixed $data, string $item, ?Closure $handler = null ): bool;
 }

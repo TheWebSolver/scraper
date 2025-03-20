@@ -8,25 +8,24 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 
 trait CollectionAware {
-	/** @var array<string,string> */
-	private array $collectableNames;
+	/** @var string[] */
+	private array $collectableItems;
 	/** @var string[] */
 	private array $collectionKeys = array();
 	private ?string $indexKey     = null;
 
-	/** @param class-string<Collectable>|string[] $keys */
-	public function useKeys( string|array $keys, string|Collectable|null $indexKey = null ): void {
+	/** @param class-string<BackedEnum>|string[] $keys */
+	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): void {
 		$this->collectionKeys = match ( true ) {
-			is_array( $keys )                 => $keys,
-			$this->isCollectableEnum( $keys ) => $this->getKeysFromCollectableEnum( $keys ),
-			default                           => $this->throwInvalidCollectable( $keys ),
+			is_array( $keys )                  => $keys,
+			$this->isCollectableClass( $keys ) => $this->getKeysFromCollectableClass( $keys ),
+			default                            => $this->throwInvalidCollectable( $keys ),
 		};
 
 		! is_null( $indexKey )
-			&& ( $this->indexKey = $indexKey instanceof Collectable ? (string) $indexKey->value : $indexKey );
+			&& ( $this->indexKey = $indexKey instanceof BackedEnum ? (string) $indexKey->value : $indexKey );
 	}
 
-	/** @return string[] */
 	public function getKeys(): array {
 		return $this->collectionKeys;
 	}
@@ -36,29 +35,25 @@ trait CollectionAware {
 	}
 
 	/**
-	 * Allows exhibit to exclude non-mappable enum case(s) as collectable name.
+	 * Allows exhibit to exclude non-mappable collection items.
 	 *
-	 * @return array<BackedEnum>
+	 * @return array<string|BackedEnum>
 	 */
-	protected function nonMappableCases(): array {
+	protected function nonMappableItems(): array {
 		return array();
 	}
 
-	/** @param ?class-string<Collectable> $enumClass */
-	protected function setCollectableNames( ?string $enumClass = null ): static {
-		( $enumClass ??= $this->collectableEnum() )
-			&& ( $this->collectableNames ??= $enumClass::toArray( ...$this->nonMappableCases() ) );
+	/** @param ?class-string<Collectable> $classname */
+	protected function setCollectionItemsFrom( ?string $classname = null ): static {
+		( $classname ??= $this->collectableClass() )
+			&& ( $this->collectableItems ??= $classname::toArray( ...$this->nonMappableItems() ) );
 
 		return $this;
 	}
 
-	/** @return array<string,string> */
+	/** @return string[] */
 	protected function getCollectableNames(): array {
-		return $this->collectableNames ?? array();
-	}
-
-	final protected function useKeysFromCollectableEnum(): void {
-		$this->useKeys( $this->getKeysFromCollectableEnum() );
+		return $this->collectableItems ?? array();
 	}
 
 	/**
@@ -85,7 +80,7 @@ trait CollectionAware {
 	 * @throws InvalidSource When this method is used without overriding.
 	 */
 	// phpcs:enable
-	protected function collectableEnum(): string {
+	protected function collectableClass(): string {
 		throw new InvalidSource(
 			sprintf(
 				'Exhibiting class must override this method "%1$s::%2$s" before use.',
@@ -96,15 +91,15 @@ trait CollectionAware {
 	}
 
 	/**
-	 * @param ?class-string<Collectable> $enumClass
+	 * @param ?class-string<Collectable> $name
 	 * @return string[]
 	 */
-	private function getKeysFromCollectableEnum( ?string $enumClass = null ): array {
-		return array_values( $this->setCollectableNames( $enumClass )->getCollectableNames() );
+	private function getKeysFromCollectableClass( ?string $name = null ): array {
+		return $this->setCollectionItemsFrom( $name )->getCollectableNames();
 	}
 
 	/** @phpstan-assert-if-true =class-string<Collectable> $value */
-	private function isCollectableEnum( string $value ): bool {
+	private function isCollectableClass( string $value ): bool {
 		return is_a( $value, Collectable::class, allow_string: true );
 	}
 
