@@ -33,10 +33,6 @@ class TableScraperTest extends TestCase {
 			protected function isTargetedTable( DOMElement $node ): bool {
 				return 'caption' === $node->firstChild?->nodeName;
 			}
-
-			protected function collectableEnum(): string {
-				return DeveloperType::class;
-			}
 		};
 	}
 
