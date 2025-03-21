@@ -1,10 +1,8 @@
 parameters:
 	level: max
+	# Intent: ignore errors for narrowing types of a generic type.
+	treatPhpDocTypesAsCertain: false
 	paths:
 		- Src/
 		- Tests/
 	ignoreErrors:
-		- # Only certain from PHPDoc generic type. Can be turned off with treatPhpDocTypesAsCertain: false
-			message: '|with string will always evaluate to true|'
-			identifier: function.alreadyNarrowedType
-			path: Src/Traits/TableNodeAware.php
