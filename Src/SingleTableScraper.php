@@ -15,7 +15,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
 /** @template-extends Scraper<array-key,array<string>> */
-abstract class TableScraper extends Scraper {
+abstract class SingleTableScraper extends Scraper {
 	/** @use TableNodeAware<string,string> */
 	use TableNodeAware, CollectionAware {
 		TableNodeAware::flush as tableNodeFlush;

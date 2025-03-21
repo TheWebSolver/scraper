@@ -10,8 +10,8 @@ use ValueError;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
-use TheWebSolver\Codegarage\Scraper\TableScraper;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
@@ -21,7 +21,7 @@ class TableScraperTest extends TestCase {
 
 	protected function setUp(): void {
 		$this->scraper = new #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )] class()
-			extends TableScraper {
+			extends SingleTableScraper {
 			public function __construct() {
 				parent::__construct( collectableClass: DeveloperType::class );
 			}
