@@ -55,14 +55,13 @@ abstract class TableScraper extends Scraper {
 		count( $keys ) === $this->getCurrentTableRowCount()
 			|| $this->throwError( $msg, count( $keys ), implode( '", "', $keys ) );
 
-		// TODO: implement logic when $this->getCollectableNames() & $this->getKeys() are not same.
 		return new ArrayObject( $set );
 	}
 
-	public function tdParser( string|DOMElement $element, int $position ): string {
+	public function tdParser( string|DOMElement $element ): string {
 		$content = trim( is_string( $element ) ? $element : $element->textContent );
-		$item    = $this->getCurrentTableDataKey() ?? ''; // Always exists from ::trParser().
-		$value   = $this->isRequestedItem( $item ) ? trim( $content ) : '';
+		$item    = $this->getCurrentTableDataKey() ?? ''; // Always exists from row transformer.
+		$value   = $this->isRequestedItem( $item ) ? $content : '';
 
 		$value && $this->collectableClass()::validate( $value, $item, $this->throwError( ... ) );
 

@@ -9,7 +9,6 @@ use DOMElement;
 use ValueError;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\Depends;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\TableScraper;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
@@ -129,6 +128,19 @@ class TableScraperTest extends TestCase {
 			array( '<tr><td>FirstName LastName</td><td>This is a very long developer title</td><td>Address</td></tr>', DeveloperType::Title ),
 			array( '<tr><td>FirstName LastName</td><td>Title</td><td>Addr3ss</td></tr>', DeveloperType::Address ),
 		);
+	}
+
+	#[Test]
+	public function itOnlyCollectsDataWithRequestedKeys(): void {
+		$this->scraper->useKeys( $requestedKeys = array( 'name', 'address' ) );
+
+		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
+
+		foreach ( $requestedKeys as $key ) {
+			$this->assertArrayHasKey( $key, $iterator->current() ); // @phpstan-ignore-line
+		}
+
+		$this->assertArrayNotHasKey( 'title', $iterator->current() ); // @phpstan-ignore-line
 	}
 }
 
