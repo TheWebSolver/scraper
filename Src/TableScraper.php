@@ -80,8 +80,10 @@ abstract class TableScraper extends Scraper {
 
 		$this->tableNodeFlush();
 
-		foreach ( $data as $arrayObject ) {
-			yield $arrayObject->getArrayCopy();
+		foreach ( $data as $index => $arrayObject ) {
+			$data = $arrayObject->getArrayCopy();
+
+			yield $data[ $this->getIndexKey() ] ?? $index => $data;
 		}
 
 		unset( $data );

@@ -136,11 +136,30 @@ class TableScraperTest extends TestCase {
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 
+		$this->assertSame( 0, $iterator->key() );
+
 		foreach ( $requestedKeys as $key ) {
 			$this->assertArrayHasKey( $key, $iterator->current() ); // @phpstan-ignore-line
 		}
 
 		$this->assertArrayNotHasKey( 'title', $iterator->current() ); // @phpstan-ignore-line
+	}
+
+	#[Test]
+	public function itYieldsKeyAsValueOfRequestedIndexKey(): void {
+		$this->scraper->useKeys( DeveloperType::class, DeveloperType::Name );
+
+		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
+
+		$this->assertSame( 'John Doe', $iterator->key() );
+		$this->assertSame(
+			array(
+				'name'    => 'John Doe',
+				'title'   => 'PHP Developer',
+				'address' => 'Ktm',
+			),
+			$iterator->current()
+		);
 	}
 }
 
