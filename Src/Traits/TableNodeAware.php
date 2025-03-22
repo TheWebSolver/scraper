@@ -274,7 +274,7 @@ trait TableNodeAware {
 		$position       = 0;
 
 		while ( $rowIterator->valid() ) {
-			if ( ! AssertDOMElement::isNextIn( $rowIterator, type: 'tr' ) ) {
+			if ( ! AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
 				return;
 			}
 
@@ -286,7 +286,7 @@ trait TableNodeAware {
 				$head && $rowIterator->next();
 			}
 
-			if ( ! AssertDOMElement::isNextIn( $rowIterator, type: 'tr' ) ) {
+			if ( ! AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
 				return;
 			}
 

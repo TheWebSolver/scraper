@@ -52,7 +52,7 @@ class AssertDOMElementTest extends TestCase {
 		/** @var Iterator */
 		$iterator = $this->dom->getElementsByTagName( 'body' )->item( 0 )?->childNodes->getIterator();
 
-		$this->assertSame( $expected, AssertDOMElement::isNextIn( $iterator, $type )?->tagName );
+		$this->assertSame( $expected, AssertDOMElement::nextIn( $iterator, $type )?->tagName );
 	}
 
 	/** @return mixed[] */

@@ -20,7 +20,7 @@ class AssertDOMElement {
 		return $node instanceof DOMElement && ( ! $type || $type === $node->tagName );
 	}
 
-	public static function isNextIn( Iterator $iterator, string $type ): ?DOMElement {
+	public static function nextIn( Iterator $iterator, string $type ): ?DOMElement {
 		while ( ! self::isValid( $current = $iterator->current(), $type ) ) {
 			if ( ! $iterator->valid() ) {
 				return null;
@@ -36,7 +36,7 @@ class AssertDOMElement {
 		/** @var \Iterator */
 		$iterator = DOMDocumentFactory::bodyFromHtml( $string, $normalize )->childNodes->getIterator();
 
-		return self::isNextIn( $iterator, $type );
+		return self::nextIn( $iterator, $type );
 	}
 
 	private static function has( DOMElement $element, string $value, string $type ): bool {
