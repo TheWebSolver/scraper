@@ -46,22 +46,22 @@ class AssertDOMElementTest extends TestCase {
 
 	#[Test]
 	#[DataProvider( 'provideHtmlString' )]
-	public function itVerifiesWhetherGivenElementIsFound( bool $expected, string $html, string $type ): void {
-		$this->dom->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOBLANKS | LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED );
+	public function itVerifiesWhetherGivenElementIsFound( ?string $expected, string $html, string $type ): void {
+		$this->dom->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOBLANKS );
 
 		/** @var Iterator */
-		$iterator = $this->dom->childNodes->getIterator();
+		$iterator = $this->dom->getElementsByTagName( 'body' )->item( 0 )->childNodes->getIterator();
 
-		$this->assertSame( $expected, AssertDOMElement::isNextIn( $iterator, $type ) );
+		$this->assertSame( $expected, AssertDOMElement::isNextIn( $iterator, $type )?->tagName );
 	}
 
 	/** @return mixed[] */
 	public static function provideHtmlString(): array {
 		return array(
-			array( false, '<div></div>', 'ul' ),
-			array( true, '<div></div>', 'div' ),
-			array( false, '<div><!-- only comment --></div>', 'ul' ),
-			array( true, '<!-- comment --><ul></ul>', 'ul' ),
+			array( null, '<div></div>', 'ul' ),
+			array( 'div', '<section></section><div></div><ul></ul>', 'div' ),
+			array( null, '<div><!-- only comment --></div>', 'ul' ),
+			array( 'ul', '<!-- comment --><div></div><ul></ul>', 'ul' ),
 		);
 	}
 }

@@ -20,16 +20,16 @@ class AssertDOMElement {
 		return $node instanceof DOMElement && ( ! $type || $type === $node->tagName );
 	}
 
-	public static function isNextIn( Iterator $iterator, string $type ): bool {
-		while ( ! self::isValid( $iterator->current(), $type ) ) {
+	public static function isNextIn( Iterator $iterator, string $type ): ?DOMElement {
+		while ( ! self::isValid( $current = $iterator->current(), $type ) ) {
 			if ( ! $iterator->valid() ) {
-				return false;
+				return null;
 			}
 
 			$iterator->next();
 		}
 
-		return true;
+		return $current;
 	}
 
 	private static function has( DOMElement $element, string $value, string $type ): bool {
