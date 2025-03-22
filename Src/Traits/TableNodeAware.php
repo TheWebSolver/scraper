@@ -10,6 +10,7 @@ use ArrayObject;
 use DOMNodeList;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
+use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /**
@@ -236,6 +237,9 @@ trait TableNodeAware {
 		$data          = array();
 		$foundPosition = $skippedNodes = $this->currentIteration__dataCount[ $this->currentTable__id ] = 0;
 
+		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
+		$transformer = $this->transformer__instances['td'] ?? new Marshaller();
+
 		foreach ( $tableRow->childNodes as $currentIndex => $node ) {
 			if ( ! $this->isNodeTHorTD( $node ) ) {
 				++$skippedNodes;
@@ -248,7 +252,7 @@ trait TableNodeAware {
 
 			$this->tickCurrentIterationTD( $indexKey, count: $foundPosition + 1 );
 
-			$this->collectFromCurrentIterationTD( array( $node, $indexKey, $foundPosition ), $data )
+			$this->collectFromCurrentIterationTD( array( $node, $indexKey, $foundPosition, $transformer ), $data )
 				&& $this->shouldPerform__allTableScan
 				&& ( $nodes = $node->childNodes )->length > 1
 				&& $this->scanTableNodeIn( $nodes );
@@ -310,24 +314,16 @@ trait TableNodeAware {
 	}
 
 	/**
-	 * @param array{0:DOMElement,1:?array-key,2:int} $args
-	 * @param array<array-key,TdReturn>              $data
+	 * @param array{0:DOMElement,1:?array-key,2:int,3:Transformer<TdReturn>} $args
+	 * @param array<array-key,TdReturn>                                      $data
 	 * @return ?TdReturn
 	 */
 	private function collectFromCurrentIterationTD( array $args, array &$data ): mixed {
-		[$node, $key, $position] = $args;
-		$key                   ??= $position;
+		[$node, $key, $position, $transformer] = $args;
+		$key                                 ??= $position;
+		$val                                   = $transformer->transform( $node, $position );
 
-		if ( ! $transformer = ( $this->transformer__instances['td'] ?? null ) ) {
-			return $data[ $key ] = trim( $node->textContent );
-		}
-
-		$val           = $transformer->transform( $node, $position );
-		$shouldCollect = ! is_null( $val ) && '' !== $val;
-
-		$shouldCollect && ( $data[ $key ] = $val );
-
-		return $shouldCollect ? $val : null;
+		return ( ! is_null( $val ) && '' !== $val ) ? ( $data[ $key ] = $val ) : null;
 	}
 
 	private function tickCurrentIterationTD( ?string $index, int $count ): void {
