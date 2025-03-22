@@ -32,6 +32,13 @@ class AssertDOMElement {
 		return $current;
 	}
 
+	public static function inferredFrom( string $string, string $type, bool $normalize = true ): ?DOMElement {
+		/** @var \Iterator */
+		$iterator = DOMDocumentFactory::bodyFromHtml( $string, $normalize )->childNodes->getIterator();
+
+		return self::isNextIn( $iterator, $type );
+	}
+
 	private static function has( DOMElement $element, string $value, string $type ): bool {
 		foreach ( $element->attributes as $attribute ) {
 			if ( $type === $attribute->name && str_contains( $attribute->value, $value ) ) {

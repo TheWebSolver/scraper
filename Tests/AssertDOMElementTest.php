@@ -50,7 +50,7 @@ class AssertDOMElementTest extends TestCase {
 		$this->dom->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOBLANKS );
 
 		/** @var Iterator */
-		$iterator = $this->dom->getElementsByTagName( 'body' )->item( 0 )->childNodes->getIterator();
+		$iterator = $this->dom->getElementsByTagName( 'body' )->item( 0 )?->childNodes->getIterator();
 
 		$this->assertSame( $expected, AssertDOMElement::isNextIn( $iterator, $type )?->tagName );
 	}
@@ -62,6 +62,22 @@ class AssertDOMElementTest extends TestCase {
 			array( 'div', '<section></section><div></div><ul></ul>', 'div' ),
 			array( null, '<div><!-- only comment --></div>', 'ul' ),
 			array( 'ul', '<!-- comment --><div></div><ul></ul>', 'ul' ),
+		);
+	}
+
+	#[Test]
+	#[DataProvider( 'provideStringToInferElementByType' )]
+	public function itInfersDOMElementByItsTagName( string $toInfer, string $type, ?string $expected ): void {
+		$element = AssertDOMElement::inferredFrom( $toInfer, $type, normalize: false );
+
+		$this->assertSame( $expected, $element?->textContent );
+	}
+
+	/** @return mixed[] */
+	public static function provideStringToInferElementByType(): array {
+		return array(
+			array( 'content <span>skip</span><!--skip--><div>div value</div>', 'div', 'div value' ),
+			array( '<span>skip</span><!-- NO <pre> TAG HERE --><div></div>', 'pre', null ),
 		);
 	}
 }
