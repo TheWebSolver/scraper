@@ -12,28 +12,32 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
 class TableScraperTest extends TestCase {
-	private Scrapable $scraper; // @phpstan-ignore-line
+	/** @var SingleTableScraper<string> */
+	private SingleTableScraper $scraper;
 
-	protected function setUp(): void {
-		$this->scraper = new #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )] class()
-			extends SingleTableScraper {
-			public function __construct() {
-				parent::__construct( collectableClass: DeveloperType::class );
-			}
+	/**
+	 * @param Closure(string|DOMElement, int): string $marshaller
+	 * @return Transformer<string>
+	 */
+	private function withTransformedTDUsing( Closure $marshaller ): Transformer {
+		return new class( $marshaller ) implements Transformer {
+			/** @param Closure(string|DOMElement, int): string $marshaller */
+			public function __construct( private Closure $marshaller ) {}
 
-			protected function defaultCachePath(): string {
-				return DOMDocumentFactoryTest::RESOURCE_PATH;
-			}
-
-			protected function isTargetedTable( DOMElement $node ): bool {
-				return 'caption' === $node->firstChild?->nodeName;
+			public function transform( string|DOMElement $element, int $position ): string {
+				return ( $this->marshaller )( $element, $position );
 			}
 		};
+	}
+
+	protected function setUp(): void {
+		$this->scraper = new HtmlTableScraper( DeveloperDetails::class );
 	}
 
 	protected function tearDown(): void {
@@ -80,6 +84,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
+		$tr    = new TableRowMarshaller( $this->scraper, DeveloperDetails::class );
 		$table = '
 		<table>
 
@@ -88,13 +93,13 @@ class TableScraperTest extends TestCase {
 
 		  <tbody>
 				<tr>
-				  <!-- "DeveloperType::Name" -->
+				  <!-- "DeveloperDetails::Name" -->
 				  <td>John Doe</td>
 
-				  <!-- "DeveloperType::Title" -->
+				  <!-- "DeveloperDetails::Title" -->
 				  <td>Developer</td>
 
-				  <!-- third <td> also required for "DeveloperType::Address". Hence, exception thrown. -->
+				  <!-- third <td> also required for "DeveloperDetails::Address". Hence, exception thrown. -->
 				</tr>
 		  </tbody>
 		</table>
@@ -102,48 +107,55 @@ class TableScraperTest extends TestCase {
 
 		$this->expectException( ScraperError::class );
 		$this->expectExceptionMessage(
-			sprintf( Collectable::INVALID_COUNT_MESSAGE, 3, implode( '", "', $this->scraper->getKeys() ) )
+			sprintf( Collectable::INVALID_COUNT_MESSAGE, 3, 'name", "title", "address' )
 		);
 
-		$this->scraper->parse( $table )->current();
+		$this->scraper->withTransformers( compact( 'tr' ) )->parse( $table )->current();
 	}
 
 	#[Test]
 	#[DataProvider( 'providesInvalidTableData' )]
-	public function itThrowsExceptionWhenEachScrapedDataIsValidated( string $content, DeveloperType $type ): void {
+	public function itThrowsExceptionWhenEachScrapedDataIsValidated( string $content, DeveloperDetails $type ): void {
 		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
+		$td    = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
 
 		$this->expectExceptionMessage( $type->errorMsg() );
-		$this->scraper->parse( $table )->current();
+		$this->scraper->withTransformers( compact( 'td' ) )->parse( $table )->current();
 	}
 
 	/** @return mixed[] */
 	public static function providesInvalidTableData(): array {
 		return array(
-			array( '<tr><td>FirstName-LastName</td><td>Title</td><td>Address</td></tr>', DeveloperType::Name ),
-			array( '<tr><td>FirstName LastName</td><td>This is a very long developer title</td><td>Address</td></tr>', DeveloperType::Title ),
-			array( '<tr><td>FirstName LastName</td><td>Title</td><td>Addr3ss</td></tr>', DeveloperType::Address ),
+			array( '<tr><td>FirstName-LastName</td><td>Title</td><td>Address</td></tr>', DeveloperDetails::Name ),
+			array( '<tr><td>FirstName LastName</td><td>This is a very long developer title</td><td>Address</td></tr>', DeveloperDetails::Title ),
+			array( '<tr><td>FirstName LastName</td><td>Title</td><td>Addr3ss</td></tr>', DeveloperDetails::Address ),
 		);
 	}
 
 	#[Test]
 	public function itOnlyCollectsDataWithRequestedKeys(): void {
-		$this->scraper->useKeys( $requestedKeys = array( 'name', 'address' ) );
+		$td = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
+
+		$this->scraper->withTransformers( compact( 'td' ) )->useKeys( $requestedKeys = array( 'name', 'address' ) );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
+		$current  = $iterator->current();
 
 		$this->assertSame( 0, $iterator->key() );
 
 		foreach ( $requestedKeys as $key ) {
-			$this->assertArrayHasKey( $key, $iterator->current() ); // @phpstan-ignore-line
+			$this->assertArrayHasKey( $key, $current );
 		}
 
-		$this->assertArrayNotHasKey( 'title', $iterator->current() ); // @phpstan-ignore-line
+		$this->assertArrayNotHasKey( 'title', $current );
 	}
 
 	#[Test]
 	public function itYieldsKeyAsValueOfRequestedIndexKey(): void {
-		$this->scraper->useKeys( DeveloperType::class, DeveloperType::Name );
+		$td = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
+
+		$this->scraper->withTransformers( compact( 'td' ) );
+		$this->scraper->useKeys( DeveloperDetails::class, DeveloperDetails::Name );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 
@@ -161,7 +173,21 @@ class TableScraperTest extends TestCase {
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 
-enum DeveloperType: string implements Collectable {
+/**
+ * @template-extends SingleTableScraper<string>
+ */
+#[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )]
+class HtmlTableScraper extends SingleTableScraper {
+	protected function defaultCachePath(): string {
+		return DOMDocumentFactoryTest::RESOURCE_PATH;
+	}
+
+	protected function isTargetedTable( DOMElement $node ): bool {
+		return 'caption' === $node->firstChild?->nodeName;
+	}
+}
+
+enum DeveloperDetails: string implements Collectable {
 	case Name    = 'name';
 	case Title   = 'title';
 	case Address = 'address';

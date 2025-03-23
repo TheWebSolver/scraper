@@ -39,8 +39,8 @@ class CollectionSetTest extends TestCase {
 	}
 
 	/**
-	 * @param array{0:string[],1:?string}       $expected
-	 * @param class-string<BackedEnum>|string[] $keys
+	 * @param array{0:list<string>,1:?string}       $expected
+	 * @param class-string<BackedEnum>|list<string> $keys
 	 */
 	#[Test]
 	#[DataProvider( 'provideCollectionKeys' )]

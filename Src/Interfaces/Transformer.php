@@ -6,16 +6,8 @@ namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-/** @template TReturn */
+/** @template-covariant TReturn */
 interface Transformer {
-	/**
-	 * Transforms element using the provided callback.
-	 *
-	 * @param callable(string|DomElement, int): TReturn $callback
-	 * @return self<TReturn>
-	 */
-	public function with( callable $callback ): self;
-
 	/**
 	 * Transforms given element to the generic datatype.
 	 *

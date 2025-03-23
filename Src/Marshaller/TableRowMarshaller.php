@@ -3,59 +3,53 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 
-use Closure;
 use DOMElement;
 use ArrayObject;
+use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
-use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
+use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
-/** @template-implements Transformer<ArrayObject<array-key,string>|DOMElement> */
+/**
+ * @template ThReturn
+ * @template TdReturn
+ * @template-implements Transformer<ArrayObject<array-key,TdReturn>>
+ */
 class TableRowMarshaller implements Transformer {
-	/** @var Closure(string|DOMElement, int): (ArrayObject<array-key,string>|DOMElement) */
-	private Closure $marshaller;
+	private const TR_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
 
-	public function with( callable $callback ): static {
-		$this->marshaller = $callback( ... );
+	/**
+	 * @param TableTracer<ThReturn,TdReturn> $tracer
+	 * @param class-string<Collectable>      $collectable
+	 */
+	public function __construct( private TableTracer $tracer, private string $collectable ) {}
 
-		return $this;
-	}
+	public function transform( string|DOMElement $element, int $position ): mixed {
+		$set   = $this->tracer->inferTableDataFrom( self::validate( $element )->childNodes );
+		$names = $this->tracer->getColumnNames();
 
-	public function transform( string|DOMElement $element, int $position ): ArrayObject|DOMElement {
-		if ( isset( $this->marshaller ) ) {
-			return ( $this->marshaller )( $element, $position );
-		}
+		count( $names ) === $this->tracer->getCurrentIterationCountOf( Table::Column )
+			|| throw ScraperError::trigger(
+				sprintf( $this->collectable::invalidCountMsg(), count( $names ), implode( '", "', $names ) )
+				. ( ScraperError::getSource()?->errorMsg() ?? '' )
+			);
 
-		return self::validate( $element );
+		return new ArrayObject( $set );
 	}
 
 	/** @throws InvalidSource When given $element is not <tr> or does not have child nodes. */
 	public static function validate( string|DOMElement $element ): DOMElement {
-		$element instanceof DOMElement || $element = self::inferFrom( $element );
-
-		return AssertDOMElement::isValid( $element, type: 'tr' )
-			? $element
-			: throw new InvalidSource( 'Impossible to infer as <tr> DOM Element from given string.' );
-	}
-
-	/** @throws InvalidSource When given $value does not contain <tr> HTML Element. */
-	public static function inferFrom( string $value ): ?DOMElement {
-		$dom = DOMDocumentFactory::createFromHtml( $value );
-		$tr  = null;
-
-		if ( ! $dom->childNodes->length ) {
-			throw new InvalidSource( 'Given string does not contain <tr> HTML Element.' );
+		if ( ! $element instanceof DOMElement ) {
+			$el   = AssertDOMElement::inferredFrom( $element, type: 'tr' );
+			$type = 'string';
+		} else {
+			$el   = AssertDOMElement::isValid( $element, type: 'tr' ) ? $element : null;
+			$type = "<{$element->tagName}> element";
 		}
 
-		foreach ( $dom->childNodes as $node ) {
-			if ( AssertDOMElement::isValid( $node, type: 'tr' ) ) {
-				$tr = $node;
-
-				break;
-			}
-		}
-
-		return $tr;
+		return $el ?? throw new InvalidSource( sprintf( self::TR_NOT_FOUND, $type ) );
 	}
 }

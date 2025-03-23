@@ -28,7 +28,7 @@ interface Collectable {
 	 * Gets collection items.
 	 *
 	 * @param string|BackedEnum ...$except The item(s) to be excluded from collection set.
-	 * @return string[]
+	 * @return list<string>
 	 */
 	public static function toArray( string|BackedEnum ...$except ): array;
 

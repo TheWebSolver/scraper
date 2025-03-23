@@ -8,14 +8,14 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 
 trait CollectionAware {
-	/** @var string[] */
+	/** @var list<string> */
 	private array $collectableItems;
-	/** @var string[] */
+	/** @var list<string> */
 	private array $collectionKeys = array();
 	private ?string $indexKey     = null;
 
-	/** @param class-string<BackedEnum>|string[] $keys */
-	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): void {
+	/** @param class-string<BackedEnum>|list<string> $keys */
+	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): static {
 		$this->collectionKeys = match ( true ) {
 			is_array( $keys )                  => $keys,
 			$this->isCollectableClass( $keys ) => $this->getKeysFromCollectableClass( $keys ),
@@ -24,6 +24,8 @@ trait CollectionAware {
 
 		! is_null( $indexKey )
 			&& ( $this->indexKey = $indexKey instanceof BackedEnum ? (string) $indexKey->value : $indexKey );
+
+		return $this;
 	}
 
 	public function getKeys(): array {
@@ -51,7 +53,7 @@ trait CollectionAware {
 		return $this;
 	}
 
-	/** @return string[] */
+	/** @return list<string> */
 	protected function getCollectableNames(): array {
 		return $this->collectableItems ?? array();
 	}
@@ -82,7 +84,7 @@ trait CollectionAware {
 
 	/**
 	 * @param ?class-string<Collectable> $name
-	 * @return string[]
+	 * @return list<string>
 	 */
 	private function getKeysFromCollectableClass( ?string $name = null ): array {
 		return $this->setCollectionItemsFrom( $name )->getCollectableNames();

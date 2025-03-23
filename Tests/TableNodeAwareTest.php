@@ -8,10 +8,12 @@ use DOMElement;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
+use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
-use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 class TableNodeAwareTest extends TestCase {
 	final public const TABLE_SOURCE = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR . 'table.html';
@@ -25,47 +27,30 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner = new DOMNodeScanner( $innerTable );
 
-		$scanner->scanTableNodeIn( $dom->childNodes );
+		$scanner->traceTableIn( $dom->childNodes );
 
-		$this->assertCount( 1, $tableIds = $scanner->getTableIds() );
+		$this->assertCount( 1, $tableIds = $scanner->getTableId() );
 		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ][0] );
-
-		$onlyContentScanner = new DOMNodeScanner( $innerTable );
-		$tdMarshaller       = new Marshaller();
-		$tdMarshaller->with(
-			fn ( string|DOMElement $node )
-			=> substr( $node instanceof DOMElement ? $node->textContent : $node, offset: 3 )
-		);
-
-		$onlyContentScanner
-			->useTransformers( array( 'td' => $tdMarshaller ) )
-			->scanTableNodeIn( $dom->childNodes );
-
-		$this->assertSame(
-			array( 'First Data', 'Second Data' ),
-			$onlyContentScanner->getTableData()[ $onlyContentScanner->getTableIds()[0] ][0]->getArrayCopy()
-		);
 	}
 
 	#[Test]
 	public function itGetsTheTargetedTableNode(): void {
-		$handler = new DOMNodeScanner();
-		$dom     = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
-
-		$thMarshaller = new Marshaller();
-
-		$thMarshaller->with(
-			fn ( string|DOMElement $e ) => explode( '[', $e instanceof DOMElement ? $e->textContent : $e )[0]
-		);
+		$handler      = new DOMNodeScanner();
+		$dom          = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
+		$thMarshaller = new class() implements Transformer {
+			public function transform( string|DOMElement $element, int $position ): string {
+				return explode( '[', $element instanceof DOMElement ? $element->textContent : $element )[0];
+			}
+		};
 
 		$handler
-			->useTransformers( array( 'th' => $thMarshaller ) )
-			->withAllTableNodes()
-			->scanTableNodeIn( $dom->childNodes );
+			->withTransformers( array( 'th' => $thMarshaller ) )
+			->withAllTables()
+			->traceTableIn( $dom->childNodes );
 
-		$this->assertCount( 3, $handler->getTableIds() );
+		$this->assertCount( 3, $handler->getTableId() );
 
-		$ids  = $handler->getTableIds();
+		$ids  = $handler->getTableId();
 		$th   = $handler->getTableHead( true )[ $ids[0] ]->toArray();
 		$data = $handler->getTableData();
 
@@ -76,6 +61,7 @@ class TableNodeAwareTest extends TestCase {
 			array( 'Lorem Ipsum', 'JS Developer', 'Bkt' ),
 			array_values( $data[ $ids[0] ][1]->getArrayCopy() )
 		);
+		$this->assertSame( 'Bkt', $data[ $ids[1] ][0]->getArrayCopy()[0] );
 		$this->assertSame(
 			array( '1: First Data', '2: Second Data' ),
 			array_values( $data[ $ids[2] ][0]->getArrayCopy() )
@@ -114,9 +100,9 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner = new DOMNodeScanner();
 
-		$scanner->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+		$scanner->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
-		$tableIds  = $scanner->getTableIds();
+		$tableIds  = $scanner->getTableId();
 		$fixedHead = $scanner->getTableHead( namesOnly: true )[ $tableIds[0] ];
 		$data      = $scanner->getTableData()[ $tableIds[0] ];
 
@@ -137,7 +123,7 @@ class TableNodeAwareTest extends TestCase {
 	public function itParsesInvalidTableGracefully( string $html, bool $hasHead = false ): void {
 		$scanner = new DOMNodeScanner();
 
-		$scanner->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $html )->childNodes );
+		$scanner->traceTableIn( DOMDocumentFactory::createFromHtml( $html )->childNodes );
 
 		$this->assertEmpty( $scanner->getTableData() );
 
@@ -175,15 +161,19 @@ class TableNodeAwareTest extends TestCase {
 			</table>
 		';
 
-		$tdMarshaller = static function ( string|DOMElement $node ): string {
-			return is_string( $node ) ? $node : ( str_contains( $text = $node->textContent, 'Two' ) ? '' : $text );
+		$tdMarshaller = new class() implements Transformer {
+			public function transform( string|DOMElement $element, int $position ): string {
+				$content = $element instanceof DOMElement ? $element->textContent : $element;
+
+				return str_contains( $content, 'Two' ) ? '' : $content;
+			}
 		};
 
-		$scanner->useTransformers( array( 'td' => ( new Marshaller() )->with( $tdMarshaller ) ) )
-			->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+		$scanner->withTransformers( array( 'td' => $tdMarshaller ) )
+			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
-		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableIds()[0] ][0]->getArrayCopy() );
-		$this->assertSame( 2, $scanner->getCurrentTableRowCount() );
+		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ][0]->getArrayCopy() );
+		$this->assertSame( 2, $scanner->getCurrentIterationCountOf( Table::Column ) );
 		$this->assertArrayHasKey( 'First', $data );
 		$this->assertArrayNotHasKey( 'Last', $data, 'Skips falsy (empty string) transformed value.' );
 	}
@@ -229,14 +219,12 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner  = new DOMNodeScanner();
 		$asserter = static function ( string|DOMElement $el, int $pos ) use ( $scanner ) {
-			if ( is_string( $el ) ) {
-				return $el;
-			}
+			self::assertInstanceOf( DOMElement::class, $el );
 
 			$text = $el->textContent;
 
 			match ( true ) {
-				default => null,
+				default => throw new \LogicException( 'This should never be thrown. All tables are covered.' ),
 
 				str_starts_with( $text, '0' )  => self::assertKeyAndPosition( $scanner, 'Top 0', 0, $pos ),
 				str_starts_with( $text, '1' )  => self::assertKeyAndPosition( $scanner, 'Top 1', 1, $pos ),
@@ -253,9 +241,19 @@ class TableNodeAwareTest extends TestCase {
 			return $text;
 		};
 
-		$scanner->withAllTableNodes()
-			->useTransformers( array( 'td' => ( new Marshaller() )->with( $asserter ) ) )
-			->scanTableNodeIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+		$tdTransformer = new class( $asserter ) implements Transformer {
+			public function __construct( private Closure $asserter ) {}
+
+			public function transform( string|DOMElement $element, int $position ): string {
+				( $this->asserter )( $element, $position );
+
+				return 'Assertion transformer. Any non-empty-string can be returned for this test.';
+			}
+		};
+
+		$scanner->withAllTables()
+			->withTransformers( array( 'td' => $tdTransformer ) )
+			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 	}
 
 	private static function assertKeyAndPosition(
@@ -264,20 +262,18 @@ class TableNodeAwareTest extends TestCase {
 		int $expectedPosition,
 		int $actualPosition
 	): void {
-		self::assertSame( $key, $scanner->getCurrentTableDataKey() );
+		self::assertSame( $key, $scanner->getCurrentColumnName() );
 		self::assertSame( $expectedPosition, $actualPosition );
-		self::assertSame( $expectedPosition + 1, $scanner->getCurrentTableRowCount() );
+		self::assertSame( $expectedPosition + 1, $scanner->getCurrentIterationCountOf( Table::Column ) );
 	}
 }
 
 
-// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
-class DOMNodeScanner {
+// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
+/** @template-implements TableTracer<string,string> */
+class DOMNodeScanner implements TableTracer {
 	/** @use TableNodeAware<string,string> */
-	use TableNodeAware {
-		TableNodeAware::getCurrentTableRowCount as public;
-		TableNodeAware::getCurrentTableDataKey as public;
-	}
+	use TableNodeAware;
 
 	/** @param Closure(DOMElement, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}

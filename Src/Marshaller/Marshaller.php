@@ -3,25 +3,12 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 
-use Closure;
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /** @template-implements Transformer<string> */
 class Marshaller implements Transformer {
-	/** @var Closure(string|DomElement, int): string */
-	private Closure $callback;
-
-	public function with( callable $callback ): static {
-		$this->callback = $callback( ... );
-
-		return $this;
-	}
-
 	public function transform( string|DOMElement $element, int $position ): string {
-		$content  = $element instanceof DOMElement ? $element->textContent : $element;
-		$marshall = $this->callback ?? null;
-
-		return trim( $marshall ? $marshall( $element, $position ) : $content );
+		return trim( $element instanceof DOMElement ? $element->textContent : $element );
 	}
 }
