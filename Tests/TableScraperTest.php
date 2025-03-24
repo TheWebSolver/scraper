@@ -113,22 +113,56 @@ class TableScraperTest extends TestCase {
 		$this->scraper->withTransformers( compact( 'tr' ) )->parse( $table )->current();
 	}
 
+	/** @param ?array{0:array-key,1:string[]} $expectedValue */
 	#[Test]
-	#[DataProvider( 'providesInvalidTableData' )]
-	public function itThrowsExceptionWhenEachScrapedDataIsValidated( string $content, DeveloperDetails $type ): void {
+	#[DataProvider( 'providesValidAndInvalidTableData' )]
+	public function itThrowsExceptionWhenEachScrapedDataIsValidated(
+		string $content,
+		DeveloperDetails $type,
+		?array $expectedValue = null
+	): void {
 		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
+		$tr    = new TableRowMarshaller( $this->scraper, DeveloperDetails::class, 'address' );
 		$td    = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
 
-		$this->expectExceptionMessage( $type->errorMsg() );
-		$this->scraper->withTransformers( compact( 'td' ) )->parse( $table )->current();
+		if ( null === $expectedValue ) {
+			$this->expectExceptionMessage( $type->errorMsg() );
+		}
+
+		$iterator      = $this->scraper->withTransformers( compact( 'tr', 'td' ) )->parse( $table );
+		[$key, $value] = $expectedValue ?? array( null, null );
+
+		$this->assertSame( $key, $iterator->key() );
+		$this->assertSame( $value, $iterator->current() );
 	}
 
 	/** @return mixed[] */
-	public static function providesInvalidTableData(): array {
+	public static function providesValidAndInvalidTableData(): array {
 		return array(
-			array( '<tr><td>FirstName-LastName</td><td>Title</td><td>Address</td></tr>', DeveloperDetails::Name ),
-			array( '<tr><td>FirstName LastName</td><td>This is a very long developer title</td><td>Address</td></tr>', DeveloperDetails::Title ),
-			array( '<tr><td>FirstName LastName</td><td>Title</td><td>Addr3ss</td></tr>', DeveloperDetails::Address ),
+			array(
+				'<tr><td>FirstName-LastName</td><td>Title</td><td>Address</td></tr>',
+				DeveloperDetails::Name,
+			),
+			array(
+				'<tr><td>FirstName LastName</td><td>This is a very long developer title</td><td>Address</td></tr>',
+				DeveloperDetails::Title,
+			),
+			array(
+				'<tr><td>FirstName LastName</td><td>Title</td><td>Addr3ss</td></tr>',
+				DeveloperDetails::Address,
+			),
+			array(
+				'<tr><td>Valid Name</td><td>Valid Title</td><td>Located</td></tr>',
+				DeveloperDetails::Address,
+				array(
+					'Located',
+					array(
+						'name'    => 'Valid Name',
+						'title'   => 'Valid Title',
+						'address' => 'Located',
+					),
+				),
+			),
 		);
 	}
 

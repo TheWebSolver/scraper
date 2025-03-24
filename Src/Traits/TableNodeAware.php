@@ -12,6 +12,7 @@ use DOMNodeList;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
+use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -28,11 +29,11 @@ trait TableNodeAware {
 	private array $foundTable__ids = array();
 	/** @var array<int,ArrayObject<int,ThReturn>> */
 	private array $scannedTable__heads;
-	/** @var array<int,array<int,ArrayObject<array-key,TdReturn>>> */
+	/** @var array<int,array<array-key,ArrayObject<array-key,TdReturn>>> */
 	private array $scannedTable__rows = array();
 	/** @var array<int,SplFixedArray<string>> */
 	private array $scannedTable__headNames = array();
-	/** @var array{tr?:Transformer<ArrayObject<array-key,TdReturn>|DOMElement>,th?:Transformer<ThReturn>,td?:Transformer<TdReturn>} */
+	/** @var array{tr?:Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,th?:Transformer<ThReturn>,td?:Transformer<TdReturn>} */
 	private array $transformer__instances;
 	private int $currentTable__id;
 	/** @var array<int,list<string>> */
@@ -81,7 +82,7 @@ trait TableNodeAware {
 		return $namesOnly ? $this->scannedTable__headNames : $this->scannedTable__heads;
 	}
 
-	/** @return array<int,array<int,ArrayObject<array-key,TdReturn>>> */
+	/** @return array<int,array<array-key,ArrayObject<array-key,TdReturn>>> */
 	public function getTableData(): array {
 		return $this->scannedTable__rows;
 	}
@@ -283,7 +284,7 @@ trait TableNodeAware {
 	/**
 	 * @param ?list<string> $head
 	 * @param DOMElement    $body
-	 * @return Iterator<int,ArrayObject<array-key,TdReturn>>
+	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
 	 */
 	protected function fromTableContents( int $tableId, ?array $head, DOMElement $body ): Iterator {
 		$this->setTableId( $tableId );
@@ -319,11 +320,17 @@ trait TableNodeAware {
 
 			// TODO: add support whether to skip yielding empty <tr> or not.
 			if ( trim( $current->textContent ) ) {
-				$row = $rowTransformer?->transform( $current, $position++ ) ?? $current;
+				$row = $rowTransformer?->transform( $current, $position ) ?? $current->childNodes;
 
 				$head && ! $this->getColumnNames() && $this->setColumnNames( $head );
 
-				yield $row instanceof ArrayObject ? $row : new ArrayObject( $this->inferTableDataFrom( $row->childNodes ) );
+				if ( $row instanceof CollectionSet ) {
+					yield $row->key => $row->value;
+				} else {
+					yield new ArrayObject( $this->inferTableDataFrom( $row ) );
+				}
+
+				++$position;
 			}
 		}//end while
 	}

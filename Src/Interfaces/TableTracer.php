@@ -4,10 +4,10 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use DOMNode;
-use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 
 /**
  * @template ThReturn
@@ -26,7 +26,7 @@ interface TableTracer {
 	 * Also, each call must only override for its respective index key.
 	 *
 	 * @param array{
-	 *   tr ?: Transformer<ArrayObject<array-key,TdReturn>|DOMElement>,
+	 *   tr ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
 	 *   th ?: Transformer<ThReturn>,
 	 *   td ?: Transformer<TdReturn>
 	 * } $transformers
