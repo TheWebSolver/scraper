@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use DOMNode;
+use Iterator;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
@@ -81,7 +82,7 @@ interface TableTracer {
 	/**
 	 * Gets collection of traced table data indexed by respective table ID.
 	 *
-	 * @return array<int,array<int,ArrayObject<array-key,TdReturn>>>
+	 * @return array<int,Iterator<int,ArrayObject<array-key,TdReturn>>>
 	 */
 	public function getTableData(): array;
 

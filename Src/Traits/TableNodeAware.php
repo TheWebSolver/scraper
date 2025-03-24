@@ -28,16 +28,23 @@ trait TableNodeAware {
 	/** @var int[] */
 	private array $foundTable__ids = array();
 	/** @var array<int,ArrayObject<int,ThReturn>> */
-	private array $scannedTable__heads;
-	/** @var array<int,array<array-key,ArrayObject<array-key,TdReturn>>> */
-	private array $scannedTable__rows = array();
+	private array $scannedTable__heads = array();
 	/** @var array<int,SplFixedArray<string>> */
 	private array $scannedTable__headNames = array();
-	/** @var array{tr?:Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,th?:Transformer<ThReturn>,td?:Transformer<TdReturn>} */
-	private array $transformer__instances;
+	/** @var array<int,Iterator<array-key,ArrayObject<array-key,TdReturn>>> */
+	private array $scannedTable__rows = array();
 	private int $currentTable__id;
 	/** @var array<int,list<string>> */
 	private array $currentTable__columnNames;
+
+	/**
+	 * @var array{
+	 *   tr ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
+	 *   th ?: Transformer<ThReturn>,
+	 *   td ?: Transformer<TdReturn>
+	 * }
+	 */
+	private array $transformer__instances;
 
 	/** @var array<int,int> */
 	private array $currentIteration__columnCount   = array();
@@ -82,9 +89,37 @@ trait TableNodeAware {
 		return $namesOnly ? $this->scannedTable__headNames : $this->scannedTable__heads;
 	}
 
-	/** @return array<int,array<array-key,ArrayObject<array-key,TdReturn>>> */
+	/** @return array<int,Iterator<array-key,ArrayObject<array-key,TdReturn>>> */
 	public function getTableData(): array {
 		return $this->scannedTable__rows;
+	}
+
+	public function withAllTables( bool $trace = true ): static {
+		$this->shouldPerform__allTableScan = $trace;
+
+		return $this;
+	}
+
+	public function traceTableIn( iterable $elementList ): void {
+		$elementList instanceof DOMNodeList || throw new InvalidSource(
+			sprintf( 'Table Node tracer only accepts "%1$s".', DOMNodeList::class )
+		);
+
+		foreach ( $elementList as $node ) {
+			if ( ! $tableElements = $this->tableStructureIn( $node ) ) {
+				continue;
+			}
+
+			[$head, $body] = $tableElements;
+			$tableId       = spl_object_id( $node ) + spl_object_id( $body );
+			$iterator      = $this->iteratorFromTableContent( $tableId, $head, $body );
+
+			$iterator->valid() && ( $this->scannedTable__rows[ $tableId ] = $iterator );
+
+			if ( $this->foundTargetedTable( $node ) ) {
+				break;
+			}
+		}
 	}
 
 	public function inferTableDataFrom( iterable $elementList ): array {
@@ -105,8 +140,7 @@ trait TableNodeAware {
 			$foundPosition = $currentIndex - $skippedNodes;
 			$indexKey      = isset( $keys[ $foundPosition ] ) ? $keys[ $foundPosition ] : null;
 
-			$this->tickCurrentIterationTD( $indexKey, count: $foundPosition + 1 );
-
+			$this->registerCurrentIterationTD( $indexKey, count: $foundPosition + 1 );
 			$this->collectFromCurrentIterationTD( array( $node, $indexKey, $foundPosition, $transformer ), $data )
 				&& $this->shouldPerform__allTableScan
 				&& ( $nodes = $node->childNodes )->length > 1
@@ -116,32 +150,6 @@ trait TableNodeAware {
 		$this->currentIteration__columnIndex = null;
 
 		return $data;
-	}
-
-	public function withAllTables( bool $trace = true ): static {
-		$this->shouldPerform__allTableScan = $trace;
-
-		return $this;
-	}
-
-	public function traceTableIn( iterable $elementList ): void {
-		$elementList instanceof DOMNodeList || throw new InvalidSource(
-			sprintf( 'Table Node tracer only accepts "%1$s".', DOMNodeList::class )
-		);
-
-		foreach ( $elementList as $node ) {
-			if ( ! $contents = $this->validateContentsOf( $node, $id = spl_object_id( $node ) ) ) {
-				continue;
-			}
-
-			$iterator = $this->fromTableContents( $id, ...$contents );
-
-			$iterator->valid() && ( $this->scannedTable__rows[ $id ] = iterator_to_array( $iterator ) );
-
-			if ( $this->foundTargetedTable( $node ) ) {
-				break;
-			}
-		}
 	}
 
 	protected function flushTableNodeTrace(): void {
@@ -187,35 +195,24 @@ trait TableNodeAware {
 		return $node instanceof DOMElement && in_array( $node->tagName, array( 'th', 'td' ), strict: true );
 	}
 
-	/** @return ?list<string> */
-	protected function scanTableHead( DOMNode $node, int $tableId ): ?array {
+	/** @return ?array{0:list<string>,1:list<ThReturn>} */
+	protected function inferTableHead( DOMNode $node ): ?array {
 		$thTransformer = $this->transformer__instances['th'] ?? null;
-		$collection    = new ArrayObject();
-		$names         = array();
+		$names         = $collection = array();
 		$position      = 0;
 
-		foreach ( $node->childNodes as $node ) {
-			if ( ! AssertDOMElement::isValid( $node, type: 'th' ) ) {
+		foreach ( $node->childNodes as $headNode ) {
+			if ( ! AssertDOMElement::isValid( $headNode, type: 'th' ) ) {
 				continue;
 			}
 
-			$trimmed = trim( $node->textContent );
-			$content = $thTransformer?->transform( $node, $position++ ) ?? $trimmed;
-			$names[] = is_string( $content ) ? $content : $trimmed;
-
-			$collection->append( $content );
+			$trimmed      = trim( $headNode->textContent );
+			$content      = $thTransformer?->transform( $headNode, $position++ ) ?? $trimmed;
+			$names[]      = is_string( $content ) ? $content : $trimmed;
+			$collection[] = $content;
 		}
 
-		if ( ! $collection->count() ) {
-			return null;
-		}
-
-		$this->setTableId( $tableId );
-
-		$this->scannedTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
-		$this->scannedTable__heads[ $tableId ]     = $collection;
-
-		return $names;
+		return $collection ? array( $names, $collection ) : null;
 	}
 
 	/** @return ?Iterator<int,DOMNode> */
@@ -232,9 +229,9 @@ trait TableNodeAware {
 			: null;
 	}
 
-	/** @return ?list<string> */
-	protected function tableHeadContentFrom( DOMNode $node, int $tableId, ?DOMElement $row = null ): ?array {
-		if ( 'thead' !== $node->nodeName ) {
+	/** @return ?array{0:list<string>,1:list<ThReturn>} */
+	protected function tableHeadContentFrom( DOMNode $node, ?DOMElement $row = null ): ?array {
+		if ( ! AssertDOMElement::isValid( $node, type: 'thead' ) ) {
 			return null;
 		}
 
@@ -247,11 +244,11 @@ trait TableNodeAware {
 			$headIterator->next();
 		}
 
-		return $row ? $this->scanTableHead( $row, $tableId ) : null;
+		return $row ? $this->inferTableHead( $row ) : null;
 	}
 
-	/** @return ?array{0:?list<string>,1:?DOMElement} */
-	protected function tableContentFrom( DOMNode $node, int $tableId, ?DOMElement $body = null ): ?array {
+	/** @return ?array{0:?array{0:list<string>,1:list<ThReturn>},1:DOMElement} */
+	protected function tableStructureIn( DOMNode $node, ?DOMElement $body = null ): ?array {
 		if ( ! $tableIterator = $this->fromTargetedHtmlTable( $node ) ) {
 			return null;
 		}
@@ -261,7 +258,7 @@ trait TableNodeAware {
 			$tableIterator->next();
 		}
 
-		if ( $head = $this->tableHeadContentFrom( $tableIterator->current(), $tableId ) ) {
+		if ( $head = $this->tableHeadContentFrom( $tableIterator->current() ) ) {
 			$tableIterator->next();
 		}
 
@@ -271,22 +268,15 @@ trait TableNodeAware {
 			$tableIterator->next();
 		}
 
-		return array( $head, $body );
-	}
-
-	/** @return ?array{0:?list<string>,1:DOMElement} */
-	protected function validateContentsOf( DOMNode $node, int $tableId ): ?array {
-		$content = $this->tableContentFrom( $node, $tableId );
-
-		return ! $content || ! $content[1] ? null : $content;
+		return $body ? array( $head, $body ) : null;
 	}
 
 	/**
-	 * @param ?list<string> $head
-	 * @param DOMElement    $body
+	 * @param ?array{0:list<string>,1:list<ThReturn>} $head
+	 * @param DOMElement                              $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
 	 */
-	protected function fromTableContents( int $tableId, ?array $head, DOMElement $body ): Iterator {
+	protected function iteratorFromTableContent( int $tableId, ?array $head, DOMElement $body ): Iterator {
 		$this->setTableId( $tableId );
 
 		isset( $this->foundTable__event ) && ( $this->foundTable__event )( $this );
@@ -294,7 +284,7 @@ trait TableNodeAware {
 		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
 		$rowIterator    = $body->childNodes->getIterator();
 		$rowTransformer = $this->transformer__instances['tr'] ?? null;
-		$scannedTh      = false;
+		$scannedTh      = $registeredTh = false;
 		$position       = 0;
 
 		while ( $rowIterator->valid() ) {
@@ -304,10 +294,16 @@ trait TableNodeAware {
 
 			if ( ! $scannedTh && ! $head ) {
 				$scannedTh = true;
-				$head    ??= $this->scanTableHead( $rowIterator->current(), $tableId );
+				$head      = $this->inferTableHead( $rowIterator->current() );
 
 				// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
 				$head && $rowIterator->next();
+			}
+
+			if ( ! $registeredTh && $head ) {
+				$this->registerCurrentTableTH( $tableId, ...$head );
+
+				$registeredTh = true;
 			}
 
 			if ( ! AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
@@ -322,7 +318,7 @@ trait TableNodeAware {
 			if ( trim( $current->textContent ) ) {
 				$row = $rowTransformer?->transform( $current, $position ) ?? $current->childNodes;
 
-				$head && ! $this->getColumnNames() && $this->setColumnNames( $head );
+				$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0] );
 
 				if ( $row instanceof CollectionSet ) {
 					yield $row->key => $row->value;
@@ -354,7 +350,16 @@ trait TableNodeAware {
 		return ( ! is_null( $val ) && '' !== $val ) ? ( $data[ $key ] = $val ) : null;
 	}
 
-	private function tickCurrentIterationTD( ?string $index, int $count ): void {
+	/**
+	 * @param list<string>   $names
+	 * @param list<ThReturn> $contents
+	 */
+	private function registerCurrentTableTH( int $tableId, array $names, array $contents ): void {
+		$this->scannedTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
+		$this->scannedTable__heads[ $tableId ]     = new ArrayObject( $contents );
+	}
+
+	private function registerCurrentIterationTD( ?string $index, int $count ): void {
 		$this->currentIteration__columnCount[ $this->currentTable__id ] = $count;
 		$this->currentIteration__columnIndex                            = $index;
 	}

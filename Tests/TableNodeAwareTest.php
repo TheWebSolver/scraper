@@ -30,7 +30,7 @@ class TableNodeAwareTest extends TestCase {
 		$scanner->traceTableIn( $dom->childNodes );
 
 		$this->assertCount( 1, $tableIds = $scanner->getTableId() );
-		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ][0] );
+		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ]->current() );
 	}
 
 	#[Test]
@@ -48,24 +48,33 @@ class TableNodeAwareTest extends TestCase {
 			->withAllTables()
 			->traceTableIn( $dom->childNodes );
 
-		$this->assertCount( 3, $handler->getTableId() );
-
-		$ids  = $handler->getTableId();
-		$th   = $handler->getTableHead( true )[ $ids[0] ]->toArray();
-		$data = $handler->getTableData();
+		$ids       = $handler->getTableId();
+		$th        = $handler->getTableHead( true )[ $ids[0] ]->toArray();
+		$data      = $handler->getTableData();
+		$devTable  = $data[ $ids[0] ];
+		$dataTable = $data[ $ids[1] ];
 
 		$this->assertSame( array( 'Name', 'Title', 'Address' ), $th );
-		$this->assertEqualsCanonicalizing( array_keys( $first = $data[ $ids[0] ][0]->getArrayCopy() ), $th );
+		$this->assertEqualsCanonicalizing( array_keys( $first = $devTable->current()->getArrayCopy() ), $th );
 		$this->assertSame( array( 'John Doe', 'PHP Developer', 'Ktm' ), array_values( $first ) );
+
+		$devTable->next();
+
+		$this->assertCount( 3, $handler->getTableId(), 'Third table inside second <tr> element.' );
+
 		$this->assertSame(
 			array( 'Lorem Ipsum', 'JS Developer', 'Bkt' ),
-			array_values( $data[ $ids[0] ][1]->getArrayCopy() )
+			array_values( $devTable->current()->getArrayCopy() )
 		);
-		$this->assertSame( 'Bkt', $data[ $ids[1] ][0]->getArrayCopy()[0] );
+
 		$this->assertSame(
 			array( '1: First Data', '2: Second Data' ),
-			array_values( $data[ $ids[2] ][0]->getArrayCopy() )
+			array_values( $dataTable->current()->getArrayCopy() )
 		);
+
+		$addressTableId = $handler->getTableId( true );
+
+		$this->assertSame( 'Bkt', $handler->getTableData()[ $addressTableId ]->current()->getArrayCopy()[0] );
 	}
 
 	#[Test]
@@ -107,7 +116,6 @@ class TableNodeAwareTest extends TestCase {
 		$data      = $scanner->getTableData()[ $tableIds[0] ];
 
 		$this->assertCount( 1, $tableIds );
-		$this->assertCount( 2, $data );
 		$this->assertSame( $headers = array( 'Title', 'Another Title' ), $fixedHead->toArray() );
 
 		foreach ( $data as $index => $tableData ) {
@@ -116,6 +124,8 @@ class TableNodeAwareTest extends TestCase {
 			$this->assertSame( $headers, array_keys( $arrayCopy = $tableData->getArrayCopy() ) );
 			$this->assertSame( $value, array_values( $arrayCopy ) );
 		}
+
+		$this->assertSame( 2, (int) ( $index ?? 0 ) + 1 );
 	}
 
 	#[Test]
@@ -172,7 +182,7 @@ class TableNodeAwareTest extends TestCase {
 		$scanner->withTransformers( array( 'td' => $tdMarshaller ) )
 			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
-		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ][0]->getArrayCopy() );
+		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ]->current()->getArrayCopy() );
 		$this->assertSame( 2, $scanner->getCurrentIterationCountOf( Table::Column ) );
 		$this->assertArrayHasKey( 'First', $data );
 		$this->assertArrayNotHasKey( 'Last', $data, 'Skips falsy (empty string) transformed value.' );
@@ -247,7 +257,7 @@ class TableNodeAwareTest extends TestCase {
 			public function transform( string|DOMElement $element, int $position ): string {
 				( $this->asserter )( $element, $position );
 
-				return 'Assertion transformer. Any non-empty-string can be returned for this test.';
+				return $element instanceof DOMElement ? $element->textContent : $element;
 			}
 		};
 
