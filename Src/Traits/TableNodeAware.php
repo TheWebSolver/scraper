@@ -13,6 +13,7 @@ use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
+use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -22,20 +23,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
  * @template TdReturn
  */
 trait TableNodeAware {
-	/** @var Closure( static ): void */
-	private Closure $foundTable__event;
-	private bool $shouldPerform__allTableScan = false;
-	/** @var int[] */
-	private array $foundTable__ids = array();
-	/** @var array<int,ArrayObject<int,ThReturn>> */
-	private array $scannedTable__heads = array();
-	/** @var array<int,SplFixedArray<string>> */
-	private array $scannedTable__headNames = array();
-	/** @var array<int,Iterator<array-key,ArrayObject<array-key,TdReturn>>> */
-	private array $scannedTable__rows = array();
-	private int $currentTable__id;
-	/** @var array<int,list<string>> */
-	private array $currentTable__columnNames;
+	/** @placeholder `1:` methodname, `2:` static classname, `3:` reason. */
+	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table found. Using method "%1$s::dispatch()", %3$s';
 
 	/**
 	 * @var array{
@@ -46,13 +35,37 @@ trait TableNodeAware {
 	 */
 	private array $transformer__instances;
 
+	private bool $shouldPerform__allTableScan = false;
+
+	/** @var Closure( static ): void */
+	private Closure $foundTable__event;
+	/** @var int[] */
+	private array $foundTable__bodyIds = array();
+
+	/** @var array<int,ArrayObject<int,ThReturn>> */
+	private array $scannedTable__heads = array();
+	/** @var array<int,SplFixedArray<string>> */
+	private array $scannedTable__headNames = array();
+	/** @var array<int,Iterator<array-key,ArrayObject<array-key,TdReturn>>> */
+	private array $scannedTable__rows = array();
+
+	private int $currentTable__splId;
+	private int $currentTable__bodyId;
+	/** @var array<int,list<string>> */
+	private array $currentTable__columnNames;
+
+	private int $currentIteration__headCount;
+	private int $currentIteration__headIndex;
 	/** @var array<int,int> */
 	private array $currentIteration__columnCount   = array();
 	private ?string $currentIteration__columnIndex = null;
 
-	/** @param list<string> $keys */
 	public function setColumnNames( array $keys ): void {
-		$this->currentTable__columnNames[ $this->currentTable__id ] = $keys;
+		$id = $this->getTableId( current: true ) ?: throw new ScraperError(
+			sprintf( self::USE_EVENT_DISPATCHER, static::class, __FUNCTION__, 'set column names.' )
+		);
+
+		$this->currentTable__columnNames[ $id ] = $keys;
 	}
 
 	public function withTransformers( array $transformers ): static {
@@ -65,23 +78,24 @@ trait TableNodeAware {
 
 	/** @return ($current is true ? int : int[]) */
 	public function getTableId( bool $current = false ): int|array {
-		return $current ? $this->currentTable__id : $this->foundTable__ids;
+		return $current ? $this->currentTable__bodyId ?? 0 : $this->foundTable__bodyIds;
 	}
 
 	/** @return list<string> */
 	public function getColumnNames(): array {
-		return $this->currentTable__columnNames[ $this->currentTable__id ] ?? array();
+		return $this->currentTable__columnNames[ $this->currentTable__bodyId ] ?? array();
 	}
 
 	public function getCurrentColumnName(): ?string {
 		return $this->currentIteration__columnIndex;
 	}
 
-	public function getCurrentIterationCountOf( Table $element ): int {
-		return ( match ( $element ) {
+	public function getCurrentIterationCountOf( Table $element ): ?int {
+		return match ( $element ) {
 			default       => null,
-			Table::Column => $this->currentIteration__columnCount,
-		} )[ $this->currentTable__id ] ?? 0;
+			Table::Head   => $this->currentIteration__headCount ?? null,
+			Table::Column => $this->currentIteration__columnCount[ $this->currentTable__bodyId ] ?? null,
+		};
 	}
 
 	/** @return ($namesOnly is true ? array<int,SplFixedArray<string>> : array<int,ArrayObject<int,ThReturn>>) */
@@ -111,10 +125,10 @@ trait TableNodeAware {
 			}
 
 			[$head, $body] = $tableElements;
-			$tableId       = spl_object_id( $node ) + spl_object_id( $body );
-			$iterator      = $this->iteratorFromTableContent( $tableId, $head, $body );
+			$id            = $this->currentTable__splId + spl_object_id( $body );
+			$iterator      = $this->iteratorFromTableContent( $id, $head, $body );
 
-			$iterator->valid() && ( $this->scannedTable__rows[ $tableId ] = $iterator );
+			$iterator->valid() && ( $this->scannedTable__rows[ $id ] = $iterator );
 
 			if ( $this->foundTargetedTable( $node ) ) {
 				break;
@@ -122,10 +136,36 @@ trait TableNodeAware {
 		}
 	}
 
+	/** @return ?array{0:list<string>,1:list<ThReturn>} */
+	public function inferTableHeadFrom( iterable $elementList ): ?array {
+		$thTransformer = $this->transformer__instances['th'] ?? null;
+		$names         = $collection = array();
+		$skippedNodes  = 0;
+
+		foreach ( $elementList as $currentIndex => $headNode ) {
+			if ( ! AssertDOMElement::isValid( $headNode, type: 'th' ) ) {
+				++$skippedNodes;
+
+				continue;
+			}
+
+			$foundPosition = $currentIndex - $skippedNodes;
+
+			$this->registerCurrentIterationTH( $foundPosition );
+
+			$trimmed      = trim( $headNode->textContent );
+			$content      = $thTransformer?->transform( $headNode, $foundPosition ) ?? $trimmed;
+			$names[]      = is_string( $content ) ? $content : $trimmed;
+			$collection[] = $content;
+		}
+
+		return $collection ? array( $names, $collection ) : null;
+	}
+
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data          = array();
 		$keys          = $this->getColumnNames();
-		$foundPosition = $skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__id ] = 0;
+		$foundPosition = $skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
 
 		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
 		$transformer = $this->transformer__instances['td'] ?? new Marshaller();
@@ -154,7 +194,7 @@ trait TableNodeAware {
 
 	protected function flushTableNodeTrace(): void {
 		unset(
-			$this->foundTable__ids,
+			$this->foundTable__bodyIds,
 			$this->scannedTable__headNames,
 			$this->scannedTable__heads,
 			$this->scannedTable__rows,
@@ -173,15 +213,15 @@ trait TableNodeAware {
 	}
 
 	final protected function setTableId( int $id ): void {
-		if ( ! in_array( $id, $this->foundTable__ids, true ) ) {
-			$this->foundTable__ids[] = $id;
-			$this->currentTable__id  = $id;
+		if ( ! in_array( $id, $this->foundTable__bodyIds, true ) ) {
+			$this->foundTable__bodyIds[] = $id;
+			$this->currentTable__bodyId  = $id;
 		}
 	}
 
 	/** @param DOMNodeList<DOMNode> $nodes */
 	final protected function findTableNodeIn( DOMNodeList $nodes ): void {
-		( ! $this->foundTable__ids || $this->shouldPerform__allTableScan )
+		( ! $this->foundTable__bodyIds || $this->shouldPerform__allTableScan )
 			&& $nodes->count() && $this->traceTableIn( $nodes );
 	}
 
@@ -193,26 +233,6 @@ trait TableNodeAware {
 	/** @phpstan-assert-if-true =DOMElement $node */
 	final protected function isNodeTHorTD( mixed $node ): bool {
 		return $node instanceof DOMElement && in_array( $node->tagName, array( 'th', 'td' ), strict: true );
-	}
-
-	/** @return ?array{0:list<string>,1:list<ThReturn>} */
-	protected function inferTableHead( DOMNode $node ): ?array {
-		$thTransformer = $this->transformer__instances['th'] ?? null;
-		$names         = $collection = array();
-		$position      = 0;
-
-		foreach ( $node->childNodes as $headNode ) {
-			if ( ! AssertDOMElement::isValid( $headNode, type: 'th' ) ) {
-				continue;
-			}
-
-			$trimmed      = trim( $headNode->textContent );
-			$content      = $thTransformer?->transform( $headNode, $position++ ) ?? $trimmed;
-			$names[]      = is_string( $content ) ? $content : $trimmed;
-			$collection[] = $content;
-		}
-
-		return $collection ? array( $names, $collection ) : null;
 	}
 
 	/** @return ?Iterator<int,DOMNode> */
@@ -244,7 +264,7 @@ trait TableNodeAware {
 			$headIterator->next();
 		}
 
-		return $row ? $this->inferTableHead( $row ) : null;
+		return $row ? $this->inferTableHeadFrom( $row->childNodes ) : null;
 	}
 
 	/** @return ?array{0:?array{0:list<string>,1:list<ThReturn>},1:DOMElement} */
@@ -252,6 +272,8 @@ trait TableNodeAware {
 		if ( ! $tableIterator = $this->fromTargetedHtmlTable( $node ) ) {
 			return null;
 		}
+
+		$this->currentTable__splId = spl_object_id( $node );
 
 		// Currently, <caption> element is skipped.
 		if ( AssertDOMElement::isValid( $tableIterator->current(), type: 'caption' ) ) {
@@ -294,7 +316,7 @@ trait TableNodeAware {
 
 			if ( ! $scannedTh && ! $head ) {
 				$scannedTh = true;
-				$head      = $this->inferTableHead( $rowIterator->current() );
+				$head      = $this->inferTableHeadFrom( $rowIterator->current()->childNodes );
 
 				// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
 				$head && $rowIterator->next();
@@ -357,10 +379,23 @@ trait TableNodeAware {
 	private function registerCurrentTableTH( int $tableId, array $names, array $contents ): void {
 		$this->scannedTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
 		$this->scannedTable__heads[ $tableId ]     = new ArrayObject( $contents );
+
+		$this->registerCurrentIterationTH( false );
+	}
+
+	private function registerCurrentIterationTH( int|false $index = 0 ): void {
+		if ( is_bool( $index ) ) {
+			unset( $this->currentIteration__headCount, $this->currentIteration__headIndex );
+
+			return;
+		}
+
+		$this->currentIteration__headIndex = $index;
+		$this->currentIteration__headCount = $index + 1;
 	}
 
 	private function registerCurrentIterationTD( ?string $index, int $count ): void {
-		$this->currentIteration__columnCount[ $this->currentTable__id ] = $count;
-		$this->currentIteration__columnIndex                            = $index;
+		$this->currentIteration__columnCount[ $this->currentTable__bodyId ] = $count;
+		$this->currentIteration__columnIndex                                = $index;
 	}
 }

@@ -9,6 +9,7 @@ use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
+use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 
 /**
  * @template ThReturn
@@ -43,7 +44,16 @@ interface TableTracer {
 	public function traceTableIn( iterable $elementList ): void;
 
 	/**
-	 * Traces table data from given element list.
+	 * Infers table head from given element list.
+	 *
+	 * @param iterable<int,TElement> $elementList
+	 * @return ?array{0:list<string>,1:list<ThReturn>}
+	 * @template TElement of string|DOMNode
+	 */
+	public function inferTableHeadFrom( iterable $elementList ): ?array;
+
+	/**
+	 * Infers table data from given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList
 	 * @return TdReturn[]
@@ -55,6 +65,7 @@ interface TableTracer {
 	 * Sets index keys mappable to traced table data set.
 	 *
 	 * @param list<string> $keys
+	 * @throws ScraperError When this method is invoked before table is discovered.
 	 */
 	public function setColumnNames( array $keys ): void;
 
@@ -95,6 +106,8 @@ interface TableTracer {
 
 	/**
 	 * Gets current iteration count of given element.
+	 *
+	 * This method may return null after current iteration is finished.
 	 */
-	public function getCurrentIterationCountOf( Table $element ): int;
+	public function getCurrentIterationCountOf( Table $element ): ?int;
 }

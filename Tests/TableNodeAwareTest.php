@@ -4,13 +4,16 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Closure;
+use Exception;
 use DOMElement;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
+use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -31,6 +34,26 @@ class TableNodeAwareTest extends TestCase {
 
 		$this->assertCount( 1, $tableIds = $scanner->getTableId() );
 		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ]->current() );
+	}
+
+	/** @param mixed[] $args */
+	#[Test]
+	#[DataProvider( 'provideMethodsThatThrowsException' )]
+	public function itThrowsExceptionWhenInvokedBeforeTableFound( string $methodName, array $args ): void {
+		$scanner = new DOMNodeScanner();
+		$class   = DOMNodeScanner::class;
+
+		$this->expectException( ScraperError::class );
+		$this->expectExceptionMessage( sprintf( DOMNodeScanner::USE_EVENT_DISPATCHER, $class, $methodName, '' ) );
+
+		$scanner->{$methodName}( ...$args );
+	}
+
+	/** @return mixed[] */
+	public static function provideMethodsThatThrowsException(): array {
+		return array(
+			array( 'setColumnNames', array( array() ) ),
+		);
 	}
 
 	#[Test]
@@ -227,46 +250,86 @@ class TableNodeAwareTest extends TestCase {
 			</tbody></table>
 		';
 
-		$scanner  = new DOMNodeScanner();
-		$asserter = static function ( string|DOMElement $el, int $pos ) use ( $scanner ) {
-			self::assertInstanceOf( DOMElement::class, $el );
-
-			$text = $el->textContent;
-
-			match ( true ) {
-				default => throw new \LogicException( 'This should never be thrown. All tables are covered.' ),
-
-				str_starts_with( $text, '0' )  => self::assertKeyAndPosition( $scanner, 'Top 0', 0, $pos ),
-				str_starts_with( $text, '1' )  => self::assertKeyAndPosition( $scanner, 'Top 1', 1, $pos ),
-				str_starts_with( $text, '2' )  => self::assertKeyAndPosition( $scanner, 'Top 2', 2, $pos ),
-
-				str_starts_with( $text, 'zero:' ) => self::assertKeyAndPosition( $scanner, 'Middle 0', 0, $pos ),
-				str_starts_with( $text, 'one:' )  => self::assertKeyAndPosition( $scanner, 'Middle 1', 1, $pos ),
-				str_starts_with( $text, 'two:' )  => self::assertKeyAndPosition( $scanner, 'Middle 2', 2, $pos ),
-
-				str_starts_with( $text, 'O=' ) => self::assertKeyAndPosition( $scanner, 'Last 0', 0, $pos ),
-				str_starts_with( $text, 'I=' ) => self::assertKeyAndPosition( $scanner, 'Last 1', 1, $pos ),
-			};
-
-			return $text;
-		};
-
-		$tdTransformer = new class( $asserter ) implements Transformer {
-			public function __construct( private Closure $asserter ) {}
+		$scanner     = new DOMNodeScanner();
+		$transformer = new class() implements Transformer {
+			public function __construct( private ?Closure $asserter = null ) {}
 
 			public function transform( string|DOMElement $element, int $position ): string {
+				! $this->asserter && throw new Exception( 'Asserter needed to test transformer.' );
+
 				( $this->asserter )( $element, $position );
 
 				return $element instanceof DOMElement ? $element->textContent : $element;
 			}
 		};
 
+		$thAsserter = static function ( string|DOMElement $el, int $position ) use ( $scanner ) {
+			self::assertInstanceOf( DOMElement::class, $el );
+
+			$text     = trim( $el->textContent );
+			$expected = (int) substr( $text, -1 );
+
+			match ( true ) {
+				default => throw new LogicException( 'This should never be thrown. All <th>s are covered.' ),
+
+				str_starts_with( $text, 'Top' )    => self::assertKeyAndPositionInTH( $scanner, $text, $expected, $position ),
+				str_starts_with( $text, 'Middle' ) => self::assertKeyAndPositionInTH( $scanner, $text, $expected, $position ),
+				str_starts_with( $text, 'Last' )   => self::assertKeyAndPositionInTH( $scanner, $text, $expected, $position ),
+			};
+
+			return $text;
+		};
+
+		$tdAsserter = static function ( string|DOMElement $el, int $pos ) use ( $scanner ) {
+			self::assertInstanceOf( DOMElement::class, $el );
+			self::assertNull(
+				$scanner->getCurrentIterationCountOf( Table::Head ),
+				'Head count is not accessible when inferring <td> content.'
+			);
+
+			$text = $el->textContent;
+
+			match ( true ) {
+				default => throw new LogicException( 'This should never be thrown. All <td>s are covered.' ),
+
+				str_starts_with( $text, '0' )  => self::assertKeyAndPositionInTD( $scanner, 'Top 0', 0, $pos ),
+				str_starts_with( $text, '1' )  => self::assertKeyAndPositionInTD( $scanner, 'Top 1', 1, $pos ),
+				str_starts_with( $text, '2' )  => self::assertKeyAndPositionInTD( $scanner, 'Top 2', 2, $pos ),
+
+				str_starts_with( $text, 'zero:' ) => self::assertKeyAndPositionInTD( $scanner, 'Middle 0', 0, $pos ),
+				str_starts_with( $text, 'one:' )  => self::assertKeyAndPositionInTD( $scanner, 'Middle 1', 1, $pos ),
+				str_starts_with( $text, 'two:' )  => self::assertKeyAndPositionInTD( $scanner, 'Middle 2', 2, $pos ),
+
+				str_starts_with( $text, 'O=' ) => self::assertKeyAndPositionInTD( $scanner, 'Last 0', 0, $pos ),
+				str_starts_with( $text, 'I=' ) => self::assertKeyAndPositionInTD( $scanner, 'Last 1', 1, $pos ),
+			};
+
+			return $text;
+		};
+
 		$scanner->withAllTables()
-			->withTransformers( array( 'td' => $tdTransformer ) )
-			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+			->withTransformers(
+				array(
+					'th' => new $transformer( $thAsserter ),
+					'td' => new $transformer( $tdAsserter ),
+				)
+			)->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+
+		$this->assertNull( $scanner->getCurrentIterationCountOf( Table::Head ) );
 	}
 
-	private static function assertKeyAndPosition(
+	private static function assertKeyAndPositionInTH(
+		DOMNodeScanner $scanner,
+		string $headContent,
+		int $expectedPosition,
+		int $actualPosition
+	): void {
+		self::assertTrue( str_ends_with( $headContent, (string) $expectedPosition ) );
+		self::assertSame( $expectedPosition, $actualPosition );
+		self::assertSame( $expectedPosition + 1, $scanner->getCurrentIterationCountOf( Table::Head ) );
+	}
+
+	private static function assertKeyAndPositionInTD(
 		DOMNodeScanner $scanner,
 		string $key,
 		int $expectedPosition,
