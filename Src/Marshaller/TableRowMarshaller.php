@@ -28,7 +28,7 @@ class TableRowMarshaller implements Transformer {
 	 * @param TableTracer<mixed,TdReturn> $tracer
 	 * @throws ScraperError When cannot validate transformed data.
 	 */
-	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
+	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): CollectionSet {
 		$set   = $tracer->inferTableDataFrom( self::validate( $element )->childNodes );
 		$names = $tracer->getColumnNames();
 		$msg   = $this->collectable::invalidCountMsg();
