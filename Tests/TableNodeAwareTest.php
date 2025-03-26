@@ -61,7 +61,8 @@ class TableNodeAwareTest extends TestCase {
 		$handler      = new DOMNodeScanner();
 		$dom          = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
 		$thMarshaller = new class() implements Transformer {
-			public function transform( string|DOMElement $element, int $position ): string {
+			/** @param TableTracer<mixed,string> $tracer */
+			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
 				return explode( '[', $element instanceof DOMElement ? $element->textContent : $element )[0];
 			}
 		};
@@ -206,7 +207,8 @@ class TableNodeAwareTest extends TestCase {
 		';
 
 		$tdMarshaller = new class() implements Transformer {
-			public function transform( string|DOMElement $element, int $position ): string {
+			/** @param TableTracer<mixed,string> $tracer */
+			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element;
 
 				return str_contains( $content, 'Two' ) ? '' : $content;
@@ -265,7 +267,11 @@ class TableNodeAwareTest extends TestCase {
 		$transformer = new class() implements Transformer {
 			public function __construct( private ?Closure $asserter = null ) {}
 
-			public function transform( string|DOMElement $element, int $position ): string {
+			/**
+			 * @param TableTracer<mixed,string> $tracer
+			 * @throws Exception When test performed without asserter.
+			 */
+			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
 				! $this->asserter && throw new Exception( 'Asserter needed to test transformer.' );
 
 				( $this->asserter )( $element, $position );

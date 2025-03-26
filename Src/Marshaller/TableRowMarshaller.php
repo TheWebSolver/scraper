@@ -15,28 +15,24 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /**
- * @template ThReturn
  * @template TdReturn
  * @template-implements Transformer<CollectionSet<TdReturn>>
  */
 class TableRowMarshaller implements Transformer {
 	private const TR_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
 
+	/** @param class-string<Collectable> $collectable */
+	public function __construct( private string $collectable, private ?string $indexKey = null ) {}
+
 	/**
-	 * @param TableTracer<ThReturn,TdReturn> $tracer
-	 * @param class-string<Collectable>      $collectable
+	 * @param TableTracer<mixed,TdReturn> $tracer
+	 * @throws ScraperError When cannot validate transformed data.
 	 */
-	public function __construct(
-		private TableTracer $tracer,
-		private string $collectable,
-		private ?string $indexKey = null
-	) {}
+	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
+		$set   = $tracer->inferTableDataFrom( self::validate( $element )->childNodes );
+		$names = $tracer->getColumnNames();
 
-	public function transform( string|DOMElement $element, int $position ): mixed {
-		$set   = $this->tracer->inferTableDataFrom( self::validate( $element )->childNodes );
-		$names = $this->tracer->getColumnNames();
-
-		count( $names ) === $this->tracer->getCurrentIterationCountOf( Table::Column )
+		count( $names ) === $tracer->getCurrentIterationCountOf( Table::Column )
 			|| throw ScraperError::trigger(
 				sprintf( $this->collectable::invalidCountMsg(), count( $names ), implode( '", "', $names ) )
 				. ( ScraperError::getSource()?->errorMsg() ?? '' )

@@ -155,7 +155,7 @@ trait TableNodeAware {
 			$this->registerCurrentIterationTH( $position );
 
 			$trimmed      = trim( $headNode->textContent );
-			$content      = $thTransformer?->transform( $headNode, $position ) ?? $trimmed;
+			$content      = $thTransformer?->transform( $headNode, $position, $this ) ?? $trimmed;
 			$names[]      = is_string( $content ) ? $content : $trimmed;
 			$collection[] = $content;
 		}
@@ -332,7 +332,7 @@ trait TableNodeAware {
 
 			$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0], $this->getTableId( true ) );
 
-			$content = $rowTransformer?->transform( $tableRow, $position ) ?? $tableRow->childNodes;
+			$content = $rowTransformer?->transform( $tableRow, $position, $this ) ?? $tableRow->childNodes;
 
 			if ( $content instanceof CollectionSet ) {
 				yield $content->key => $content->value;
@@ -371,7 +371,7 @@ trait TableNodeAware {
 	private function collectedTDFrom( DOMElement $node, Transformer $transformer, array &$data ): mixed {
 		$count    = $this->getCurrentIterationCountOf( Table::Column );
 		$position = $count ? $count - 1 : 0;
-		$value    = $transformer->transform( $node, $position );
+		$value    = $transformer->transform( $node, $position, $this );
 
 		return ( ! is_null( $value ) && '' !== $value )
 			? ( $data[ $this->getCurrentColumnName() ?? $position ] = $value )

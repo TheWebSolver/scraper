@@ -14,6 +14,7 @@ use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
@@ -22,16 +23,17 @@ class TableScraperTest extends TestCase {
 	private SingleTableScraper $scraper;
 
 	/**
-	 * @param Closure(string|DOMElement, int): string $marshaller
+	 * @param Closure(string|DOMElement, int, TableTracer<mixed,string>): string $marshaller
 	 * @return Transformer<string>
 	 */
 	private function withTransformedTDUsing( Closure $marshaller ): Transformer {
 		return new class( $marshaller ) implements Transformer {
-			/** @param Closure(string|DOMElement, int): string $marshaller */
+			/** @param Closure(string|DOMElement, int, TableTracer<mixed,string>): string $marshaller */
 			public function __construct( private Closure $marshaller ) {}
 
-			public function transform( string|DOMElement $element, int $position ): string {
-				return ( $this->marshaller )( $element, $position );
+			/** @param TableTracer<mixed,string> $tracer */
+			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
+				return ( $this->marshaller )( $element, $position, $tracer );
 			}
 		};
 	}
@@ -84,7 +86,9 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
-		$tr    = new TableRowMarshaller( $this->scraper, DeveloperDetails::class );
+		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::class )
+		extends TableRowMarshaller{};
+
 		$table = '
 		<table>
 
@@ -121,8 +125,10 @@ class TableScraperTest extends TestCase {
 		DeveloperDetails $type,
 		?array $expectedValue = null
 	): void {
+		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::class, 'address' )
+		extends TableRowMarshaller{};
+
 		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
-		$tr    = new TableRowMarshaller( $this->scraper, DeveloperDetails::class, 'address' );
 		$td    = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
 
 		if ( null === $expectedValue ) {
