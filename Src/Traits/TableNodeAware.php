@@ -58,8 +58,8 @@ trait TableNodeAware {
 	private array $currentIteration__columnCount   = array();
 	private ?string $currentIteration__columnIndex = null;
 
-	public function setColumnNames( array $keys ): void {
-		$id = $this->getTableId( current: true ) ?: throw new ScraperError(
+	public function setColumnNames( array $keys, int $id ): void {
+		( $id && $this->getTableId( current: true ) === $id ) || throw new ScraperError(
 			sprintf( self::USE_EVENT_DISPATCHER, static::class, __FUNCTION__, 'set column names.' )
 		);
 
@@ -203,8 +203,10 @@ trait TableNodeAware {
 	}
 
 	/** @param callable( static ): void $eventListener */
-	protected function subscribeWith( callable $eventListener, Table $target = Table::Row ): void {
+	public function subscribeWith( callable $eventListener, Table $target = Table::Row ): static {
 		$this->discoveredTable__eventListeners[ $target->name ] = $eventListener( ... );
+
+		return $this;
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -219,6 +221,8 @@ trait TableNodeAware {
 
 		isset( $this->discoveredTable__eventListeners[ Table::Row->name ] )
 			&& ( $this->discoveredTable__eventListeners[ Table::Row->name ] )( $this );
+
+		unset( $this->discoveredTable__eventListeners[ Table::Row->name ] );
 	}
 
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
@@ -323,7 +327,7 @@ trait TableNodeAware {
 				return;
 			}
 
-			$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0] );
+			$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0], $this->getTableId( true ) );
 
 			$content = $rowTransformer?->transform( $tableRow, $position ) ?? $tableRow->childNodes;
 

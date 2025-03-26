@@ -32,7 +32,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 			->withCachePath( $this->defaultCachePath(), $this->getSource()->filename )
 			->setCollectionItemsFrom( $collectableClass )
 			->useKeys( $columnNames = $this->getCollectableNames() )
-			->subscribeWith( static fn( $i ) => $i->withAllTables( false )->setColumnNames( $columnNames ) );
+			->subscribeWith( static fn( $i ) => $i->withAllTables( false )->setColumnNames( $columnNames, $i->getTableId( true ) ) );
 
 		$this->unsubscribeError = ScraperError::for( $this->getSource() );
 	}

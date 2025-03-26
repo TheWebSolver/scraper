@@ -52,7 +52,7 @@ class TableNodeAwareTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideMethodsThatThrowsException(): array {
 		return array(
-			array( 'setColumnNames', array( array() ) ),
+			array( 'setColumnNames', array( array(), 0 ) ),
 		);
 	}
 
@@ -84,9 +84,14 @@ class TableNodeAwareTest extends TestCase {
 		$this->assertEqualsCanonicalizing( array_keys( $first = $devTable->current()->getArrayCopy() ), $th );
 		$this->assertSame( array( 'John Doe', 'PHP Developer', 'Ktm' ), array_values( $first ) );
 
+		$handler->subscribeWith(
+			static fn( $i ) => $i->setColumnNames( array( 'finalAddress' ), $i->getTableId( true ) )
+		);
+
 		$devTable->next();
 
 		$this->assertCount( 3, $handler->getTableId(), 'Third table inside second <tr> element of first table.' );
+		$this->assertSame( array( 'finalAddress' ), $handler->getColumnNames() );
 
 		$this->assertSame(
 			array( 'Lorem Ipsum', 'JS Developer', 'Bkt' ),
@@ -100,7 +105,10 @@ class TableNodeAwareTest extends TestCase {
 
 		$addressTableId = $handler->getTableId( true );
 
-		$this->assertSame( 'Bkt', $handler->getTableData()[ $addressTableId ]->current()->getArrayCopy()[0] );
+		$this->assertSame(
+			'Bkt',
+			$handler->getTableData()[ $addressTableId ]->current()->getArrayCopy()['finalAddress']
+		);
 	}
 
 	#[Test]

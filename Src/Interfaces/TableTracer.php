@@ -36,6 +36,13 @@ interface TableTracer {
 	public function withTransformers( array $transformers ): static;
 
 	/**
+	 * Registers event listener for targeted table structure.
+	 *
+	 * @param callable( static ): void $eventListener
+	 */
+	public function subscribeWith( callable $eventListener, Table $target ): static;
+
+	/**
 	 * Traces table from given element list.
 	 *
 	 * @param iterable<int,TContent> $elementList
@@ -65,9 +72,10 @@ interface TableTracer {
 	 * Sets index keys mappable to traced table data set.
 	 *
 	 * @param list<string> $keys
+	 * @param int          $id Usually, value of `$this->getTableId(current: true)`.
 	 * @throws ScraperError When this method is invoked before table is discovered.
 	 */
-	public function setColumnNames( array $keys ): void;
+	public function setColumnNames( array $keys, int $id ): void;
 
 	/**
 	 * Gets traced table IDs or current table being traced.
