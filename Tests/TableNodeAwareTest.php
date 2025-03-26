@@ -71,9 +71,12 @@ class TableNodeAwareTest extends TestCase {
 			->withAllTables()
 			->traceTableIn( $dom->childNodes );
 
-		$ids       = $handler->getTableId();
-		$th        = $handler->getTableHead( true )[ $ids[0] ]->toArray();
-		$data      = $handler->getTableData();
+		$ids  = $handler->getTableId();
+		$th   = $handler->getTableHead( true )[ $ids[0] ]->toArray();
+		$data = $handler->getTableData();
+
+		$this->assertCount( 2, $handler->getTableId() );
+
 		$devTable  = $data[ $ids[0] ];
 		$dataTable = $data[ $ids[1] ];
 
@@ -83,7 +86,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$devTable->next();
 
-		$this->assertCount( 3, $handler->getTableId(), 'Third table inside second <tr> element.' );
+		$this->assertCount( 3, $handler->getTableId(), 'Third table inside second <tr> element of first table.' );
 
 		$this->assertSame(
 			array( 'Lorem Ipsum', 'JS Developer', 'Bkt' ),

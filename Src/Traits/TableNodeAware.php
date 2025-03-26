@@ -23,8 +23,10 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
  * @template TdReturn
  */
 trait TableNodeAware {
-	/** @placeholder `1:` methodname, `2:` static classname, `3:` reason. */
-	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table found. Using method "%1$s::dispatch()", %3$s';
+	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` reason. */
+	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table is discovered. Use listener passed to "%1$s::subscribeWith()" to %3$s';
+
+	private bool $shouldPerform__allTableDiscovery = false;
 
 	/**
 	 * @var array{
@@ -33,21 +35,17 @@ trait TableNodeAware {
 	 *   td ?: Transformer<TdReturn>
 	 * }
 	 */
-	private array $transformer__instances;
-
-	private bool $shouldPerform__allTableScan = false;
-
-	/** @var Closure( static ): void */
-	private Closure $foundTable__event;
+	private array $discoveredTable__transformers;
+	/** @var array<string,Closure( static ): void> */
+	private array $discoveredTable__eventListeners;
 	/** @var int[] */
-	private array $foundTable__bodyIds = array();
-
+	private array $discoveredTable__bodyIds = array();
 	/** @var array<int,ArrayObject<int,ThReturn>> */
-	private array $scannedTable__heads = array();
+	private array $discoveredTable__heads = array();
 	/** @var array<int,SplFixedArray<string>> */
-	private array $scannedTable__headNames = array();
+	private array $discoveredTable__headNames = array();
 	/** @var array<int,Iterator<array-key,ArrayObject<array-key,TdReturn>>> */
-	private array $scannedTable__rows = array();
+	private array $discoveredTable__rows = array();
 
 	private int $currentTable__splId;
 	private int $currentTable__bodyId;
@@ -69,16 +67,16 @@ trait TableNodeAware {
 	}
 
 	public function withTransformers( array $transformers ): static {
-		isset( $transformers['tr'] ) && ( $this->transformer__instances['tr'] = $transformers['tr'] );
-		isset( $transformers['th'] ) && ( $this->transformer__instances['th'] = $transformers['th'] );
-		isset( $transformers['td'] ) && ( $this->transformer__instances['td'] = $transformers['td'] );
+		isset( $transformers['tr'] ) && ( $this->discoveredTable__transformers['tr'] = $transformers['tr'] );
+		isset( $transformers['th'] ) && ( $this->discoveredTable__transformers['th'] = $transformers['th'] );
+		isset( $transformers['td'] ) && ( $this->discoveredTable__transformers['td'] = $transformers['td'] );
 
 		return $this;
 	}
 
 	/** @return ($current is true ? int : int[]) */
 	public function getTableId( bool $current = false ): int|array {
-		return $current ? $this->currentTable__bodyId ?? 0 : $this->foundTable__bodyIds;
+		return $current ? $this->currentTable__bodyId ?? 0 : $this->discoveredTable__bodyIds;
 	}
 
 	/** @return list<string> */
@@ -100,16 +98,16 @@ trait TableNodeAware {
 
 	/** @return ($namesOnly is true ? array<int,SplFixedArray<string>> : array<int,ArrayObject<int,ThReturn>>) */
 	public function getTableHead( bool $namesOnly = false ): array {
-		return $namesOnly ? $this->scannedTable__headNames : $this->scannedTable__heads;
+		return $namesOnly ? $this->discoveredTable__headNames : $this->discoveredTable__heads;
 	}
 
 	/** @return array<int,Iterator<array-key,ArrayObject<array-key,TdReturn>>> */
 	public function getTableData(): array {
-		return $this->scannedTable__rows;
+		return $this->discoveredTable__rows;
 	}
 
 	public function withAllTables( bool $trace = true ): static {
-		$this->shouldPerform__allTableScan = $trace;
+		$this->shouldPerform__allTableDiscovery = $trace;
 
 		return $this;
 	}
@@ -120,17 +118,20 @@ trait TableNodeAware {
 		);
 
 		foreach ( $elementList as $node ) {
-			if ( ! $tableElements = $this->tableStructureIn( $node ) ) {
+			if ( ! $tableElements = $this->discoveredStructureIn( $node ) ) {
 				continue;
 			}
 
-			[$head, $body] = $tableElements;
-			$id            = $this->currentTable__splId + spl_object_id( $body );
-			$iterator      = $this->iteratorFromTableContent( $id, $head, $body );
+			$splId = $this->currentTable__splId = spl_object_id( $node );
+			$id    = $splId * spl_object_id( $tableElements[1] );
 
-			$iterator->valid() && ( $this->scannedTable__rows[ $id ] = $iterator );
+			$this->dispatchEventListenerForDiscoveredTable( $id );
 
-			if ( $this->foundTargetedTable( $node ) ) {
+			$iterator = $this->fromTableBodyRowStructure( ...$tableElements );
+
+			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
+
+			if ( $this->discoveredTargetedTable( $node ) ) {
 				break;
 			}
 		}
@@ -138,7 +139,7 @@ trait TableNodeAware {
 
 	/** @return ?array{0:list<string>,1:list<ThReturn>} */
 	public function inferTableHeadFrom( iterable $elementList ): ?array {
-		$thTransformer = $this->transformer__instances['th'] ?? null;
+		$thTransformer = $this->discoveredTable__transformers['th'] ?? null;
 		$names         = $collection = array();
 		$skippedNodes  = 0;
 
@@ -149,12 +150,12 @@ trait TableNodeAware {
 				continue;
 			}
 
-			$foundPosition = $currentIndex - $skippedNodes;
+			$position = $currentIndex - $skippedNodes;
 
-			$this->registerCurrentIterationTH( $foundPosition );
+			$this->registerCurrentIterationTH( $position );
 
 			$trimmed      = trim( $headNode->textContent );
-			$content      = $thTransformer?->transform( $headNode, $foundPosition ) ?? $trimmed;
+			$content      = $thTransformer?->transform( $headNode, $position ) ?? $trimmed;
 			$names[]      = is_string( $content ) ? $content : $trimmed;
 			$collection[] = $content;
 		}
@@ -163,28 +164,27 @@ trait TableNodeAware {
 	}
 
 	public function inferTableDataFrom( iterable $elementList ): array {
-		$data          = array();
-		$keys          = $this->getColumnNames();
-		$foundPosition = $skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
+		$data     = array();
+		$keys     = $this->getColumnNames();
+		$position = $skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
 
 		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
-		$transformer = $this->transformer__instances['td'] ?? new Marshaller();
+		$transformer = $this->discoveredTable__transformers['td'] ?? new Marshaller();
 
 		foreach ( $elementList as $currentIndex => $node ) {
-			if ( ! $this->isNodeTHorTD( $node ) ) {
+			if ( ! $this->isTHorTDStructure( $node ) ) {
 				++$skippedNodes;
 
 				continue;
 			}
 
-			$foundPosition = $currentIndex - $skippedNodes;
-			$indexKey      = isset( $keys[ $foundPosition ] ) ? $keys[ $foundPosition ] : null;
+			$position = $currentIndex - $skippedNodes;
+			$indexKey = $keys[ $position ] ?? null;
 
-			$this->registerCurrentIterationTD( $indexKey, count: $foundPosition + 1 );
-			$this->collectFromCurrentIterationTD( array( $node, $indexKey, $foundPosition, $transformer ), $data )
-				&& $this->shouldPerform__allTableScan
-				&& ( $nodes = $node->childNodes )->length > 1
-				&& $this->traceTableIn( $nodes );
+			$this->registerCurrentIterationTD( $indexKey, count: $position + 1 );
+
+			$this->collectedTDFrom( $node, $transformer, $data )
+				&& $this->findTableStructureIn( $node, minChildNodesCount: 1 );
 		}
 
 		$this->currentIteration__columnIndex = null;
@@ -194,17 +194,17 @@ trait TableNodeAware {
 
 	protected function flushTableNodeTrace(): void {
 		unset(
-			$this->foundTable__bodyIds,
-			$this->scannedTable__headNames,
-			$this->scannedTable__heads,
-			$this->scannedTable__rows,
-			$this->transformer__instances,
+			$this->discoveredTable__transformers,
+			$this->discoveredTable__eventListeners,
+			$this->discoveredTable__heads,
+			$this->discoveredTable__headNames,
+			$this->discoveredTable__rows,
 		);
 	}
 
-	/** @param callable( static ): void $event */
-	protected function dispatch( callable $event ): void {
-		$this->foundTable__event = $event( ... );
+	/** @param callable( static ): void $eventListener */
+	protected function subscribeWith( callable $eventListener, Table $target = Table::Row ): void {
+		$this->discoveredTable__eventListeners[ $target->name ] = $eventListener( ... );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -212,39 +212,41 @@ trait TableNodeAware {
 		return true;
 	}
 
-	final protected function setTableId( int $id ): void {
-		if ( ! in_array( $id, $this->foundTable__bodyIds, true ) ) {
-			$this->foundTable__bodyIds[] = $id;
-			$this->currentTable__bodyId  = $id;
+	final protected function dispatchEventListenerForDiscoveredTable( int $id ): void {
+		if ( ! in_array( $id, $this->discoveredTable__bodyIds, true ) ) {
+			$this->discoveredTable__bodyIds[] = $this->currentTable__bodyId = $id;
 		}
+
+		isset( $this->discoveredTable__eventListeners[ Table::Row->name ] )
+			&& ( $this->discoveredTable__eventListeners[ Table::Row->name ] )( $this );
 	}
 
-	/** @param DOMNodeList<DOMNode> $nodes */
-	final protected function findTableNodeIn( DOMNodeList $nodes ): void {
-		( ! $this->foundTable__bodyIds || $this->shouldPerform__allTableScan )
-			&& $nodes->count() && $this->traceTableIn( $nodes );
+	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
+		( ! $this->getTableId() || $this->shouldPerform__allTableDiscovery )
+			&& ( ( $nodes = $node->childNodes )->length > $minChildNodesCount )
+			&& $this->traceTableIn( $nodes );
 	}
 
 	/** @phpstan-assert-if-true =DOMElement $node */
-	final protected function isNodeTRWithTDContent( DOMNode $node ): bool {
-		return $node->childNodes->count() && AssertDOMElement::isValid( $node, type: 'tr' );
+	final protected function isTRStructure( DOMNode $node ): bool {
+		return $node->childNodes->length && AssertDOMElement::isValid( $node, type: 'tr' );
 	}
 
 	/** @phpstan-assert-if-true =DOMElement $node */
-	final protected function isNodeTHorTD( mixed $node ): bool {
+	final protected function isTHorTDStructure( mixed $node ): bool {
 		return $node instanceof DOMElement && in_array( $node->tagName, array( 'th', 'td' ), strict: true );
 	}
 
 	/** @return ?Iterator<int,DOMNode> */
-	protected function fromTargetedHtmlTable( DOMNode $node ): ?Iterator {
+	protected function fromCurrentStructure( DOMNode $node ): ?Iterator {
 		if ( ! AssertDOMElement::isValid( $node, type: 'table' ) ) {
-			$this->findTableNodeIn( $node->childNodes );
+			$this->findTableStructureIn( $node );
 
 			return null;
 		}
 
 		/** @var ?Iterator<int,DOMNode> */
-		return $this->isTargetedTable( $node ) && $node->hasChildNodes()
+		return $this->isTargetedTable( $node ) && $node->childNodes->length
 			? $node->childNodes->getIterator()
 			: null;
 	}
@@ -259,7 +261,7 @@ trait TableNodeAware {
 		$headIterator = $node->childNodes->getIterator();
 
 		while ( ! $row && $headIterator->valid() ) {
-			$this->isNodeTRWithTDContent( $node = $headIterator->current() ) && ( $row = $node );
+			$this->isTRStructure( $node = $headIterator->current() ) && ( $row = $node );
 
 			$headIterator->next();
 		}
@@ -268,12 +270,10 @@ trait TableNodeAware {
 	}
 
 	/** @return ?array{0:?array{0:list<string>,1:list<ThReturn>},1:DOMElement} */
-	protected function tableStructureIn( DOMNode $node, ?DOMElement $body = null ): ?array {
-		if ( ! $tableIterator = $this->fromTargetedHtmlTable( $node ) ) {
+	protected function discoveredStructureIn( DOMNode $node, ?DOMElement $body = null ): ?array {
+		if ( ! $tableIterator = $this->fromCurrentStructure( $node ) ) {
 			return null;
 		}
-
-		$this->currentTable__splId = spl_object_id( $node );
 
 		// Currently, <caption> element is skipped.
 		if ( AssertDOMElement::isValid( $tableIterator->current(), type: 'caption' ) ) {
@@ -298,93 +298,93 @@ trait TableNodeAware {
 	 * @param DOMElement                              $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
 	 */
-	protected function iteratorFromTableContent( int $tableId, ?array $head, DOMElement $body ): Iterator {
-		$this->setTableId( $tableId );
-
-		isset( $this->foundTable__event ) && ( $this->foundTable__event )( $this );
-
+	protected function fromTableBodyRowStructure( ?array $head, DOMElement $body ): Iterator {
 		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
 		$rowIterator    = $body->childNodes->getIterator();
-		$rowTransformer = $this->transformer__instances['tr'] ?? null;
-		$scannedTh      = $registeredTh = false;
+		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
+		$headInspected  = false;
 		$position       = 0;
 
 		while ( $rowIterator->valid() ) {
-			if ( ! AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
+			if ( ! $tableRow = AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
 				return;
 			}
 
-			if ( ! $scannedTh && ! $head ) {
-				$scannedTh = true;
-				$head      = $this->inferTableHeadFrom( $rowIterator->current()->childNodes );
+			! $headInspected && $this->inspectHeadInBody( $head, $rowIterator, $tableRow );
 
-				// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
-				$head && $rowIterator->next();
-			}
+			$headInspected = true;
 
-			if ( ! $registeredTh && $head ) {
-				$this->registerCurrentTableTH( $tableId, ...$head );
-
-				$registeredTh = true;
-			}
-
-			if ( ! AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
+			if ( ! $tableRow = AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
 				return;
 			}
-
-			$current = $rowIterator->current();
-
-			$rowIterator->next();
 
 			// TODO: add support whether to skip yielding empty <tr> or not.
-			if ( trim( $current->textContent ) ) {
-				$row = $rowTransformer?->transform( $current, $position ) ?? $current->childNodes;
-
-				$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0] );
-
-				if ( $row instanceof CollectionSet ) {
-					yield $row->key => $row->value;
-				} else {
-					yield new ArrayObject( $this->inferTableDataFrom( $row ) );
-				}
-
-				++$position;
+			if ( ! trim( $tableRow->textContent ) ) {
+				return;
 			}
+
+			$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0] );
+
+			$content = $rowTransformer?->transform( $tableRow, $position ) ?? $tableRow->childNodes;
+
+			if ( $content instanceof CollectionSet ) {
+				yield $content->key => $content->value;
+			} else {
+				yield new ArrayObject( $this->inferTableDataFrom( $content ) );
+			}
+
+			++$position;
+
+			$rowIterator->next();
 		}//end while
 	}
 
-	private function foundTargetedTable( mixed $node ): bool {
-		return ! $this->shouldPerform__allTableScan
+	/** @param ?array{0:list<string>,1:list<ThReturn>} $head */
+	private function inspectHeadInBody( ?array &$head, Iterator $iterator, DOMNode $row ): void {
+		$head ??= $headDiscoveredInBody = $this->inferTableHeadFrom( $row->childNodes );
+
+		// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
+		// Advance iterator to next <tr> when current row is collected as head.
+		( $headDiscoveredInBody ?? false ) && $iterator->next();
+
+		$head && $this->registerCurrentTableTH( ...$head );
+	}
+
+	private function discoveredTargetedTable( mixed $node ): bool {
+		return ! $this->shouldPerform__allTableDiscovery
 			&& AssertDOMElement::isValid( $node )
 			&& $this->isTargetedTable( $node );
 	}
 
 	/**
-	 * @param array{0:DOMElement,1:?array-key,2:int,3:Transformer<TdReturn>} $args
-	 * @param array<array-key,TdReturn>                                      $data
+	 * @param Transformer<TdReturn>     $transformer
+	 * @param array<array-key,TdReturn> $data
 	 * @return ?TdReturn
 	 */
-	private function collectFromCurrentIterationTD( array $args, array &$data ): mixed {
-		[$node, $key, $position, $transformer] = $args;
-		$key                                 ??= $position;
-		$val                                   = $transformer->transform( $node, $position );
+	private function collectedTDFrom( DOMElement $node, Transformer $transformer, array &$data ): mixed {
+		$count    = $this->getCurrentIterationCountOf( Table::Column );
+		$position = $count ? $count - 1 : 0;
+		$value    = $transformer->transform( $node, $position );
 
-		return ( ! is_null( $val ) && '' !== $val ) ? ( $data[ $key ] = $val ) : null;
+		return ( ! is_null( $value ) && '' !== $value )
+			? ( $data[ $this->getCurrentColumnName() ?? $position ] = $value )
+			: null;
 	}
 
 	/**
 	 * @param list<string>   $names
 	 * @param list<ThReturn> $contents
 	 */
-	private function registerCurrentTableTH( int $tableId, array $names, array $contents ): void {
-		$this->scannedTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
-		$this->scannedTable__heads[ $tableId ]     = new ArrayObject( $contents );
+	private function registerCurrentTableTH( array $names, array $contents ): void {
+		$tableId                                      = $this->getTableId( current: true );
+		$this->discoveredTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
+		$this->discoveredTable__heads[ $tableId ]     = new ArrayObject( $contents );
 
 		$this->registerCurrentIterationTH( false );
 	}
 
 	private function registerCurrentIterationTH( int|false $index = 0 ): void {
-		if ( is_bool( $index ) ) {
+		if ( false === $index ) {
 			unset( $this->currentIteration__headCount, $this->currentIteration__headIndex );
 
 			return;
