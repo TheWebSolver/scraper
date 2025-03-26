@@ -31,12 +31,10 @@ class TableRowMarshaller implements Transformer {
 	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
 		$set   = $tracer->inferTableDataFrom( self::validate( $element )->childNodes );
 		$names = $tracer->getColumnNames();
+		$msg   = $this->collectable::invalidCountMsg();
 
 		count( $names ) === $tracer->getCurrentIterationCountOf( Table::Column )
-			|| throw ScraperError::trigger(
-				sprintf( $this->collectable::invalidCountMsg(), count( $names ), implode( '", "', $names ) )
-				. ( ScraperError::getSource()?->errorMsg() ?? '' )
-			);
+			|| ScraperError::withSourceMsg( $msg, count( $names ), implode( '", "', $names ) );
 
 		return new CollectionSet( $this->discoverIndexKeyFrom( $set ) ?? $position, new ArrayObject( $set ) );
 	}

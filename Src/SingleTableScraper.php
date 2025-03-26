@@ -42,7 +42,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 		$item    = $this->getCurrentColumnName() ?? ''; // Always exists from row transformer.
 		$value   = $this->isRequestedItem( $item ) ? $content : '';
 
-		$value && $this->collectableClass()::validate( $value, $item, $this->throwError( ... ) );
+		$value && $this->collectableClass()::validate( $value, $item, ScraperError::withSourceMsg( ... ) );
 
 		return $value;
 	}
@@ -77,11 +77,5 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 	/** @return class-string<Collectable> */
 	protected function collectableClass(): string {
 		return $this->collectableClass;
-	}
-
-	public static function throwError( string $msg, string|int ...$args ): never {
-		throw ScraperError::trigger(
-			sprintf( $msg, ...$args ) . ( ScraperError::getSource()?->errorMsg() ?? '' )
-		);
 	}
 }
