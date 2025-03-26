@@ -40,6 +40,8 @@ class ScraperError extends RuntimeException {
 	}
 
 	public static function withSourceMsg( string $msg, string|int ...$args ): never {
-		throw self::trigger( sprintf( $msg, ...$args ) . ( self::getSource()?->errorMsg() ?? '' ) );
+		$source = self::getSource();
+
+		throw self::trigger( sprintf( $msg, ...$args ) . ( $source ? " {$source->errorMsg()}" : '' ) );
 	}
 }
