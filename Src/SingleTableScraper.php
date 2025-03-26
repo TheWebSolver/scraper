@@ -57,7 +57,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 			'Could not find parsable content. ' . $this->getSource()->errorMsg()
 		);
 
-		$this->flushTableNodeTrace();
+		$this->flushDiscoveredContents();
 
 		foreach ( $data as $index => $arrayObject ) {
 			$data = $arrayObject->getArrayCopy();
@@ -66,6 +66,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 			yield $data[ $this->getIndexKey() ] ?? $index => $data; // @phpstan-ignore-line
 		}
 
+		$this->flushTransformers();
 		unset( $data );
 	}
 
@@ -78,7 +79,9 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 		return $this->collectableClass;
 	}
 
-	protected function throwError( string $msg, string|int ...$args ): never {
-		throw ScraperError::trigger( sprintf( $msg, ...$args ) . " {$this->getSource()->errorMsg()}" );
+	public static function throwError( string $msg, string|int ...$args ): never {
+		throw ScraperError::trigger(
+			sprintf( $msg, ...$args ) . ( ScraperError::getSource()?->errorMsg() ?? '' )
+		);
 	}
 }

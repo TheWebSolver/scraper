@@ -192,9 +192,12 @@ trait TableNodeAware {
 		return $data;
 	}
 
-	protected function flushTableNodeTrace(): void {
+	protected function flushTransformers(): void {
+		unset( $this->discoveredTable__transformers );
+	}
+
+	protected function flushDiscoveredContents(): void {
 		unset(
-			$this->discoveredTable__transformers,
 			$this->discoveredTable__eventListeners,
 			$this->discoveredTable__heads,
 			$this->discoveredTable__headNames,
