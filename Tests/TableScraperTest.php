@@ -7,9 +7,11 @@ use Closure;
 use BackedEnum;
 use DOMElement;
 use ValueError;
+use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
+use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
@@ -65,7 +67,7 @@ class TableScraperTest extends TestCase {
 				'title'   => 'PHP Developer',
 				'address' => 'Ktm',
 			),
-			$iterator->current()
+			$iterator->current()->getArrayCopy()
 		);
 
 		$iterator->next();
@@ -76,7 +78,7 @@ class TableScraperTest extends TestCase {
 				'title'   => 'JS Developer',
 				'address' => 'Bkt',
 			),
-			$iterator->current()
+			$iterator->current()->getArrayCopy()
 		);
 
 		$iterator->next();
@@ -139,7 +141,7 @@ class TableScraperTest extends TestCase {
 		[$key, $value] = $expectedValue ?? array( null, null );
 
 		$this->assertSame( $key, $iterator->key() );
-		$this->assertSame( $value, $iterator->current() );
+		$this->assertSame( $value, $iterator->current()->getArrayCopy() );
 	}
 
 	/** @return mixed[] */
@@ -184,18 +186,30 @@ class TableScraperTest extends TestCase {
 		$this->assertSame( 0, $iterator->key() );
 
 		foreach ( $requestedKeys as $key ) {
-			$this->assertArrayHasKey( $key, $current );
+			$this->assertArrayHasKey( $key, $current->getArrayCopy() );
 		}
 
-		$this->assertArrayNotHasKey( 'title', $current );
+		$this->assertArrayNotHasKey( 'title', $current->getArrayCopy() );
 	}
 
 	#[Test]
-	public function itYieldsKeyAsValueOfRequestedIndexKey(): void {
+	public function itYieldsKeyAsValueThatOffsetsDeveloperDetailsEnumCaseValue(): void {
 		$td = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
+		$tr = new /** @template-implements Transformer<CollectionSet<string>> */ class( DeveloperDetails::Name )
+		implements Transformer{
+			public function __construct( private DeveloperDetails $details ) {}
 
-		$this->scraper->withTransformers( compact( 'td' ) );
-		$this->scraper->useKeys( DeveloperDetails::class, DeveloperDetails::Name );
+			/** @param TableTracer<string,string> $tracer */
+			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
+				assert( $element instanceof DOMElement );
+
+				$data = $tracer->inferTableDataFrom( $element->childNodes );
+
+				return new CollectionSet( $data[ $this->details->value ], new ArrayObject( $data ) );
+			}
+		};
+
+		$this->scraper->withTransformers( compact( 'td', 'tr' ) );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 
@@ -206,7 +220,7 @@ class TableScraperTest extends TestCase {
 				'title'   => 'PHP Developer',
 				'address' => 'Ktm',
 			),
-			$iterator->current()
+			$iterator->current()->getArrayCopy()
 		);
 	}
 }

@@ -6,6 +6,7 @@ namespace TheWebSolver\Codegarage\Scraper;
 use Closure;
 use Iterator;
 use DOMElement;
+use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
@@ -17,7 +18,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
 
 /**
  * @template TdReturn
- * @template-implements Scrapable<string,array<TdReturn>>
+ * @template-implements Scrapable<array-key,ArrayObject<array-key,TdReturn>>
  * @template-implements TableTracer<string,TdReturn>
  */
 abstract class SingleTableScraper implements Scrapable, TableTracer {
@@ -48,26 +49,9 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 	}
 
 	public function parse( string $content ): Iterator {
-		! empty( $this->getKeys() ) || $this->useKeys( $this->getCollectableNames() );
-
-		$this->traceTableIn( DOMDocumentFactory::createFromHtml( $content )->childNodes );
-
-		$tableId = $this->getTableId()[ array_key_last( $this->getTableId() ) ];
-		$data    = $this->getTableData()[ $tableId ] ?? throw ScraperError::trigger(
-			'Could not find parsable content. ' . $this->getSource()->errorMsg()
-		);
-
-		$this->flushDiscoveredContents();
-
-		foreach ( $data as $index => $arrayObject ) {
-			$data = $arrayObject->getArrayCopy();
-
-			// FIXME: $data[$indexKey] might not always be string.
-			yield $data[ $this->getIndexKey() ] ?? $index => $data; // @phpstan-ignore-line
-		}
+		yield from $this->validateCurrentTableParsedData( $content );
 
 		$this->flushTransformers();
-		unset( $data );
 	}
 
 	public function flush(): void {
@@ -77,5 +61,19 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 	/** @return class-string<Collectable> */
 	protected function collectableClass(): string {
 		return $this->collectableClass;
+	}
+
+	/** @return Iterator<string|int,ArrayObject<array-key,TdReturn>> */
+	protected function validateCurrentTableParsedData( string $content ): Iterator {
+		! empty( $this->getKeys() ) || $this->useKeys( $this->getCollectableNames() );
+
+		$this->traceTableIn( DOMDocumentFactory::createFromHtml( $content )->childNodes );
+
+		$data = $this->getTableData()[ $this->getTableId( current: true ) ]
+			?? ScraperError::withSourceMsg( 'Could not find parsable content.' );
+
+		$this->flushDiscoveredContents();
+
+		return $data;
 	}
 }
