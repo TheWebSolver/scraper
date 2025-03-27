@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Closure;
+use Iterator;
 use BackedEnum;
 use DOMElement;
 use ValueError;
@@ -15,6 +16,7 @@ use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -40,7 +42,7 @@ class TableScraperTest extends TestCase {
 	}
 
 	protected function setUp(): void {
-		$this->scraper = new HtmlTableScraper( DeveloperDetails::class );
+		$this->scraper = new HtmlTableScraper();
 	}
 
 	protected function tearDown(): void {
@@ -194,17 +196,15 @@ class TableScraperTest extends TestCase {
 	#[Test]
 	public function itYieldsKeyAsValueThatOffsetsDeveloperDetailsEnumCaseValue(): void {
 		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
-		$tr = new /** @template-implements Transformer<CollectionSet<string>> */ class( DeveloperDetails::Name )
+		$tr = new /** @template-implements Transformer<CollectionSet<string>> */ class()
 		implements Transformer{
-			public function __construct( private DeveloperDetails $details ) {}
-
 			/** @param TableTracer<string,string> $tracer */
 			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
 				assert( $element instanceof DOMElement );
 
 				$data = $tracer->inferTableDataFrom( $element->childNodes );
 
-				return new CollectionSet( $data[ $this->details->value ], new ArrayObject( $data ) );
+				return new CollectionSet( $data[ DeveloperDetails::Name->value ], new ArrayObject( $data ) );
 			}
 		};
 
@@ -222,6 +222,30 @@ class TableScraperTest extends TestCase {
 			$iterator->current()->getArrayCopy()
 		);
 	}
+
+	#[Test]
+	public function itRegistersCollectableSourceUsingEnumName(): void {
+		$iterator = $this->createStub( Iterator::class );
+		$scraper  = new class( $iterator ) extends SingleTableScraper {
+			public function __construct( private readonly Iterator $iterator ) {
+				$this->collectableFromConcrete( DeveloperDetails::class );
+			}
+
+			public function getCollectionSource(): CollectFrom { // phpcs:ignore
+				return parent::getCollectionSource();
+			}
+
+			public function parse( string $content ): Iterator {
+				return $this->iterator;
+			}
+
+			protected function defaultCachePath(): string {
+				return '';
+			}
+		};
+
+		$this->assertCount( 3, $scraper->getCollectionSource()->items );
+	}
 }
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
@@ -230,13 +254,19 @@ class TableScraperTest extends TestCase {
  * @template-extends SingleTableScraper<string>
  */
 #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )]
+#[CollectFrom( DeveloperDetails::class )]
 class HtmlTableScraper extends SingleTableScraper {
-	public function validateTableData( string|DOMElement $element ): string {
-		$content = trim( is_string( $element ) ? $element : $element->textContent );
-		$item    = $this->getCurrentColumnName() ?? '';
-		$value   = $this->isRequestedItem( $item ) ? $content : '';
+	public function parse( string $content ): Iterator {
+		yield from $this->validateCurrentTableParsedData( $content );
+	}
 
-		$value && $this->collectableClass()::validate( $value, $item, ScraperError::withSourceMsg( ... ) );
+	public function validateTableData( string|DOMElement $element ): string {
+		$content    = trim( is_string( $element ) ? $element : $element->textContent );
+		$columnName = $this->getCurrentColumnName() ?? '';
+		$value      = $this->isRequestedKey( $columnName ) ? $content : '';
+
+		$value && $this->getCollectionSource()
+			->concrete::validate( $value, $columnName, ScraperError::withSourceMsg( ... ) );
 
 		return $value;
 	}

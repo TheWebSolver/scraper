@@ -4,7 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Iterator;
-use ArrayObject;
+use ReflectionClass;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
@@ -17,7 +17,7 @@ class ScraperTest extends TestCase {
 	private Scraper $scraper;
 
 	protected function setUp(): void {
-		$this->scraper = new Scraper();
+		$this->scraper = new Scraper( $this->createStub( Iterator::class ) );
 	}
 
 	protected function tearDown(): void {
@@ -50,9 +50,13 @@ class ScraperTest extends TestCase {
 		$this->assertStringContainsString( '<div id="no-html-tag">', $this->scraper->fromCache() );
 
 		$scraper = new #[ScrapeFrom( name: 'Test', url: 'https://php.net', filename: 'cacheFile' )]
-		class() extends Scraper {};
+		class() extends Scraper {
+			public function __construct() {
+				$this->sourceFromAttribute( new ReflectionClass( $this ) );
+			}
+		};
 
-		$scraper->sourceFromAttribute()->withCachePath( DOMDocumentFactoryTest::RESOURCE_PATH, 'full-content.html' );
+		$scraper->withCachePath( DOMDocumentFactoryTest::RESOURCE_PATH, 'full-content.html' );
 
 		$this->assertStringContainsString( '<div id="with-html-tag">', $scraper->fromCache() );
 		$this->assertSame( 'https://php.net', $scraper->getSourceUrl() );
@@ -63,12 +67,12 @@ class ScraperTest extends TestCase {
 
 /** @template-implements Scrapable<string,array<string,string>> */
 class Scraper implements Scrapable {
-	use ScrapeYard, ScraperSource, CollectionAware {
-		ScraperSource::sourceFromAttribute as public;
-	}
+	use ScrapeYard, ScraperSource, CollectionAware;
+
+	public function __construct( private readonly Iterator $iterator ) {}
 
 	public function parse( string $content ): Iterator {
-		return ( new ArrayObject() )->getIterator();
+		return $this->iterator;
 	}
 
 	public function invalidateCache(): bool {

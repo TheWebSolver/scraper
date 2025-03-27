@@ -12,7 +12,6 @@ use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
 
@@ -27,35 +26,25 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 
 	private Closure $unsubscribeError;
 
-	/** @param class-string<Collectable> $collectableClass */
-	public function __construct( private readonly string $collectableClass ) {
-		$this->sourceFromAttribute( new ReflectionClass( $this ) )
-			->withCachePath( $this->defaultCachePath(), $this->getSource()->filename )
-			->setCollectionItemsFrom( $collectableClass )
-			->useKeys( $columnNames = $this->getCollectableNames() )
-			->subscribeWith( static fn( $i ) => $i->withAllTables( false )->setColumnNames( $columnNames, $i->getTableId( true ) ) );
+	public function __construct() {
+		$reflection = new ReflectionClass( $this );
 
-		$this->unsubscribeError = ScraperError::for( $this->getSource() );
-	}
+		$this->sourceFromAttribute( $reflection )
+			->collectableFromAttribute( $reflection )
+			->subscribeWith( $this->beforeTableTraceListener( ... ) )
+			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename );
 
-	public function parse( string $content ): Iterator {
-		yield from $this->validateCurrentTableParsedData( $content );
-
-		$this->flushTransformers();
+		$this->unsubscribeError = ScraperError::for( $this->getScraperSource() );
 	}
 
 	public function flush(): void {
 		( $this->unsubscribeError )();
-	}
-
-	/** @return class-string<Collectable> */
-	protected function collectableClass(): string {
-		return $this->collectableClass;
+		$this->flushTransformers();
 	}
 
 	/** @return Iterator<string|int,ArrayObject<array-key,TdReturn>> */
 	protected function validateCurrentTableParsedData( string $content ): Iterator {
-		! empty( $this->getKeys() ) || $this->useKeys( $this->getCollectableNames() );
+		! empty( $this->getKeys() ) || $this->useKeys( $this->getCollectionSource()->items );
 
 		$this->traceTableIn( DOMDocumentFactory::createFromHtml( $content )->childNodes );
 
@@ -65,5 +54,10 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 		$this->flushDiscoveredContents();
 
 		return $data;
+	}
+
+	private function beforeTableTraceListener(): void {
+		$this->withAllTables( false )
+			->setColumnNames( $this->getCollectionSource()->items, $this->getTableId( current: true ) );
 	}
 }

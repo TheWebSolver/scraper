@@ -4,21 +4,22 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Traits;
 
 use BackedEnum;
+use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 
 trait CollectionAware {
+	private CollectFrom $collectionSource;
 	/** @var list<string> */
-	private array $collectableItems;
-	/** @var list<string> */
-	private array $collectionKeys = array();
-	private ?string $indexKey     = null;
+	private array $requestedKeys = array();
+	private ?string $indexKey    = null;
 
 	/** @param class-string<BackedEnum>|list<string> $keys */
 	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): static {
-		$this->collectionKeys = match ( true ) {
+		$this->requestedKeys = match ( true ) {
 			is_array( $keys )                  => $keys,
-			$this->isCollectableClass( $keys ) => $this->getKeysFromCollectableClass( $keys ),
+			$this->isCollectableClass( $keys ) => $this->collectableFromConcrete( $keys )->getCollectionSource()->items,
 			default                            => $this->throwInvalidCollectable( $keys ),
 		};
 
@@ -29,65 +30,34 @@ trait CollectionAware {
 	}
 
 	public function getKeys(): array {
-		return $this->collectionKeys;
+		return $this->requestedKeys;
 	}
 
 	public function getIndexKey(): ?string {
 		return $this->indexKey;
 	}
 
-	/**
-	 * Allows exhibit to exclude non-mappable collection items.
-	 *
-	 * @return array<string|BackedEnum>
-	 */
-	protected function nonMappableItems(): array {
-		return array();
+	protected function getCollectionSource(): CollectFrom {
+		return $this->collectionSource;
 	}
 
-	/** @param ?class-string<Collectable> $classname */
-	protected function setCollectionItemsFrom( ?string $classname = null ): static {
-		( $classname ??= $this->collectableClass() )
-			&& ( $this->collectableItems ??= $classname::toArray( ...$this->nonMappableItems() ) );
+	/** @param ReflectionClass<static> $reflection */
+	protected function collectableFromAttribute( ReflectionClass $reflection ): static {
+		( $attribute = ( $reflection->getAttributes( CollectFrom::class )[0] ?? null ) )
+				&& $this->collectionSource = $attribute->newInstance();
 
 		return $this;
 	}
 
-	/** @return list<string> */
-	protected function getCollectableNames(): array {
-		return $this->collectableItems ?? array();
+	/** @param class-string<Collectable> $classname */
+	protected function collectableFromConcrete( string $classname, string|BackedEnum ...$only ): static {
+		$this->collectionSource = new CollectFrom( $classname, ...$only );
+
+		return $this;
 	}
 
-	final protected function isCollectionItem( string $key ): bool {
-		return in_array( $key, $this->getCollectableNames(), strict: true );
-	}
-
-	final protected function isRequestedItem( string $key ): bool {
-		return in_array( $key, $this->getKeys(), strict: true );
-	}
-
-	// phpcs:disable Squiz.Commenting.FunctionComment.InvalidNoReturn
-	/**
-	 * @return class-string<Collectable>
-	 * @throws InvalidSource When this method is used without overriding.
-	 */
-	// phpcs:enable
-	protected function collectableClass(): string {
-		throw new InvalidSource(
-			sprintf(
-				'Exhibiting class must override this method "%1$s::%2$s" before use.',
-				static::class,
-				__FUNCTION__
-			)
-		);
-	}
-
-	/**
-	 * @param ?class-string<Collectable> $name
-	 * @return list<string>
-	 */
-	private function getKeysFromCollectableClass( ?string $name = null ): array {
-		return $this->setCollectionItemsFrom( $name )->getCollectableNames();
+	final protected function isRequestedKey( string $collectable ): bool {
+		return in_array( $collectable, $this->getKeys(), strict: true );
 	}
 
 	/** @phpstan-assert-if-true =class-string<Collectable> $value */
@@ -98,7 +68,7 @@ trait CollectionAware {
 	private function throwInvalidCollectable( string $value ): never {
 		throw new InvalidSource(
 			sprintf(
-				'Collection keys can either be an array of string or a class string of "%1$s" interface. %2$s given.',
+				'Collection keys can either be an array of string or a BackedEnum classname implementing "%1$s" interface. %2$s given.',
 				Collectable::class,
 				$value
 			)

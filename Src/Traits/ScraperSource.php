@@ -8,26 +8,19 @@ use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 
 trait ScraperSource {
 	private ScrapeFrom $scraperSource;
-	private string $sourceUrl;
 
 	public function getSourceUrl(): string {
-		return $this->sourceUrl ?? '';
+		return isset( $this->scraperSource ) ? $this->scraperSource->url : '';
 	}
 
-	protected function getSource(): ScrapeFrom {
+	protected function getScraperSource(): ScrapeFrom {
 		return $this->scraperSource;
 	}
 
-	/** @param ?ReflectionClass<static> $reflection */
-	final protected function sourceFromAttribute( ?ReflectionClass $reflection = null ): static {
-		if ( $this->scraperSource ?? null ) {
-			return $this;
-		}
-
-		$reflection        ??= new ReflectionClass( static::class );
-		$attribute           = $reflection->getAttributes( ScrapeFrom::class )[0];
-		$this->scraperSource = $attribute->newInstance();
-		$this->sourceUrl     = $this->scraperSource->url;
+	/** @param ReflectionClass<static> $reflection */
+	final protected function sourceFromAttribute( ReflectionClass $reflection ): static {
+		( $attribute = ( $reflection->getAttributes( ScrapeFrom::class )[0] ?? null ) )
+			&& ( $this->scraperSource = $attribute->newInstance() );
 
 		return $this;
 	}

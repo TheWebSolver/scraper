@@ -16,7 +16,7 @@ trait ScrapeYard {
 	private ?int $diacriticOperationType = null;
 
 	abstract public function getSourceUrl(): string;
-	abstract protected function getSource(): ScrapeFrom;
+	abstract protected function getScraperSource(): ScrapeFrom;
 
 	/** @return array<string,string> */
 	protected function getDiacritics(): array {
@@ -52,8 +52,8 @@ trait ScrapeYard {
 		return @file_put_contents( $this->getCachePath(), $content )
 			?: throw ScraperError::trigger(
 				'Could not cache scraped content from %1$s source: %2$s.%3$s',
-				$this->getSource()->name,
-				$this->getSource()->url,
+				$this->getScraperSource()->name,
+				$this->getScraperSource()->url,
 				( $e = error_get_last() ) ? "Reason: {$e['message']}." : ''
 			);
 	}
@@ -68,7 +68,7 @@ trait ScrapeYard {
 
 	private function notFound( string $source ): never {
 		throw new InvalidSource(
-			sprintf( 'Could not fetch content from %1$s source: %2$s', $this->getSource()->name, $source )
+			sprintf( 'Could not fetch content from %1$s source: %2$s', $this->getScraperSource()->name, $source )
 		);
 	}
 }
