@@ -4,7 +4,6 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use Closure;
-use BackedEnum;
 
 interface Collectable {
 	/** @placeholder: **1:** collection items count, **2:** stringified collection items. */
@@ -27,10 +26,9 @@ interface Collectable {
 	/**
 	 * Gets collection items.
 	 *
-	 * @param string|BackedEnum ...$except The item(s) to be excluded from collection set.
 	 * @return list<string>
 	 */
-	public static function toArray( string|BackedEnum ...$except ): array;
+	public static function toArray(): array;
 
 	/**
 	 * Walks given data for validation.

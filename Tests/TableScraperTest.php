@@ -326,12 +326,8 @@ enum DeveloperDetails: string implements Collectable {
 		return self::label() . ' ' . self::INVALID_COUNT_MESSAGE;
 	}
 
-	public static function toArray( string|BackedEnum ...$except ): array {
-		$cases = ! $except
-			? self::cases()
-			: array_filter( self::cases(), static fn( self $i ) => ! in_array( $i, $except, strict: true ) );
-
-		return array_column( $cases, column_key: 'value' );
+	public static function toArray(): array {
+		return array_column( self::cases(), column_key: 'value' );
 	}
 
 	public static function validate( mixed $data, string $item, ?Closure $handler = null ): bool {
