@@ -228,11 +228,8 @@ class TableScraperTest extends TestCase {
 		$iterator = $this->createStub( Iterator::class );
 		$scraper  = new class( $iterator ) extends SingleTableScraper {
 			public function __construct( private readonly Iterator $iterator ) {
-				$this->collectableFromConcrete( DeveloperDetails::class );
-			}
-
-			public function getCollectionSource(): CollectFrom { // phpcs:ignore
-				return parent::getCollectionSource();
+				$this->collectableFromConcrete( DeveloperDetails::class )
+					->useKeys( $this->getCollectionSource()->items );
 			}
 
 			public function parse( string $content ): Iterator {
@@ -244,8 +241,7 @@ class TableScraperTest extends TestCase {
 			}
 		};
 
-		$this->assertSame( DeveloperDetails::class, $scraper->getCollectionSource()->concrete );
-		$this->assertCount( 3, $scraper->getCollectionSource()->items );
+		$this->assertCount( 3, $scraper->getKeys() );
 
 		$scraper = new class( $iterator ) extends SingleTableScraper {
 			public function __construct( private readonly Iterator $iterator ) {
@@ -253,11 +249,7 @@ class TableScraperTest extends TestCase {
 					DeveloperDetails::class,
 					DeveloperDetails::Name,
 					'address'
-				);
-			}
-
-			public function getCollectionSource(): CollectFrom { // phpcs:ignore
-				return parent::getCollectionSource();
+				)->useKeys( $this->getCollectionSource()->items );
 			}
 
 			public function parse( string $content ): Iterator {
@@ -269,7 +261,7 @@ class TableScraperTest extends TestCase {
 			}
 		};
 
-		$this->assertSame( array( 'name', 'address' ), $scraper->getCollectionSource()->items );
+		$this->assertSame( array( 'name', 'address' ), $scraper->getKeys() );
 	}
 }
 
