@@ -18,14 +18,16 @@ trait ScraperSource {
 		return $this->scraperSource;
 	}
 
-	final protected function sourceFromAttribute( string $customUrl = '' ): static {
+	/** @param ?ReflectionClass<static> $reflection */
+	final protected function sourceFromAttribute( ?ReflectionClass $reflection = null ): static {
 		if ( $this->scraperSource ?? null ) {
 			return $this;
 		}
 
-		$attribute           = ( new ReflectionClass( static::class ) )->getAttributes( ScrapeFrom::class )[0];
+		$reflection        ??= new ReflectionClass( static::class );
+		$attribute           = $reflection->getAttributes( ScrapeFrom::class )[0];
 		$this->scraperSource = $attribute->newInstance();
-		$this->sourceUrl     = $customUrl ?: $this->scraperSource->url;
+		$this->sourceUrl     = $this->scraperSource->url;
 
 		return $this;
 	}

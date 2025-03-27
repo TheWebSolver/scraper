@@ -5,8 +5,8 @@ namespace TheWebSolver\Codegarage\Scraper;
 
 use Closure;
 use Iterator;
-use DOMElement;
 use ArrayObject;
+use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
@@ -29,7 +29,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 
 	/** @param class-string<Collectable> $collectableClass */
 	public function __construct( private readonly string $collectableClass ) {
-		$this->sourceFromAttribute()
+		$this->sourceFromAttribute( new ReflectionClass( $this ) )
 			->withCachePath( $this->defaultCachePath(), $this->getSource()->filename )
 			->setCollectionItemsFrom( $collectableClass )
 			->useKeys( $columnNames = $this->getCollectableNames() )
