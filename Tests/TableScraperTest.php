@@ -244,7 +244,32 @@ class TableScraperTest extends TestCase {
 			}
 		};
 
+		$this->assertSame( DeveloperDetails::class, $scraper->getCollectionSource()->concrete );
 		$this->assertCount( 3, $scraper->getCollectionSource()->items );
+
+		$scraper = new class( $iterator ) extends SingleTableScraper {
+			public function __construct( private readonly Iterator $iterator ) {
+				$this->collectableFromConcrete(
+					DeveloperDetails::class,
+					DeveloperDetails::Name,
+					'address'
+				);
+			}
+
+			public function getCollectionSource(): CollectFrom { // phpcs:ignore
+				return parent::getCollectionSource();
+			}
+
+			public function parse( string $content ): Iterator {
+				return $this->iterator;
+			}
+
+			protected function defaultCachePath(): string {
+				return '';
+			}
+		};
+
+		$this->assertSame( array( 'name', 'address' ), $scraper->getCollectionSource()->items );
 	}
 }
 
