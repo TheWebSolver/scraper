@@ -38,16 +38,6 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 		$this->unsubscribeError = ScraperError::for( $this->getSource() );
 	}
 
-	public function tdParser( string|DOMElement $element ): string {
-		$content = trim( is_string( $element ) ? $element : $element->textContent );
-		$item    = $this->getCurrentColumnName() ?? ''; // Always exists from row transformer.
-		$value   = $this->isRequestedItem( $item ) ? $content : '';
-
-		$value && $this->collectableClass()::validate( $value, $item, ScraperError::withSourceMsg( ... ) );
-
-		return $value;
-	}
-
 	public function parse( string $content ): Iterator {
 		yield from $this->validateCurrentTableParsedData( $content );
 

@@ -21,8 +21,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
 class TableScraperTest extends TestCase {
-	/** @var SingleTableScraper<string> */
-	private SingleTableScraper $scraper;
+	private HtmlTableScraper $scraper;
 
 	/**
 	 * @param Closure(string|DOMElement, int, TableTracer<mixed,string>): string $marshaller
@@ -131,7 +130,7 @@ class TableScraperTest extends TestCase {
 		extends TableRowMarshaller{};
 
 		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
-		$td    = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
+		$td    = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
 
 		if ( null === $expectedValue ) {
 			$this->expectExceptionMessage( $type->errorMsg() );
@@ -176,7 +175,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itOnlyCollectsDataWithRequestedKeys(): void {
-		$td = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
+		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
 
 		$this->scraper->withTransformers( compact( 'td' ) )->useKeys( $requestedKeys = array( 'name', 'address' ) );
 
@@ -194,7 +193,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itYieldsKeyAsValueThatOffsetsDeveloperDetailsEnumCaseValue(): void {
-		$td = $this->withTransformedTDUsing( $this->scraper->tdParser( ... ) );
+		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
 		$tr = new /** @template-implements Transformer<CollectionSet<string>> */ class( DeveloperDetails::Name )
 		implements Transformer{
 			public function __construct( private DeveloperDetails $details ) {}
@@ -232,6 +231,16 @@ class TableScraperTest extends TestCase {
  */
 #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )]
 class HtmlTableScraper extends SingleTableScraper {
+	public function validateTableData( string|DOMElement $element ): string {
+		$content = trim( is_string( $element ) ? $element : $element->textContent );
+		$item    = $this->getCurrentColumnName() ?? '';
+		$value   = $this->isRequestedItem( $item ) ? $content : '';
+
+		$value && $this->collectableClass()::validate( $value, $item, ScraperError::withSourceMsg( ... ) );
+
+		return $value;
+	}
+
 	protected function defaultCachePath(): string {
 		return DOMDocumentFactoryTest::RESOURCE_PATH;
 	}
