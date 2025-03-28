@@ -11,7 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
-use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
+use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 
 class ScraperTest extends TestCase {
 	private Scraper $scraper;
@@ -67,7 +67,7 @@ class ScraperTest extends TestCase {
 
 /** @template-implements Scrapable<string,array<string,string>> */
 class Scraper implements Scrapable {
-	use ScrapeYard, ScraperSource, CollectionAware;
+	use ScrapeYard, ScraperSource, CollectorSource;
 
 	public function __construct( private readonly Iterator $iterator ) {}
 

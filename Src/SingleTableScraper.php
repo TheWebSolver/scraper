@@ -13,7 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
-use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
+use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 
 /**
  * @template TdReturn
@@ -22,7 +22,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\CollectionAware;
  */
 abstract class SingleTableScraper implements Scrapable, TableTracer {
 	/** @use TableNodeAware<string,TdReturn> */
-	use ScrapeYard, ScraperSource, TableNodeAware, CollectionAware;
+	use ScrapeYard, ScraperSource, TableNodeAware, CollectorSource;
 
 	private Closure $unsubscribeError;
 
