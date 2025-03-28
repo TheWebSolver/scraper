@@ -51,19 +51,27 @@ trait TableNodeAware {
 	private int $currentTable__bodyId;
 	/** @var array<int,list<string>> */
 	private array $currentTable__columnNames;
+	/** @var array<int,int> */
+	private array $currentTable__lastColumn = array();
 
 	private int $currentIteration__headCount;
 	private int $currentIteration__headIndex;
+	private string $currentIteration__columnIndex;
 	/** @var array<int,int> */
-	private array $currentIteration__columnCount   = array();
-	private ?string $currentIteration__columnIndex = null;
+	private array $currentIteration__columnCount = array();
 
 	public function setColumnNames( array $keys, int $id ): void {
+
 		( $id && $this->getTableId( current: true ) === $id ) || throw new ScraperError(
 			sprintf( self::USE_EVENT_DISPATCHER, static::class, __FUNCTION__, 'set column names.' )
 		);
 
+		if ( ! $keys ) {
+			return;
+		}
+
 		$this->currentTable__columnNames[ $id ] = $keys;
+		$this->currentTable__lastColumn[ $id ]  = array_key_last( $keys );
 	}
 
 	public function withTransformers( array $transformers ): static {
@@ -85,7 +93,7 @@ trait TableNodeAware {
 	}
 
 	public function getCurrentColumnName(): ?string {
-		return $this->currentIteration__columnIndex;
+		return $this->currentIteration__columnIndex ?? null;
 	}
 
 	public function getCurrentIterationCountOf( Table $element ): ?int {
@@ -166,6 +174,7 @@ trait TableNodeAware {
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data     = array();
 		$keys     = $this->getColumnNames();
+		$last     = $this->currentTable__lastColumn[ $this->currentTable__bodyId ] ?? null;
 		$position = $skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
 
 		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
@@ -179,6 +188,11 @@ trait TableNodeAware {
 			}
 
 			$position = $currentIndex - $skippedNodes;
+
+			if ( $last && $position > $last ) {
+				break;
+			}
+
 			$indexKey = $keys[ $position ] ?? null;
 
 			$this->registerCurrentIterationTD( $indexKey, count: $position + 1 );
@@ -187,7 +201,7 @@ trait TableNodeAware {
 				&& $this->findTableStructureIn( $node, minChildNodesCount: 1 );
 		}
 
-		$this->currentIteration__columnIndex = null;
+		unset( $this->currentIteration__columnIndex );
 
 		return $data;
 	}
@@ -403,6 +417,6 @@ trait TableNodeAware {
 
 	private function registerCurrentIterationTD( ?string $index, int $count ): void {
 		$this->currentIteration__columnCount[ $this->currentTable__bodyId ] = $count;
-		$this->currentIteration__columnIndex                                = $index;
+		$index && $this->currentIteration__columnIndex                      = $index;
 	}
 }
