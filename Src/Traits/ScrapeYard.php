@@ -11,7 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 trait ScrapeYard {
 	use CachePath;
 
-	/** @var null|Scrapable::DIACRITICS* */
+	/** @var null|\TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable::DIACRITICS* */
 	private ?int $diacriticOperationType = null;
 
 	abstract public function getSourceUrl(): string;
