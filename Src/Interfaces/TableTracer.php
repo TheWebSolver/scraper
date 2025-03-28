@@ -22,10 +22,10 @@ interface TableTracer {
 	public function withAllTables( bool $trace = true ): static;
 
 	/**
-	 * Registers transformers to transformed traced element.
+	 * Registers transformers to transform traced element.
 	 *
 	 * Each call made to this method must override previously set transformer, if any.
-	 * Also, each call must only override for its respective index key.
+	 * Also, each call must only override for its respective offset/index key.
 	 *
 	 * @param array{
 	 *   tr ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
@@ -106,16 +106,16 @@ interface TableTracer {
 	public function getTableData(): array;
 
 	/**
-	 * Gets index key of traced table row's currently iterated data.
+	 * Gets current iteration table data column name, if set.
 	 *
-	 * This must return null when current iteration is completed.
+	 * This must return null after current iteration is completed.
 	 */
 	public function getCurrentColumnName(): ?string;
 
 	/**
 	 * Gets current iteration count of given element.
 	 *
-	 * This method may return null after current iteration is finished.
+	 * This may return null after current iteration is completed.
 	 */
 	public function getCurrentIterationCountOf( Table $element ): ?int;
 }

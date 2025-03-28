@@ -6,7 +6,6 @@ namespace TheWebSolver\Codegarage\Scraper\Traits;
 use TheWebSolver\Codegarage\Scraper\Traits\CachePath;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 
 trait ScrapeYard {
