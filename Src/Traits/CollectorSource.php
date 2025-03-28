@@ -9,7 +9,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 
-trait CollectionAware {
+trait CollectorSource {
 	private ?CollectFrom $collectionSource = null;
 	/** @var list<string> */
 	private array $requestedKeys = array();
