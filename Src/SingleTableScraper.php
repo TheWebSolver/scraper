@@ -34,6 +34,8 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 			->subscribeWith( $this->beforeTableTraceListener( ... ) )
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename );
 
+		( $source = $this->getCollectionSource() ) && $this->useKeys( $source->items );
+
 		$this->unsubscribeError = ScraperError::for( $this->getScraperSource() );
 	}
 
@@ -44,7 +46,11 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 
 	/** @return Iterator<string|int,ArrayObject<array-key,TdReturn>> */
 	protected function validateCurrentTableParsedData( string $content ): Iterator {
-		! empty( $this->getKeys() ) || $this->useKeys( $this->getCollectionSource()->items );
+		$this->withAllTables( false );
+
+		empty( $this->getKeys() )
+			&& ( $source = $this->getCollectionSource() )
+			&& $this->useKeys( $source->items );
 
 		$this->traceTableIn( DOMDocumentFactory::createFromHtml( $content )->childNodes );
 
@@ -57,7 +63,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 	}
 
 	private function beforeTableTraceListener(): void {
-		$this->withAllTables( false )
-			->setColumnNames( $this->getCollectionSource()->items, $this->getTableId( current: true ) );
+		( $source = $this->getCollectionSource() )
+			&& $this->setColumnNames( $source->items, $this->getTableId( current: true ) );
 	}
 }

@@ -228,8 +228,7 @@ class TableScraperTest extends TestCase {
 		$iterator = $this->createStub( Iterator::class );
 		$scraper  = new class( $iterator ) extends SingleTableScraper {
 			public function __construct( private readonly Iterator $iterator ) {
-				$this->collectableFromConcrete( DeveloperDetails::class )
-					->useKeys( $this->getCollectionSource()->items );
+				$this->useKeys( $this->collectableFromConcrete( DeveloperDetails::class )->items );
 			}
 
 			public function parse( string $content ): Iterator {
@@ -245,11 +244,9 @@ class TableScraperTest extends TestCase {
 
 		$scraper = new class( $iterator ) extends SingleTableScraper {
 			public function __construct( private readonly Iterator $iterator ) {
-				$this->collectableFromConcrete(
-					DeveloperDetails::class,
-					DeveloperDetails::Name,
-					'address'
-				)->useKeys( $this->getCollectionSource()->items );
+				$this->useKeys(
+					$this->collectableFromConcrete( DeveloperDetails::class, DeveloperDetails::Name, 'address' )->items
+				);
 			}
 
 			public function parse( string $content ): Iterator {
@@ -282,8 +279,8 @@ class HtmlTableScraper extends SingleTableScraper {
 		$columnName = $this->getCurrentColumnName() ?? '';
 		$value      = $this->isRequestedKey( $columnName ) ? $content : '';
 
-		$value && $this->getCollectionSource()
-			->concrete::validate( $value, $columnName, ScraperError::withSourceMsg( ... ) );
+		$value && ( $source = $this->getCollectionSource() ) &&
+			$source->concrete::validate( $value, $columnName, ScraperError::withSourceMsg( ... ) );
 
 		return $value;
 	}

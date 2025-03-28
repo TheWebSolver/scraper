@@ -10,7 +10,7 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 
 trait CollectionAware {
-	private CollectFrom $collectionSource;
+	private ?CollectFrom $collectionSource = null;
 	/** @var list<string> */
 	private array $requestedKeys = array();
 	private ?string $indexKey    = null;
@@ -19,7 +19,7 @@ trait CollectionAware {
 	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): static {
 		$this->requestedKeys = match ( true ) {
 			is_array( $keys )                  => $keys,
-			$this->isCollectableClass( $keys ) => $this->collectableFromConcrete( $keys )->getCollectionSource()->items,
+			$this->isCollectableClass( $keys ) => $this->collectableFromConcrete( $keys )->items,
 			default                            => $this->throwInvalidCollectable( $keys ),
 		};
 
@@ -37,7 +37,7 @@ trait CollectionAware {
 		return $this->indexKey;
 	}
 
-	protected function getCollectionSource(): CollectFrom {
+	protected function getCollectionSource(): ?CollectFrom {
 		return $this->collectionSource;
 	}
 
@@ -50,10 +50,10 @@ trait CollectionAware {
 	}
 
 	/** @param class-string<Collectable> $classname */
-	protected function collectableFromConcrete( string $classname, string|BackedEnum ...$only ): static {
+	protected function collectableFromConcrete( string $classname, string|BackedEnum ...$only ): CollectFrom {
 		$this->collectionSource = new CollectFrom( $classname, ...$only );
 
-		return $this;
+		return $this->collectionSource;
 	}
 
 	final protected function isRequestedKey( string $collectable ): bool {
