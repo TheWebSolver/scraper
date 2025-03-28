@@ -5,7 +5,6 @@ namespace TheWebSolver\Codegarage\Test;
 
 use Closure;
 use Iterator;
-use BackedEnum;
 use DOMElement;
 use ValueError;
 use ArrayObject;
