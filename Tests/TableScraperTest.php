@@ -271,7 +271,7 @@ class TableScraperTest extends TestCase {
 #[CollectFrom( DeveloperDetails::class )]
 class HtmlTableScraper extends SingleTableScraper {
 	public function parse( string $content ): Iterator {
-		yield from $this->validateCurrentTableParsedData( $content );
+		yield from $this->currentTableIterator( $content );
 	}
 
 	public function validateTableData( string|DOMElement $element ): string {

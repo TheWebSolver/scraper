@@ -45,14 +45,14 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 	}
 
 	/** @return Iterator<string|int,ArrayObject<array-key,TdReturn>> */
-	protected function validateCurrentTableParsedData( string $content ): Iterator {
+	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->withAllTables( false );
 
 		empty( $this->getKeys() )
 			&& ( $source = $this->getCollectionSource() )
 			&& $this->useKeys( $source->items );
 
-		$this->traceTableIn( DOMDocumentFactory::createFromHtml( $content )->childNodes );
+		$this->traceTableIn( DOMDocumentFactory::bodyFromHtml( $content, normalize: $normalize )->childNodes );
 
 		$data = $this->getTableData()[ $this->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg( 'Could not find parsable content.' );
