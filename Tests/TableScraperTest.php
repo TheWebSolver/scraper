@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
+use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
@@ -20,6 +21,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnTranslit;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
 
 class TableScraperTest extends TestCase {
 	private HtmlTableScraper $scraper;
@@ -117,6 +120,38 @@ class TableScraperTest extends TestCase {
 		);
 
 		$this->scraper->withTransformers( compact( 'tr' ) )->parse( $table )->current();
+	}
+
+	#[Test]
+	public function itTranslitAndCollectOnlySubsetOfColumnProvided(): void {
+		$title   = htmlentities( 'Develôper' );
+		$address = htmlentities( 'Curaçao' );
+		$table   = "
+			<table>
+				<caption></caption>
+				<tbody>
+					<tr><td>Valid Name</td><td>{$title}</td><td>{$address}</td></tr>
+				</tbody>
+			</table>
+		";
+
+		$cols = array( $translitCol = DeveloperDetails::Title->value, DeveloperDetails::Address->value );
+		$td   = new TableColumnMarshaller( $cols );
+		$td   = new TableColumnTranslit( $td, $this->scraper->getDiacritics(), array( $translitCol ) );
+
+		$this->scraper
+			->withTransformers( compact( 'td' ) )
+			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+
+		$this->assertCount( 1, $this->scraper->getTableId() );
+
+		$this->assertSame(
+			array(
+				'title'   => 'Developer',
+				'address' => 'Curaçao',
+			),
+			$this->scraper->getTableData()[ $this->scraper->getTableId( true ) ]->current()->getArrayCopy()
+		);
 	}
 
 	/** @param ?array{0:array-key,1:string[]} $expectedValue */
@@ -282,6 +317,16 @@ class HtmlTableScraper extends SingleTableScraper {
 			$source->concrete::validate( $value, $columnName, ScraperError::withSourceMsg( ... ) );
 
 		return $value;
+	}
+
+	/** @return array<string,string> */
+	public function getDiacritics(): array {
+		return array(
+			'ä' => 'ae',
+			'ç' => 'c',
+			'ė' => 'e',
+			'ô' => 'o',
+		);
 	}
 
 	protected function defaultCachePath(): string {

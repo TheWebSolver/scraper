@@ -58,14 +58,6 @@ trait ScrapeYard {
 			);
 	}
 
-	protected function maybeTranslit( string $text ): string {
-		return Scrapable::DIACRITICS_TRANSLIT !== $this->getDiacritic() ? $text : str_replace(
-			search: array_keys( $this->getDiacritics() ),
-			replace: array_values( $this->getDiacritics() ),
-			subject: $text
-		);
-	}
-
 	private function notFound( string $source ): never {
 		throw new InvalidSource(
 			sprintf( 'Could not fetch content from %1$s source: %2$s', $this->getScraperSource()->name, $source )

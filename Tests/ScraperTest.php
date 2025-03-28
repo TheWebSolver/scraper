@@ -84,15 +84,4 @@ class Scraper implements Scrapable {
 	protected function defaultCachePath(): string {
 		return DOMDocumentFactoryTest::RESOURCE_PATH;
 	}
-
-	/** @return array<string,string> */
-	protected function getDiacritics(): array {
-		return array(
-			'ä' => 'ae',
-			'Ď' => 'd',
-			'ė' => 'e',
-			'ô' => 'o',
-			'ŗ' => 'r',
-		);
-	}
 }
