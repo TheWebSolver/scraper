@@ -89,7 +89,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
-		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::class )
+		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg() )
 		extends TableRowMarshaller{};
 
 		$table = '
@@ -128,7 +128,7 @@ class TableScraperTest extends TestCase {
 		DeveloperDetails $type,
 		?array $expectedValue = null
 	): void {
-		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::class, 'address' )
+		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg(), 'address' )
 		extends TableRowMarshaller{};
 
 		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
