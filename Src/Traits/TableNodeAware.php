@@ -15,8 +15,8 @@ use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
-use TheWebSolver\Codegarage\Scraper\Marshaller\Marshaller;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
 
 /**
  * @template ThReturn
@@ -169,7 +169,7 @@ trait TableNodeAware {
 		$position = $skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
 
 		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
-		$transformer = $this->discoveredTable__transformers['td'] ?? new Marshaller();
+		$transformer = $this->discoveredTable__transformers['td'] ?? new TableColumnMarshaller();
 
 		foreach ( $elementList as $currentIndex => $node ) {
 			if ( ! $this->isTHorTDStructure( $node ) ) {

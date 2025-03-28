@@ -8,7 +8,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /** @template-implements Transformer<string> */
-class Marshaller implements Transformer {
+class TableColumnMarshaller implements Transformer {
 	/** @param TableTracer<mixed,string> $tracer */
 	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
 		return trim( $element instanceof DOMElement ? $element->textContent : $element );
