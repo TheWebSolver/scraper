@@ -36,7 +36,7 @@ trait TableNodeAware {
 	 * }
 	 */
 	private array $discoveredTable__transformers;
-	/** @var array<string,Closure( static ): void> */
+	/** @var array<string,Closure( static, DOMElement ): mixed> */
 	private array $discoveredTable__eventListeners;
 	/** @var int[] */
 	private array $discoveredTable__bodyIds = array();
@@ -56,12 +56,11 @@ trait TableNodeAware {
 
 	private int $currentIteration__headCount;
 	private int $currentIteration__headIndex;
-	private string $currentIteration__columnIndex;
+	private string $currentIteration__columnName;
 	/** @var array<int,int> */
 	private array $currentIteration__columnCount = array();
 
 	public function setColumnNames( array $keys, int $id ): void {
-
 		( $id && $this->getTableId( current: true ) === $id ) || throw new ScraperError(
 			sprintf( self::USE_EVENT_DISPATCHER, static::class, __FUNCTION__, 'set column names.' )
 		);
@@ -72,6 +71,13 @@ trait TableNodeAware {
 
 		$this->currentTable__columnNames[ $id ] = $keys;
 		$this->currentTable__lastColumn[ $id ]  = array_key_last( $keys );
+	}
+
+	/** @param callable( static, DOMElement ): mixed $eventListener */
+	public function subscribeWith( callable $eventListener, Table $target ): static {
+		$this->discoveredTable__eventListeners[ $target->name ] = $eventListener( ... );
+
+		return $this;
 	}
 
 	public function withTransformers( array $transformers ): static {
@@ -93,7 +99,7 @@ trait TableNodeAware {
 	}
 
 	public function getCurrentColumnName(): ?string {
-		return $this->currentIteration__columnIndex ?? null;
+		return $this->currentIteration__columnName ?? null;
 	}
 
 	public function getCurrentIterationCountOf( Table $element ): ?int {
@@ -133,7 +139,7 @@ trait TableNodeAware {
 			$splId = $this->currentTable__splId = spl_object_id( $node );
 			$id    = $splId * spl_object_id( $tableElements[1] );
 
-			$this->dispatchEventListenerForDiscoveredTable( $id );
+			$this->dispatchEventListenerForDiscoveredTable( $id, $tableElements[1] );
 
 			$iterator = $this->fromTableBodyRowStructure( ...$tableElements );
 
@@ -160,7 +166,7 @@ trait TableNodeAware {
 
 			$position = $currentIndex - $skippedNodes;
 
-			$this->registerCurrentIterationTH( $position );
+			$this->registerCurrentIterationTableHead( $position );
 
 			$trimmed      = trim( $headNode->textContent );
 			$content      = $thTransformer?->transform( $headNode, $position, $this ) ?? $trimmed;
@@ -172,74 +178,64 @@ trait TableNodeAware {
 	}
 
 	public function inferTableDataFrom( iterable $elementList ): array {
-		$data     = array();
-		$keys     = $this->getColumnNames();
-		$last     = $this->currentTable__lastColumn[ $this->currentTable__bodyId ] ?? null;
-		$position = $skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
+		$data         = array();
+		$keys         = $this->getColumnNames();
+		$lastPosition = $this->currentTable__lastColumn[ $this->currentTable__bodyId ] ?? null;
+		$skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
 
 		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
 		$transformer = $this->discoveredTable__transformers['td'] ?? new TableColumnMarshaller();
 
 		foreach ( $elementList as $currentIndex => $node ) {
-			if ( ! $this->isTHorTDStructure( $node ) ) {
+			if ( ! $this->isTableColumnStructure( $node ) ) {
 				++$skippedNodes;
 
 				continue;
 			}
 
-			$position = $currentIndex - $skippedNodes;
+			$currentPosition = $currentIndex - $skippedNodes;
 
-			if ( $last && $position > $last ) {
+			if ( $this->hasColumnReachedAtLastPosition( $currentPosition, $lastPosition ) ) {
 				break;
 			}
 
-			$indexKey = $keys[ $position ] ?? null;
+			$columnName = $keys[ $currentPosition ] ?? null;
 
-			$this->registerCurrentIterationTD( $indexKey, count: $position + 1 );
+			$this->registerCurrentIterationTableColumn( $columnName, count: $currentPosition + 1 );
 
-			$this->collectedTDFrom( $node, $transformer, $data )
+			$this->collectedTableColumnFrom( $node, $transformer, $data )
 				&& $this->findTableStructureIn( $node, minChildNodesCount: 1 );
 		}
 
-		unset( $this->currentIteration__columnIndex );
+		unset( $this->currentIteration__columnName );
 
 		return $data;
 	}
 
-	protected function flushTransformers(): void {
-		unset( $this->discoveredTable__transformers );
+	final protected function flushDiscoveredTableHooks(): void {
+		unset(
+			$this->discoveredTable__transformers,
+			$this->discoveredTable__eventListeners
+		);
 	}
 
-	protected function flushDiscoveredContents(): void {
+	final protected function flushDiscoveredTableStructure(): void {
 		unset(
-			$this->discoveredTable__eventListeners,
 			$this->discoveredTable__heads,
 			$this->discoveredTable__headNames,
 			$this->discoveredTable__rows,
 		);
 	}
 
-	/** @param callable( static ): void $eventListener */
-	public function subscribeWith( callable $eventListener, Table $target = Table::Row ): static {
-		$this->discoveredTable__eventListeners[ $target->name ] = $eventListener( ... );
-
-		return $this;
-	}
-
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
-	protected function isTargetedTable( DOMElement $node ): bool {
-		return true;
-	}
-
-	final protected function dispatchEventListenerForDiscoveredTable( int $id ): void {
+	final protected function dispatchEventListenerForDiscoveredTable( int $id, DOMElement $body ): void {
 		if ( ! in_array( $id, $this->discoveredTable__bodyIds, true ) ) {
 			$this->discoveredTable__bodyIds[] = $this->currentTable__bodyId = $id;
 		}
 
-		isset( $this->discoveredTable__eventListeners[ Table::Row->name ] )
-			&& ( $this->discoveredTable__eventListeners[ Table::Row->name ] )( $this );
+		isset( $this->discoveredTable__eventListeners[ Table::Body->name ] )
+			&& ( $this->discoveredTable__eventListeners[ Table::Body->name ] )( $this, $body );
 
-		unset( $this->discoveredTable__eventListeners[ Table::Row->name ] );
+		unset( $this->discoveredTable__eventListeners[ Table::Body->name ] );
 	}
 
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
@@ -248,18 +244,23 @@ trait TableNodeAware {
 			&& $this->traceTableIn( $nodes );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
+	protected function isTargetedTable( DOMElement $node ): bool {
+		return true;
+	}
+
 	/** @phpstan-assert-if-true =DOMElement $node */
-	final protected function isTRStructure( DOMNode $node ): bool {
+	protected function isTableRowStructure( DOMNode $node ): bool {
 		return $node->childNodes->length && AssertDOMElement::isValid( $node, type: 'tr' );
 	}
 
 	/** @phpstan-assert-if-true =DOMElement $node */
-	final protected function isTHorTDStructure( mixed $node ): bool {
+	protected function isTableColumnStructure( mixed $node ): bool {
 		return $node instanceof DOMElement && in_array( $node->tagName, array( 'th', 'td' ), strict: true );
 	}
 
 	/** @return ?Iterator<int,DOMNode> */
-	protected function fromCurrentStructure( DOMNode $node ): ?Iterator {
+	private function fromCurrentStructure( DOMNode $node ): ?Iterator {
 		if ( ! AssertDOMElement::isValid( $node, type: 'table' ) ) {
 			$this->findTableStructureIn( $node );
 
@@ -273,7 +274,7 @@ trait TableNodeAware {
 	}
 
 	/** @return ?array{0:list<string>,1:list<ThReturn>} */
-	protected function tableHeadContentFrom( DOMNode $node, ?DOMElement $row = null ): ?array {
+	private function tableHeadContentFrom( DOMNode $node, ?DOMElement $row = null ): ?array {
 		if ( ! AssertDOMElement::isValid( $node, type: 'thead' ) ) {
 			return null;
 		}
@@ -282,7 +283,7 @@ trait TableNodeAware {
 		$headIterator = $node->childNodes->getIterator();
 
 		while ( ! $row && $headIterator->valid() ) {
-			$this->isTRStructure( $node = $headIterator->current() ) && ( $row = $node );
+			$this->isTableRowStructure( $node = $headIterator->current() ) && ( $row = $node );
 
 			$headIterator->next();
 		}
@@ -291,27 +292,27 @@ trait TableNodeAware {
 	}
 
 	/** @return ?array{0:?array{0:list<string>,1:list<ThReturn>},1:DOMElement} */
-	protected function discoveredStructureIn( DOMNode $node, ?DOMElement $body = null ): ?array {
+	private function discoveredStructureIn( DOMNode $node, ?DOMElement $body = null ): ?array {
 		if ( ! $tableIterator = $this->fromCurrentStructure( $node ) ) {
 			return null;
 		}
 
-		// Currently, <caption> element is skipped.
-		if ( AssertDOMElement::isValid( $tableIterator->current(), type: 'caption' ) ) {
-			$tableIterator->next();
-		}
-
-		if ( $head = $this->tableHeadContentFrom( $tableIterator->current() ) ) {
-			$tableIterator->next();
-		}
-
 		while ( ! $body && $tableIterator->valid() ) {
+			// Currently, <caption> element is skipped.
+			if ( AssertDOMElement::isValid( $tableIterator->current(), type: 'caption' ) ) {
+				$tableIterator->next();
+			}
+
+			if ( $head = $this->tableHeadContentFrom( $tableIterator->current() ) ) {
+				$tableIterator->next();
+			}
+
 			AssertDOMElement::isValid( $node = $tableIterator->current(), type: 'tbody' ) && ( $body = $node );
 
 			$tableIterator->next();
 		}
 
-		return $body ? array( $head, $body ) : null;
+		return $body ? array( $head ?? null, $body ) : null;
 	}
 
 	/**
@@ -319,7 +320,7 @@ trait TableNodeAware {
 	 * @param DOMElement                              $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
 	 */
-	protected function fromTableBodyRowStructure( ?array $head, DOMElement $body ): Iterator {
+	private function fromTableBodyRowStructure( ?array $head, DOMElement $body ): Iterator {
 		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
 		$rowIterator    = $body->childNodes->getIterator();
 		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
@@ -382,7 +383,7 @@ trait TableNodeAware {
 	 * @param array<array-key,TdReturn> $data
 	 * @return ?TdReturn
 	 */
-	private function collectedTDFrom( DOMElement $node, Transformer $transformer, array &$data ): mixed {
+	private function collectedTableColumnFrom( DOMElement $node, Transformer $transformer, array &$data ): mixed {
 		$count    = $this->getCurrentIterationCountOf( Table::Column );
 		$position = $count ? $count - 1 : 0;
 		$value    = $transformer->transform( $node, $position, $this );
@@ -401,10 +402,10 @@ trait TableNodeAware {
 		$this->discoveredTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
 		$this->discoveredTable__heads[ $tableId ]     = new ArrayObject( $contents );
 
-		$this->registerCurrentIterationTH( false );
+		$this->registerCurrentIterationTableHead( false );
 	}
 
-	private function registerCurrentIterationTH( int|false $index = 0 ): void {
+	private function registerCurrentIterationTableHead( int|false $index = 0 ): void {
 		if ( false === $index ) {
 			unset( $this->currentIteration__headCount, $this->currentIteration__headIndex );
 
@@ -415,8 +416,12 @@ trait TableNodeAware {
 		$this->currentIteration__headCount = $index + 1;
 	}
 
-	private function registerCurrentIterationTD( ?string $index, int $count ): void {
+	private function registerCurrentIterationTableColumn( ?string $name, int $count ): void {
 		$this->currentIteration__columnCount[ $this->currentTable__bodyId ] = $count;
-		$index && $this->currentIteration__columnIndex                      = $index;
+		$name && $this->currentIteration__columnName                        = $name;
+	}
+
+	private function hasColumnReachedAtLastPosition( int $currentPosition, ?int $lastPosition ): bool {
+		return null !== $lastPosition && $currentPosition > $lastPosition;
 	}
 }

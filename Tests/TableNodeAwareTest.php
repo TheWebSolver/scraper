@@ -36,6 +36,52 @@ class TableNodeAwareTest extends TestCase {
 		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ]->current() );
 	}
 
+	#[Test]
+	public function itOnlyScansTargetedTableColumn(): void {
+		$dom = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
+		$dev = static function ( DOMElement $node ) {
+			return AssertDOMElement::hasId( $node, id: 'developer-list' );
+		};
+
+		$scanner = new DOMNodeScanner( $dev );
+		$scanner->subscribeWith(
+			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'title' ), $scanner->getTableId( true ) ),
+			Table::Body
+		);
+
+		$scanner->traceTableIn( $dom->childNodes );
+
+		$this->assertSame(
+			array(
+				'name'  => 'John Doe',
+				'title' => 'PHP Developer',
+			),
+			$scanner->getTableData()[ $scanner->getTableId( true ) ]->current()->getArrayCopy()
+		);
+
+		$scanner = new class() extends DOMNodeScanner {
+			protected function isTableColumnStructure( mixed $node ): bool {
+				return parent::isTableColumnStructure( $node )
+					&& ! str_ends_with( $node->firstChild->textContent ?? '', 'Developer' );
+			}
+		};
+
+		$scanner->subscribeWith(
+			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'address' ), $scanner->getTableId( true ) ),
+			Table::Body
+		);
+
+		$scanner->traceTableIn( $dom->childNodes );
+
+		$this->assertSame(
+			array(
+				'name'    => 'John Doe',
+				'address' => 'Ktm',
+			),
+			$scanner->getTableData()[ $scanner->getTableId( true ) ]->current()->getArrayCopy()
+		);
+	}
+
 	/** @param mixed[] $args */
 	#[Test]
 	#[DataProvider( 'provideMethodsThatThrowsException' )]
@@ -86,7 +132,8 @@ class TableNodeAwareTest extends TestCase {
 		$this->assertSame( array( 'John Doe', 'PHP Developer', 'Ktm' ), array_values( $first ) );
 
 		$handler->subscribeWith(
-			static fn( $i ) => $i->setColumnNames( array( 'finalAddress' ), $i->getTableId( true ) )
+			static fn( $i ) => $i->setColumnNames( array( 'finalAddress' ), $i->getTableId( true ) ),
+			Table::Body
 		);
 
 		$devTable->next();

@@ -7,6 +7,7 @@ use Closure;
 use Iterator;
 use ArrayObject;
 use ReflectionClass;
+use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
@@ -31,7 +32,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 
 		$this->sourceFromAttribute( $reflection )
 			->collectableFromAttribute( $reflection )
-			->subscribeWith( $this->beforeTableTraceListener( ... ) )
+			->subscribeWith( $this->tableBodyListener( ... ), target: Table::Body )
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename );
 
 		( $source = $this->getCollectionSource() ) && $this->useKeys( $source->items );
@@ -41,7 +42,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 
 	public function flush(): void {
 		( $this->unsubscribeError )();
-		$this->flushTransformers();
+		$this->flushDiscoveredTableHooks();
 	}
 
 	/** @return Iterator<string|int,ArrayObject<array-key,TdReturn>> */
@@ -57,12 +58,12 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 		$data = $this->getTableData()[ $this->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg( 'Could not find parsable content.' );
 
-		$this->flushDiscoveredContents();
+		$this->flushDiscoveredTableStructure();
 
 		return $data;
 	}
 
-	private function beforeTableTraceListener(): void {
+	private function tableBodyListener(): void {
 		( $source = $this->getCollectionSource() )
 			&& $this->setColumnNames( $source->items, $this->getTableId( current: true ) );
 	}
