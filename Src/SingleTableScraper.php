@@ -63,7 +63,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 		return $data;
 	}
 
-	private function tableBodyListener(): void {
+	protected function tableBodyListener(): void {
 		( $source = $this->getCollectionSource() )
 			&& $this->setColumnNames( $source->items, $this->getTableId( current: true ) );
 	}
