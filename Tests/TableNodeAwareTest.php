@@ -6,6 +6,7 @@ namespace TheWebSolver\Codegarage\Test;
 use Closure;
 use Exception;
 use DOMElement;
+use ArrayObject;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -312,8 +313,10 @@ class TableNodeAwareTest extends TestCase {
 	#[Test]
 	public function itCascadesParentCurrentCountIfTdHasTable(): void {
 		$table = '
-			<table><tbody>
+			<table id="first-table"><tbody id="first-body">
+				<!-- comment -->
 				<tr><th>Top 0</th><th><!-- comment -->Top 1</th><th><!-- comment --><!-- comment -->Top 2</th><!-- comment --><!-- comment --></tr>
+				<!-- comment -->
 				<tr>
 				<!-- comment -->
 				<!-- comment -->
@@ -323,7 +326,7 @@ class TableNodeAwareTest extends TestCase {
 					<!-- comment -->
 					<td>1
 						<!-- comment -->
-						<table><tbody>
+						<table id="middle-table"><!-- comment --><tbody id="middle-body">
 							<tr><th><!-- comment --><!-- comment -->Middle 0</th><th><!-- comment -->Middle 1</th><th>Middle 2</th></tr>
 							<tr>
 								<!-- comment -->
@@ -333,7 +336,7 @@ class TableNodeAwareTest extends TestCase {
 								<td>one:<!-- comment -->
 									<!-- Final table -->
 									<div>
-										<table><tbody>
+										<table id="last-table"><tbody id="last-body">
 											<tr><th>Last 0</th><th><!-- comment --><!-- comment -->Last 1</th></tr>
 											<tr><td>O=</td><td>I=<!-- comment --></td><!-- comment --><!-- comment --></tr>
 										</tbody></table>
@@ -348,18 +351,22 @@ class TableNodeAwareTest extends TestCase {
 			</tbody></table>
 		';
 
+		$dom         = DOMDocumentFactory::createFromHtml( $table );
 		$scanner     = new DOMNodeScanner();
 		$transformer = new class() implements Transformer {
 			public function __construct( private ?Closure $asserter = null ) {}
 
 			/**
 			 * @param TableTracer<mixed,string> $tracer
+			 * @return string|ArrayObject<array-key,string[]>
 			 * @throws Exception When test performed without asserter.
 			 */
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
+			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): ArrayObject|string {
 				! $this->asserter && throw new Exception( 'Asserter needed to test transformer.' );
 
-				( $this->asserter )( $element, $position );
+				if ( ( $result = ( $this->asserter )( $element, $position, $tracer ) ) instanceof ArrayObject ) {
+					return $result;
+				}
 
 				return $element instanceof DOMElement ? $element->textContent : $element;
 			}
@@ -380,6 +387,27 @@ class TableNodeAwareTest extends TestCase {
 			};
 
 			return $text;
+		};
+
+		$trAsserter = static function ( string|DOMElement $el, int $pos, TableTracer $tracer ) {
+			assert( $el instanceof DOMElement );
+
+			$body = $el->parentNode;
+
+			assert( $body instanceof DOMElement );
+
+			$table = $body->parentNode;
+
+			assert( $table instanceof DOMElement );
+
+			self::assertSame( spl_object_id( $table ) * spl_object_id( $body ), $tracer->getTableId( true ) );
+
+			$result = $tracer->inferTableDataFrom( $el->childNodes );
+			$id     = $table->getAttribute( 'id' );
+
+			self::assertSame( 'last-table' === $id ? 2 : 3, $tracer->getCurrentIterationCountOf( Table::Column ) );
+
+			return new ArrayObject( $result );
 		};
 
 		$tdAsserter = static function ( string|DOMElement $el, int $pos ) use ( $scanner ) {
@@ -413,9 +441,10 @@ class TableNodeAwareTest extends TestCase {
 			->withTransformers(
 				array(
 					'th' => new $transformer( $thAsserter ),
+					'tr' => new $transformer( $trAsserter ),
 					'td' => new $transformer( $tdAsserter ),
 				)
-			)->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+			)->traceTableIn( $dom->childNodes );
 
 		$this->assertNull( $scanner->getCurrentIterationCountOf( Table::Head ) );
 	}
