@@ -12,6 +12,7 @@ use DOMNodeList;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
+use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
@@ -49,7 +50,7 @@ trait TableNodeAware {
 
 	private int $currentTable__splId;
 	private int $currentTable__bodyId;
-	/** @var array<int,list<string>> */
+	/** @var array<int,array{0:array<int,string>,1:array<int,int>}> */
 	private array $currentTable__columnNames;
 	/** @var array<int,int> */
 	private array $currentTable__lastColumn = array();
@@ -60,7 +61,7 @@ trait TableNodeAware {
 	/** @var array<int,int> */
 	private array $currentIteration__columnCount = array();
 
-	public function setColumnNames( array $keys, int $id ): void {
+	public function setColumnNames( array $keys, int $id, int ...$offset ): void {
 		( $id && $this->getTableId( current: true ) === $id ) || throw new ScraperError(
 			sprintf( self::USE_EVENT_DISPATCHER, static::class, __FUNCTION__, 'set column names.' )
 		);
@@ -69,8 +70,9 @@ trait TableNodeAware {
 			return;
 		}
 
-		$this->currentTable__columnNames[ $id ] = $keys;
-		$this->currentTable__lastColumn[ $id ]  = array_key_last( $keys );
+		[$columns, $flippedOffset, $lastIndex]  = Normalize::listWithOffset( $keys, $offset );
+		$this->currentTable__columnNames[ $id ] = array( $columns, $flippedOffset );
+		$this->currentTable__lastColumn[ $id ]  = $lastIndex;
 	}
 
 	/** @param callable( static, DOMElement ): mixed $eventListener */
@@ -93,21 +95,31 @@ trait TableNodeAware {
 		return $current ? $this->currentTable__bodyId ?? 0 : $this->discoveredTable__bodyIds;
 	}
 
-	/** @return list<string> */
+	/** @return array<int,string> */
 	public function getColumnNames(): array {
-		return $this->currentTable__columnNames[ $this->currentTable__bodyId ] ?? array();
+		return $this->currentTable__columnNames[ $this->currentTable__bodyId ][0] ?? array();
 	}
 
 	public function getCurrentColumnName(): ?string {
 		return $this->currentIteration__columnName ?? null;
 	}
 
-	public function getCurrentIterationCountOf( Table $element ): ?int {
-		return match ( $element ) {
-			default       => null,
-			Table::Head   => $this->currentIteration__headCount ?? null,
-			Table::Column => $this->currentIteration__columnCount[ $this->currentTable__bodyId ] ?? null,
-		};
+	public function getCurrentIterationCountOf( Table $element, bool $offsetInclusive = false ): ?int {
+		if ( Table::Head === $element ) {
+			return $this->currentIteration__headCount ?? null;
+		} elseif ( Table::Column === $element ) {
+			$count = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] ?? null;
+
+			if ( null === $count ) {
+				return null;
+			}
+
+			$column = $this->currentTable__columnNames[ $this->currentTable__bodyId ] ?? null;
+
+			return ! $offsetInclusive && $column ? $count - count( $column[1] ) : $count;
+		}
+
+		return null;
 	}
 
 	/** @return ($namesOnly is true ? array<int,SplFixedArray<string>> : array<int,ArrayObject<int,ThReturn>>) */
@@ -179,7 +191,9 @@ trait TableNodeAware {
 
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data         = array();
-		$keys         = $this->getColumnNames();
+		$columns      = $this->currentTable__columnNames[ $this->currentTable__bodyId ] ?? array();
+		$keys         = $columns[0] ?? array();
+		$offset       = $columns[1] ?? array();
 		$lastPosition = $this->currentTable__lastColumn[ $this->currentTable__bodyId ] ?? null;
 		$skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
 
@@ -195,17 +209,19 @@ trait TableNodeAware {
 
 			$currentPosition = $currentIndex - $skippedNodes;
 
+			if ( false !== ( $offset[ $currentPosition ] ?? false ) ) {
+				continue;
+			}
+
 			if ( $this->hasColumnReachedAtLastPosition( $currentPosition, $lastPosition ) ) {
 				break;
 			}
 
-			$columnName = $keys[ $currentPosition ] ?? null;
-
-			$this->registerCurrentIterationTableColumn( $columnName, count: $currentPosition + 1 );
+			$this->registerCurrentIterationTableColumn( $keys[ $currentPosition ] ?? null, $currentPosition + 1 );
 
 			$this->collectedTableColumnFrom( $node, $transformer, $data )
 				&& $this->findTableStructureIn( $node, minChildNodesCount: 1 );
-		}
+		}//end foreach
 
 		unset( $this->currentIteration__columnName );
 

@@ -71,11 +71,18 @@ interface TableTracer {
 	/**
 	 * Sets index keys mappable to traced table data set.
 	 *
-	 * @param list<string> $keys
-	 * @param int          $id Usually, value of `$this->getTableId(current: true)`.
+	 * @param list<string> $keys      Names to be used as index key for each mapped column. Extra columns after
+	 *                                last mappable key will automatically be omitted from being inferred.
+	 * @param int          $id        Usually, value of `$this->getTableId(current: true)`.
+	 * @param int          ...$offset Skippable index/indices in between provided `$keys`, if any. For example:
+	 *                                only three columns needs to be mapped: `['one','three', 'five']`. But, the
+	 *                                table contains `seven` columns. To properly map each table column name to
+	 *                                its respective value, `$offset` indices must be passed: `0`, `2`, & `4`.
+	 *                                Last/seventh column at the sixth index will automatically gets omitted.
 	 * @throws ScraperError When this method is invoked before table is discovered.
+	 * @no-named-arguments
 	 */
-	public function setColumnNames( array $keys, int $id ): void;
+	public function setColumnNames( array $keys, int $id, int ...$offset ): void;
 
 	/**
 	 * Gets traced table IDs or current table being traced.
@@ -116,6 +123,9 @@ interface TableTracer {
 	 * Gets current iteration count of given element.
 	 *
 	 * This may return null after current iteration is completed.
+	 *
+	 * @param bool $offsetInclusive When this is set to true, the total count must include offset values
+	 *                              count even if provided offset indices have been omitted during trace.
 	 */
-	public function getCurrentIterationCountOf( Table $element ): ?int;
+	public function getCurrentIterationCountOf( Table $element, bool $offsetInclusive = false ): ?int;
 }

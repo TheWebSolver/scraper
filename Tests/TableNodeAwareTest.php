@@ -17,6 +17,7 @@ use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
 class TableNodeAwareTest extends TestCase {
 	final public const TABLE_SOURCE = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR . 'table.html';
@@ -79,6 +80,43 @@ class TableNodeAwareTest extends TestCase {
 				'address' => 'Ktm',
 			),
 			$scanner->getTableData()[ $scanner->getTableId( true ) ]->current()->getArrayCopy()
+		);
+	}
+
+	/**
+	 * @param list<string> $columnNames
+	 * @param list<int>    $offset
+	 * @param mixed[]      $expected
+	 */
+	#[Test]
+	#[DataProvider( 'provideTableColumnDataWithOffset' )]
+	public function itOffsetsInBetweenIndicesOfColumnNames( array $columnNames, array $offset, array $expected ): void {
+		$table   = '<table><tbody><tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody</table>';
+		$dom     = DOMDocumentFactory::createFromHtml( $table );
+		$scanner = new DOMNodeScanner();
+		$scanner->subscribeWith(
+			fn( $scanner ) => $scanner->setColumnNames( $columnNames, $scanner->getTableId( true ), ...$offset ),
+			Table::Body
+		);
+
+		/** @var TableRowMarshaller<string> */
+		$tr = new TableRowMarshaller( 'Should Not Throw exception' );
+
+		$scanner->withTransformers( compact( 'tr' ) )->traceTableIn( $dom->childNodes );
+
+		$this->assertSame(
+			$expected,
+			$scanner->getTableData()[ $scanner->getTableId( true ) ]->current()->getArrayCopy()
+		);
+	}
+
+	/** @return mixed[] */
+	// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+	public static function provideTableColumnDataWithOffset(): array {
+		return array(
+			array( array( 'zero', 'two' ), array( 1 ), array( 'zero' => '0', 'two' => '2' ) ),
+			array( array( 'one', 'three' ), array( 0, 2 ), array( 'one' => '1', 'three' => '3' ) ),
+			array( array( 'zero', 'three', 'four' ), array( 1, 2 ), array( 'zero' => '0', 'three' => '3', 'four' => '4' ) ),
 		);
 	}
 
