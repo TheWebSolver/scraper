@@ -40,7 +40,7 @@ class NormalizeTest extends TestCase {
 
 	/**
 	 * @param list<mixed>      $array
-	 * @param array<int,int>   $offset
+	 * @param list<int>        $offset
 	 * @param array<int,mixed> $expected
 	 */
 	#[Test]

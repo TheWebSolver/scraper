@@ -36,8 +36,8 @@ class Normalize {
 	}
 
 	/**
-	 * @param list<TValue>   $array  Eg: **['one', 'three', 'five']**
-	 * @param array<int,int> $offset Eg: **[0, 2, 4]**
+	 * @param list<TValue> $array  Eg: **['one', 'three', 'five']**
+	 * @param list<int>    $offset Eg: **[0, 2, 4]**
 	 *
 	 * @return array{0:array<int,TValue>,1:array<int,int>,2:int} Returns:
 	 * - **0:** Resulted array -> `[1=>'one', 3=>'three', 5=>'five']`
@@ -53,19 +53,23 @@ class Normalize {
 			return array( $array, array(), array_key_last( $array ) ?? 0 );
 		}
 
-		$lastOffset = end( $offset ) ?? throw new InvalidSource( 'Last offset index not found' );
-		$offset     = array_flip( $offset );
-		$result     = array();
-		$current    = 0;
+		$skipList    = array_flip( $offset );
+		$lastSkipped = array_key_last( $skipList ) ?? throw new InvalidSource( 'Last offset index not found' );
+		$collectList = array();
+		$current     = 0;
 
-		for ( $i = 0; $i <= $lastOffset; $i++ ) {
-			isset( $offset[ $i ] ) || ( $result[ $i ] = $array[ $current++ ] );
+		for ( $i = 0; $i <= $lastSkipped; $i++ ) {
+			if ( ! isset( $skipList[ $i ] ) ) {
+				$collectList[ $i ] = $array[ $current ];
+
+				unset( $array[ $current++ ] );
+			}
 		}
 
 		foreach ( $array as $value ) {
-			in_array( $value, $result, strict: true ) || ( $result[ ++$lastOffset ] = $value );
+			$collectList[ ++$lastSkipped ] = $value;
 		}
 
-		return array( $result, $offset, $lastOffset );
+		return array( $collectList, $skipList, $lastSkipped );
 	}
 }
