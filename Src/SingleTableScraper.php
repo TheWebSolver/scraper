@@ -33,9 +33,8 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 		$this->sourceFromAttribute( $reflection )
 			->collectableFromAttribute( $reflection )
 			->subscribeWith( $this->tableBodyListener( ... ), target: Table::TBody )
-			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename );
-
-		( $source = $this->getCollectionSource() ) && $this->useKeys( $source->items );
+			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename )
+			->useKeys( $this->getCollectionSource()->items ?? array() );
 
 		$this->unsubscribeError = ScraperError::for( $this->getScraperSource() );
 	}
@@ -53,7 +52,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 			&& ( $source = $this->getCollectionSource() )
 			&& $this->useKeys( $source->items );
 
-		$this->traceTableIn( DOMDocumentFactory::bodyFromHtml( $content, normalize: $normalize )->childNodes );
+		$this->inferTableFrom( DOMDocumentFactory::bodyFromHtml( $content, normalize: $normalize )->childNodes );
 
 		$data = $this->getTableData()[ $this->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg( 'Could not find parsable content.' );

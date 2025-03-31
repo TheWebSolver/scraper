@@ -29,6 +29,8 @@ trait TableNodeAware {
 
 	private bool $shouldPerform__allTableDiscovery = false;
 
+	/** @var list<Table> */
+	private array $discoveredTable__excludedStructures = array();
 	/**
 	 * @var array{
 	 *   tr      ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
@@ -56,6 +58,7 @@ trait TableNodeAware {
 	/** @var array<int,int> */
 	private array $currentTable__lastColumn = array();
 
+	private bool $currentIteration__allTableHeads = true;
 	private int $currentIteration__headCount;
 	private int $currentIteration__headIndex;
 	private string $currentIteration__columnName;
@@ -74,6 +77,12 @@ trait TableNodeAware {
 		[$columns, $flippedOffset, $lastIndex]  = Normalize::listWithOffset( $keys, $offset );
 		$this->currentTable__columnNames[ $id ] = array( $columns, $flippedOffset );
 		$this->currentTable__lastColumn[ $id ]  = $lastIndex;
+	}
+
+	public function traceWithout( Table ...$targets ): static {
+		$this->discoveredTable__excludedStructures = $targets;
+
+		return $this;
 	}
 
 	/** @param callable( static, DOMElement ): mixed $eventListener */
@@ -137,10 +146,8 @@ trait TableNodeAware {
 		return $this;
 	}
 
-	public function traceTableIn( iterable $elementList ): void {
-		$elementList instanceof DOMNodeList || throw new InvalidSource(
-			sprintf( 'Table Node tracer only accepts "%1$s".', DOMNodeList::class )
-		);
+	public function inferTableFrom( iterable $elementList ): void {
+		$this->assertIsDOMNodeList( $elementList, 'Table' );
 
 		foreach ( $elementList as $node ) {
 			if ( ! $tableElements = $this->discoveredStructureIn( $node ) ) {
@@ -162,14 +169,21 @@ trait TableNodeAware {
 		}
 	}
 
-	/** @return ?array{0:list<string>,1:list<ThReturn>} */
+	/**
+	 * @return ?array{0:list<string>,1:list<ThReturn>}
+	 * @throws InvalidSource When element list is not DOMNodeList.
+	 */
 	public function inferTableHeadFrom( iterable $elementList ): ?array {
+		$this->assertIsDOMNodeList( $elementList, 'Table Head' );
+
 		$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null;
 		$names         = $collection = array();
 		$skippedNodes  = 0;
 
 		foreach ( $elementList as $currentIndex => $headNode ) {
 			if ( ! AssertDOMElement::isValid( $headNode, Table::Head ) ) {
+				$this->tickCurrentHeadIterationSkippableNode( $headNode );
+
 				++$skippedNodes;
 
 				continue;
@@ -256,7 +270,7 @@ trait TableNodeAware {
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
 		( ! $this->getTableId() || $this->shouldPerform__allTableDiscovery )
 			&& ( ( $nodes = $node->childNodes )->length > $minChildNodesCount )
-			&& $this->traceTableIn( $nodes );
+			&& $this->inferTableFrom( $nodes );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -289,8 +303,14 @@ trait TableNodeAware {
 	}
 
 	/** @return ?array{0:list<string>,1:list<ThReturn>} */
-	private function tableHeadContentFrom( DOMNode $node, ?DOMElement $row = null ): ?array {
-		if ( ! AssertDOMElement::isValid( $node, Table::THead ) ) {
+	private function fromTableHeadStructureIn( Iterator $tableIterator, ?DOMElement $row = null ): ?array {
+		if ( ! AssertDOMElement::isValid( $node = $tableIterator->current(), Table::THead ) ) {
+			return null;
+		}
+
+		$tableIterator->next();
+
+		if ( ! $this->shouldTraceTableStructure( Table::THead ) ) {
 			return null;
 		}
 
@@ -318,9 +338,7 @@ trait TableNodeAware {
 				$tableIterator->next();
 			}
 
-			if ( $head = $this->tableHeadContentFrom( $tableIterator->current() ) ) {
-				$tableIterator->next();
-			}
+			$head = $this->fromTableHeadStructureIn( $tableIterator );
 
 			AssertDOMElement::isValid( $node = $tableIterator->current(), Table::TBody ) && ( $body = $node );
 
@@ -347,7 +365,7 @@ trait TableNodeAware {
 				return;
 			}
 
-			! $headInspected && $this->inspectHeadInBody( $head, $rowIterator, $tableRow );
+			! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $rowIterator, $tableRow );
 
 			$headInspected = true;
 
@@ -377,12 +395,13 @@ trait TableNodeAware {
 	}
 
 	/** @param ?array{0:list<string>,1:list<ThReturn>} $head */
-	private function inspectHeadInBody( ?array &$head, Iterator $iterator, DOMNode $row ): void {
-		$head ??= $headDiscoveredInBody = $this->inferTableHeadFrom( $row->childNodes );
+	private function inspectFirstRowForHeadStructure( ?array &$head, Iterator $iterator, DOMNode $row ): void {
+		$firstRowContent = $this->inferTableHeadFrom( $row->childNodes );
+		$head          ??= $this->currentIteration__allTableHeads ? $firstRowContent : null;
 
 		// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
-		// Advance iterator to next <tr> when current row is collected as head.
-		( $headDiscoveredInBody ?? false ) && $iterator->next();
+		// Advance iterator to next <tr> if first row is collected as head.
+		$this->currentIteration__allTableHeads && $iterator->next();
 
 		$head && $this->registerCurrentTableTH( ...$head );
 	}
@@ -438,5 +457,25 @@ trait TableNodeAware {
 
 	private function hasColumnReachedAtLastPosition( int $currentPosition, ?int $lastPosition ): bool {
 		return null !== $lastPosition && $currentPosition > $lastPosition;
+	}
+
+	private function shouldTraceTableStructure( Table $target ): bool {
+		return ! in_array( $target, $this->discoveredTable__excludedStructures, strict: true );
+	}
+
+	/**
+	 * @param iterable<mixed> $elementList
+	 * @throws InvalidSource When given element list is not DOMNodeList.
+	 * @phpstan-assert DOMNodeList<DOMNode> $elementList
+	 */
+	private function assertIsDOMNodeList( iterable $elementList, string $type ): void {
+		$elementList instanceof DOMNodeList || throw new InvalidSource(
+			sprintf( 'Table Node tracer only accepts "%1$s" when inferring %2$s.', DOMNodeList::class, $type )
+		);
+	}
+
+	private function tickCurrentHeadIterationSkippableNode( DOMNode $node ): void {
+		$this->currentIteration__allTableHeads
+			&& $this->currentIteration__allTableHeads = XML_COMMENT_NODE === $node->nodeType;
 	}
 }

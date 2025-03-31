@@ -21,6 +21,13 @@ interface TableTracer {
 	public function withAllTables( bool $trace = true ): static;
 
 	/**
+	 * Registers target table structure(s) to not be traced and inferred.
+	 *
+	 * @no-named-arguments
+	 */
+	public function traceWithout( Table ...$targets ): static;
+
+	/**
 	 * Registers transformers to transform traced element.
 	 *
 	 * Each call made to this method must override previously set transformer, if any.
@@ -44,7 +51,7 @@ interface TableTracer {
 	 * @param iterable<int,TContent> $elementList
 	 * @template TContent of string|DOMNode
 	 */
-	public function traceTableIn( iterable $elementList ): void;
+	public function inferTableFrom( iterable $elementList ): void;
 
 	/**
 	 * Infers table head from given element list.

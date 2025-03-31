@@ -32,7 +32,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner = new DOMNodeScanner( $innerTable );
 
-		$scanner->traceTableIn( $dom->childNodes );
+		$scanner->inferTableFrom( $dom->childNodes );
 
 		$this->assertCount( 1, $tableIds = $scanner->getTableId() );
 		$this->assertCount( 2, $scanner->getTableData()[ $tableIds[0] ]->current() );
@@ -51,7 +51,7 @@ class TableNodeAwareTest extends TestCase {
 			Table::TBody
 		);
 
-		$scanner->traceTableIn( $dom->childNodes );
+		$scanner->inferTableFrom( $dom->childNodes );
 
 		$this->assertSame(
 			array(
@@ -73,7 +73,7 @@ class TableNodeAwareTest extends TestCase {
 			Table::TBody
 		);
 
-		$scanner->traceTableIn( $dom->childNodes );
+		$scanner->inferTableFrom( $dom->childNodes );
 
 		$this->assertSame(
 			array(
@@ -103,7 +103,7 @@ class TableNodeAwareTest extends TestCase {
 		/** @var TableRowMarshaller<string> */
 		$tr = new TableRowMarshaller( 'Should Not Throw exception' );
 
-		$scanner->transformWith( $tr, Table::Row )->traceTableIn( $dom->childNodes );
+		$scanner->transformWith( $tr, Table::Row )->inferTableFrom( $dom->childNodes );
 
 		$this->assertSame(
 			$expected,
@@ -155,7 +155,7 @@ class TableNodeAwareTest extends TestCase {
 		$handler
 			->transformWith( $thMarshaller, Table::Head )
 			->withAllTables()
-			->traceTableIn( $dom->childNodes );
+			->inferTableFrom( $dom->childNodes );
 
 		$ids  = $handler->getTableId();
 		$th   = $handler->getTableHead( true )[ $ids[0] ]->toArray();
@@ -228,9 +228,10 @@ class TableNodeAwareTest extends TestCase {
 				</table>
 		';
 
-		$scanner = new DOMNodeScanner();
+		$nodeList = DOMDocumentFactory::createFromHtml( $table )->childNodes;
+		$scanner  = new DOMNodeScanner();
 
-		$scanner->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+		$scanner->inferTableFrom( $nodeList );
 
 		$tableIds  = $scanner->getTableId();
 		$fixedHead = $scanner->getTableHead( namesOnly: true )[ $tableIds[0] ];
@@ -247,6 +248,16 @@ class TableNodeAwareTest extends TestCase {
 		}
 
 		$this->assertSame( 2, (int) ( $index ?? 0 ) + 1 );
+
+		$scanner = new DOMNodeScanner();
+
+		$scanner->traceWithout( Table::THead )->inferTableFrom( $nodeList );
+
+		$this->assertEmpty( $scanner->getTableHead() );
+
+		$data = $scanner->getTableData()[ $scanner->getTableId( true ) ];
+
+		$this->assertIsList( $data->current()->getArrayCopy() );
 	}
 
 	#[Test]
@@ -254,7 +265,7 @@ class TableNodeAwareTest extends TestCase {
 	public function itParsesInvalidTableGracefully( string $html, bool $hasHead = false ): void {
 		$scanner = new DOMNodeScanner();
 
-		$scanner->traceTableIn( DOMDocumentFactory::createFromHtml( $html )->childNodes );
+		$scanner->inferTableFrom( DOMDocumentFactory::createFromHtml( $html )->childNodes );
 
 		$this->assertEmpty( $scanner->getTableData() );
 
@@ -302,7 +313,7 @@ class TableNodeAwareTest extends TestCase {
 		};
 
 		$scanner->transformWith( $tdMarshaller, Table::Column )
-			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+			->inferTableFrom( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
 		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ]->current()->getArrayCopy() );
 		$this->assertSame( 2, $scanner->getCurrentIterationCountOf( Table::Column ) );
@@ -450,7 +461,7 @@ class TableNodeAwareTest extends TestCase {
 			->transformWith( new $transformer( $thAsserter ), Table::Head )
 			->transformWith( new $transformer( $trAsserter ), Table::Row )
 			->transformWith( new $transformer( $tdAsserter ), Table::Column )
-			->traceTableIn( $dom->childNodes );
+			->inferTableFrom( $dom->childNodes );
 	}
 
 	/** @param TableTracer<string,string> $tracer */

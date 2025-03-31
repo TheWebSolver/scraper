@@ -142,7 +142,7 @@ class TableScraperTest extends TestCase {
 
 		$this->scraper
 			->transformWith( $td, Table::Column )
-			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+			->inferTableFrom( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
 		$this->assertCount( 1, $this->scraper->getTableId() );
 
