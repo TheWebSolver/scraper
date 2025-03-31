@@ -315,7 +315,7 @@ class TableNodeAwareTest extends TestCase {
 		$table = '
 			<table id="first-table"><tbody id="first-body">
 				<!-- comment -->
-				<tr><th>Top 0</th><th><!-- comment -->Top 1</th><th><!-- comment --><!-- comment -->Top 2</th><!-- comment --><!-- comment --></tr>
+				<tr><th>Top 0</th><th><!-- comment -->Top 1</th><!-- comment --><!-- comment --><th>Top 2</th><!-- comment --><!-- comment --></tr>
 				<!-- comment -->
 				<tr>
 				<!-- comment -->
@@ -337,7 +337,7 @@ class TableNodeAwareTest extends TestCase {
 									<!-- Final table -->
 									<div>
 										<table id="last-table"><tbody id="last-body">
-											<tr><th>Last 0</th><th><!-- comment --><!-- comment -->Last 1</th></tr>
+											<tr><!-- comment --><!-- comment --><th>Last 0</th><th><!-- comment --><!-- comment -->Last 1</th></tr>
 											<tr><td>O=</td><td>I=<!-- comment --></td><!-- comment --><!-- comment --></tr>
 										</tbody></table>
 									</div>
@@ -372,7 +372,7 @@ class TableNodeAwareTest extends TestCase {
 			}
 		};
 
-		$thAsserter = static function ( string|DOMElement $el, int $position ) use ( $scanner ) {
+		$thAsserter = static function ( string|DOMElement $el, int $position, TableTracer $tracer ) {
 			self::assertInstanceOf( DOMElement::class, $el );
 
 			$text     = trim( $el->textContent );
@@ -381,9 +381,9 @@ class TableNodeAwareTest extends TestCase {
 			match ( true ) {
 				default => throw new LogicException( 'This should never be thrown. All <th>s are covered.' ),
 
-				str_starts_with( $text, 'Top' )    => self::assertKeyAndPositionInTH( $scanner, $text, $expected, $position ),
-				str_starts_with( $text, 'Middle' ) => self::assertKeyAndPositionInTH( $scanner, $text, $expected, $position ),
-				str_starts_with( $text, 'Last' )   => self::assertKeyAndPositionInTH( $scanner, $text, $expected, $position ),
+				str_starts_with( $text, 'Top' )    => self::assertKeyAndPositionInTH( $tracer, $text, $expected, $position ),
+				str_starts_with( $text, 'Middle' ) => self::assertKeyAndPositionInTH( $tracer, $text, $expected, $position ),
+				str_starts_with( $text, 'Last' )   => self::assertKeyAndPositionInTH( $tracer, $text, $expected, $position ),
 			};
 
 			return $text;
@@ -405,15 +405,24 @@ class TableNodeAwareTest extends TestCase {
 			$result = $tracer->inferTableDataFrom( $el->childNodes );
 			$id     = $table->getAttribute( 'id' );
 
-			self::assertSame( 'last-table' === $id ? 2 : 3, $tracer->getCurrentIterationCountOf( Table::Column ) );
+			self::assertSame(
+				'last-table' === $id ? 2 : 3,
+				$tracer->getCurrentIterationCountOf( Table::Column ),
+				'Column count is accessible when <td> is inferred within <tr> Transformer.'
+			);
+
+			self::assertNull(
+				$tracer->getCurrentIterationCountOf( Table::Head ),
+				'Head count is not accessible when inferring <tr> content.'
+			);
 
 			return new ArrayObject( $result );
 		};
 
-		$tdAsserter = static function ( string|DOMElement $el, int $pos ) use ( $scanner ) {
+		$tdAsserter = static function ( string|DOMElement $el, int $pos, TableTracer $tracer ) {
 			self::assertInstanceOf( DOMElement::class, $el );
 			self::assertNull(
-				$scanner->getCurrentIterationCountOf( Table::Head ),
+				$tracer->getCurrentIterationCountOf( Table::Head ),
 				'Head count is not accessible when inferring <td> content.'
 			);
 
@@ -422,16 +431,16 @@ class TableNodeAwareTest extends TestCase {
 			match ( true ) {
 				default => throw new LogicException( 'This should never be thrown. All <td>s are covered.' ),
 
-				str_starts_with( $text, '0' )  => self::assertKeyAndPositionInTD( $scanner, 'Top 0', 0, $pos ),
-				str_starts_with( $text, '1' )  => self::assertKeyAndPositionInTD( $scanner, 'Top 1', 1, $pos ),
-				str_starts_with( $text, '2' )  => self::assertKeyAndPositionInTD( $scanner, 'Top 2', 2, $pos ),
+				str_starts_with( $text, '0' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 0', 0, $pos ),
+				str_starts_with( $text, '1' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 1', 1, $pos ),
+				str_starts_with( $text, '2' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 2', 2, $pos ),
 
-				str_starts_with( $text, 'zero:' ) => self::assertKeyAndPositionInTD( $scanner, 'Middle 0', 0, $pos ),
-				str_starts_with( $text, 'one:' )  => self::assertKeyAndPositionInTD( $scanner, 'Middle 1', 1, $pos ),
-				str_starts_with( $text, 'two:' )  => self::assertKeyAndPositionInTD( $scanner, 'Middle 2', 2, $pos ),
+				str_starts_with( $text, 'zero:' ) => self::assertKeyAndPositionInTD( $tracer, 'Middle 0', 0, $pos ),
+				str_starts_with( $text, 'one:' )  => self::assertKeyAndPositionInTD( $tracer, 'Middle 1', 1, $pos ),
+				str_starts_with( $text, 'two:' )  => self::assertKeyAndPositionInTD( $tracer, 'Middle 2', 2, $pos ),
 
-				str_starts_with( $text, 'O=' ) => self::assertKeyAndPositionInTD( $scanner, 'Last 0', 0, $pos ),
-				str_starts_with( $text, 'I=' ) => self::assertKeyAndPositionInTD( $scanner, 'Last 1', 1, $pos ),
+				str_starts_with( $text, 'O=' ) => self::assertKeyAndPositionInTD( $tracer, 'Last 0', 0, $pos ),
+				str_starts_with( $text, 'I=' ) => self::assertKeyAndPositionInTD( $tracer, 'Last 1', 1, $pos ),
 			};
 
 			return $text;
@@ -445,30 +454,30 @@ class TableNodeAwareTest extends TestCase {
 					'td' => new $transformer( $tdAsserter ),
 				)
 			)->traceTableIn( $dom->childNodes );
-
-		$this->assertNull( $scanner->getCurrentIterationCountOf( Table::Head ) );
 	}
 
+	/** @param TableTracer<string,string> $tracer */
 	private static function assertKeyAndPositionInTH(
-		DOMNodeScanner $scanner,
+		TableTracer $tracer,
 		string $headContent,
 		int $expectedPosition,
 		int $actualPosition
 	): void {
 		self::assertTrue( str_ends_with( $headContent, (string) $expectedPosition ) );
 		self::assertSame( $expectedPosition, $actualPosition );
-		self::assertSame( $expectedPosition + 1, $scanner->getCurrentIterationCountOf( Table::Head ) );
+		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Head ) );
 	}
 
+	/** @param TableTracer<string,string> $tracer */
 	private static function assertKeyAndPositionInTD(
-		DOMNodeScanner $scanner,
+		TableTracer $tracer,
 		string $key,
 		int $expectedPosition,
 		int $actualPosition
 	): void {
-		self::assertSame( $key, $scanner->getCurrentColumnName() );
+		self::assertSame( $key, $tracer->getCurrentColumnName() );
 		self::assertSame( $expectedPosition, $actualPosition );
-		self::assertSame( $expectedPosition + 1, $scanner->getCurrentIterationCountOf( Table::Column ) );
+		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Column ) );
 	}
 }
 
