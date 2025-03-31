@@ -78,7 +78,7 @@ trait TableNodeAware {
 
 	/** @param callable( static, DOMElement ): mixed $eventListener */
 	public function subscribeWith( callable $eventListener, Table $target ): static {
-		$this->discoveredTable__eventListeners[ $target->name ] = $eventListener( ... );
+		$this->discoveredTable__eventListeners[ $target->value ] = $eventListener( ... );
 
 		return $this;
 	}
@@ -169,7 +169,7 @@ trait TableNodeAware {
 		$skippedNodes  = 0;
 
 		foreach ( $elementList as $currentIndex => $headNode ) {
-			if ( ! AssertDOMElement::isValid( $headNode, type: 'th' ) ) {
+			if ( ! AssertDOMElement::isValid( $headNode, Table::Head ) ) {
 				++$skippedNodes;
 
 				continue;
@@ -247,10 +247,10 @@ trait TableNodeAware {
 			$this->discoveredTable__bodyIds[] = $this->currentTable__bodyId = $id;
 		}
 
-		isset( $this->discoveredTable__eventListeners[ Table::Body->name ] )
-			&& ( $this->discoveredTable__eventListeners[ Table::Body->name ] )( $this, $body );
+		isset( $this->discoveredTable__eventListeners[ Table::TBody->value ] )
+			&& ( $this->discoveredTable__eventListeners[ Table::TBody->value ] )( $this, $body );
 
-		unset( $this->discoveredTable__eventListeners[ Table::Body->name ] );
+		unset( $this->discoveredTable__eventListeners[ Table::TBody->value ] );
 	}
 
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
@@ -266,17 +266,17 @@ trait TableNodeAware {
 
 	/** @phpstan-assert-if-true =DOMElement $node */
 	protected function isTableRowStructure( DOMNode $node ): bool {
-		return $node->childNodes->length && AssertDOMElement::isValid( $node, type: 'tr' );
+		return $node->childNodes->length && AssertDOMElement::isValid( $node, Table::Row );
 	}
 
 	/** @phpstan-assert-if-true =DOMElement $node */
 	protected function isTableColumnStructure( mixed $node ): bool {
-		return $node instanceof DOMElement && in_array( $node->tagName, array( 'th', 'td' ), strict: true );
+		return AssertDOMElement::isValid( $node, Table::Head ) || AssertDOMElement::isValid( $node, Table::Column );
 	}
 
 	/** @return ?Iterator<int,DOMNode> */
 	private function fromCurrentStructure( DOMNode $node ): ?Iterator {
-		if ( ! AssertDOMElement::isValid( $node, type: 'table' ) ) {
+		if ( ! AssertDOMElement::isValid( $node, 'table' ) ) {
 			$this->findTableStructureIn( $node );
 
 			return null;
@@ -290,7 +290,7 @@ trait TableNodeAware {
 
 	/** @return ?array{0:list<string>,1:list<ThReturn>} */
 	private function tableHeadContentFrom( DOMNode $node, ?DOMElement $row = null ): ?array {
-		if ( ! AssertDOMElement::isValid( $node, type: 'thead' ) ) {
+		if ( ! AssertDOMElement::isValid( $node, Table::THead ) ) {
 			return null;
 		}
 
@@ -314,7 +314,7 @@ trait TableNodeAware {
 
 		while ( ! $body && $tableIterator->valid() ) {
 			// Currently, <caption> element is skipped.
-			if ( AssertDOMElement::isValid( $tableIterator->current(), type: 'caption' ) ) {
+			if ( AssertDOMElement::isValid( $tableIterator->current(), Table::Caption ) ) {
 				$tableIterator->next();
 			}
 
@@ -322,7 +322,7 @@ trait TableNodeAware {
 				$tableIterator->next();
 			}
 
-			AssertDOMElement::isValid( $node = $tableIterator->current(), type: 'tbody' ) && ( $body = $node );
+			AssertDOMElement::isValid( $node = $tableIterator->current(), Table::TBody ) && ( $body = $node );
 
 			$tableIterator->next();
 		}
@@ -343,7 +343,7 @@ trait TableNodeAware {
 		$position       = 0;
 
 		while ( $rowIterator->valid() ) {
-			if ( ! $tableRow = AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
+			if ( ! $tableRow = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
 				return;
 			}
 
@@ -351,7 +351,7 @@ trait TableNodeAware {
 
 			$headInspected = true;
 
-			if ( ! $tableRow = AssertDOMElement::nextIn( $rowIterator, type: 'tr' ) ) {
+			if ( ! $tableRow = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
 				return;
 			}
 

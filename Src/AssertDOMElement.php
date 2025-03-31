@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper;
 
 use Iterator;
+use BackedEnum;
 use DOMElement;
 
 class AssertDOMElement {
@@ -16,11 +17,12 @@ class AssertDOMElement {
 	}
 
 	/** @phpstan-assert-if-true =DOMElement $node */
-	public static function isValid( mixed $node, string $type = '' ): bool {
-		return $node instanceof DOMElement && ( ! $type || $type === $node->tagName );
+	public static function isValid( mixed $node, string|BackedEnum $type = '' ): bool {
+		return $node instanceof DOMElement
+			&& ( ! $type || ( $type instanceof BackedEnum ? $type->value : $type ) === $node->tagName );
 	}
 
-	public static function nextIn( Iterator $iterator, string $type ): ?DOMElement {
+	public static function nextIn( Iterator $iterator, string|BackedEnum $type ): ?DOMElement {
 		while ( ! self::isValid( $current = $iterator->current(), $type ) ) {
 			if ( ! $iterator->valid() ) {
 				return null;
@@ -32,7 +34,11 @@ class AssertDOMElement {
 		return $current;
 	}
 
-	public static function inferredFrom( string $string, string $type, bool $normalize = true ): ?DOMElement {
+	public static function inferredFrom(
+		string $string,
+		string|BackedEnum $type,
+		bool $normalize = true
+	): ?DOMElement {
 		/** @var \Iterator */
 		$iterator = DOMDocumentFactory::bodyFromHtml( $string, $normalize )->childNodes->getIterator();
 

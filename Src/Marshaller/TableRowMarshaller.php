@@ -43,10 +43,10 @@ class TableRowMarshaller implements Transformer {
 	/** @throws InvalidSource When given $element is not <tr> or does not have child nodes. */
 	public static function validate( string|DOMElement $element ): DOMElement {
 		if ( ! $element instanceof DOMElement ) {
-			$el   = AssertDOMElement::inferredFrom( $element, type: 'tr' );
+			$el   = AssertDOMElement::inferredFrom( $element, Table::Row );
 			$type = 'string';
 		} else {
-			$el   = AssertDOMElement::isValid( $element, type: 'tr' ) ? $element : null;
+			$el   = AssertDOMElement::isValid( $element, Table::Row ) ? $element : null;
 			$type = "<{$element->tagName}> element";
 		}
 

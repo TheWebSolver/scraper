@@ -48,7 +48,7 @@ class TableNodeAwareTest extends TestCase {
 		$scanner = new DOMNodeScanner( $dev );
 		$scanner->subscribeWith(
 			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'title' ), $scanner->getTableId( true ) ),
-			Table::Body
+			Table::TBody
 		);
 
 		$scanner->traceTableIn( $dom->childNodes );
@@ -70,7 +70,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$scanner->subscribeWith(
 			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'address' ), $scanner->getTableId( true ) ),
-			Table::Body
+			Table::TBody
 		);
 
 		$scanner->traceTableIn( $dom->childNodes );
@@ -97,7 +97,7 @@ class TableNodeAwareTest extends TestCase {
 		$scanner = new DOMNodeScanner();
 		$scanner->subscribeWith(
 			fn( $scanner ) => $scanner->setColumnNames( $columnNames, $scanner->getTableId( true ), ...$offset ),
-			Table::Body
+			Table::TBody
 		);
 
 		/** @var TableRowMarshaller<string> */
@@ -172,7 +172,7 @@ class TableNodeAwareTest extends TestCase {
 
 		$handler->subscribeWith(
 			static fn( $i ) => $i->setColumnNames( array( 'finalAddress' ), $i->getTableId( true ) ),
-			Table::Body
+			Table::TBody
 		);
 
 		$devTable->next();

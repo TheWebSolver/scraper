@@ -32,7 +32,7 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 
 		$this->sourceFromAttribute( $reflection )
 			->collectableFromAttribute( $reflection )
-			->subscribeWith( $this->tableBodyListener( ... ), target: Table::Body )
+			->subscribeWith( $this->tableBodyListener( ... ), target: Table::TBody )
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename );
 
 		( $source = $this->getCollectionSource() ) && $this->useKeys( $source->items );
