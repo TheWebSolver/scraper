@@ -105,6 +105,7 @@ interface TableTracer {
 	 * Gets collection of traced table head indexed by respective table ID.
 	 *
 	 * @return ($namesOnly is true ? array<int,SplFixedArray<string>> : array<int,ArrayObject<int,ThReturn>>)
+	 * Discovered tables' head contents indexed by respective table ID.
 	 */
 	public function getTableHead( bool $namesOnly = false ): array;
 
@@ -112,9 +113,16 @@ interface TableTracer {
 	 * Gets collection of traced table data indexed by respective table ID.
 	 *
 	 * @return array<int,Iterator<int,ArrayObject<array-key,TdReturn>>>
+	 * Discovered tables' iterable column set indexed by respective table ID.
 	 */
 	public function getTableData(): array;
 
+	/**
+	 * Gets table caption, if set.
+	 *
+	 * @return array<int,?string> Discovered tables' caption contents indexed by respective table ID.
+	 */
+	public function getTableCaption(): array;
 	/**
 	 * Gets current iteration table data column name, if set.
 	 *

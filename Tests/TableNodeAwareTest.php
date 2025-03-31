@@ -324,7 +324,9 @@ class TableNodeAwareTest extends TestCase {
 	#[Test]
 	public function itCascadesParentCurrentCountIfTdHasTable(): void {
 		$table = '
-			<table id="first-table"><tbody id="first-body">
+			<table id="first-table">
+				<caption> This is a <b>Caption</b> content </caption>
+				<tbody id="first-body">
 				<!-- comment -->
 				<tr><th>Top 0</th><th><!-- comment -->Top 1</th><!-- comment --><!-- comment --><th>Top 2</th><!-- comment --><!-- comment --></tr>
 				<!-- comment -->
@@ -365,6 +367,7 @@ class TableNodeAwareTest extends TestCase {
 		$dom         = DOMDocumentFactory::createFromHtml( $table );
 		$scanner     = new DOMNodeScanner();
 		$transformer = new class() implements Transformer {
+			/** @param ?Closure(string|DOMElement,int,TableTracer<mixed,string>): (string|ArrayOBject<array-key,string[]>) $asserter */
 			public function __construct( private ?Closure $asserter = null ) {}
 
 			/**
@@ -375,12 +378,21 @@ class TableNodeAwareTest extends TestCase {
 			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): ArrayObject|string {
 				! $this->asserter && throw new Exception( 'Asserter needed to test transformer.' );
 
-				if ( ( $result = ( $this->asserter )( $element, $position, $tracer ) ) instanceof ArrayObject ) {
-					return $result;
-				}
-
-				return $element instanceof DOMElement ? $element->textContent : $element;
+				return ( $this->asserter )( $element, $position, $tracer );
 			}
+		};
+
+		$captionAsserter = static function ( string|DOMElement $el, int $position, TableTracer $tracer ) {
+			assert( $el instanceof DOMElement );
+
+			$data = array();
+			$list = $el->childNodes;
+
+			$data['text1'] = trim( $list->item( 0 )->textContent ?? '' );
+			$data['bold1'] = trim( $list->item( 1 )->textContent ?? '' );
+			$data['text2'] = trim( $list->item( 2 )->textContent ?? '' );
+
+			return json_encode( $data );
 		};
 
 		$thAsserter = static function ( string|DOMElement $el, int $position, TableTracer $tracer ) {
@@ -458,10 +470,16 @@ class TableNodeAwareTest extends TestCase {
 		};
 
 		$scanner->withAllTables()
+			->transformWith( new $transformer( $captionAsserter ), Table::Caption )
 			->transformWith( new $transformer( $thAsserter ), Table::Head )
 			->transformWith( new $transformer( $trAsserter ), Table::Row )
 			->transformWith( new $transformer( $tdAsserter ), Table::Column )
 			->inferTableFrom( $dom->childNodes );
+
+		$this->assertSame(
+			array( 'text1' => 'This is a', 'bold1' => 'Caption', 'text2' => 'content' ),
+			json_decode( $scanner->getTableCaption()[ $scanner->getTableId()[0] ] ?? '', associative: true )
+		);
 	}
 
 	/** @param TableTracer<string,string> $tracer */
@@ -486,6 +504,17 @@ class TableNodeAwareTest extends TestCase {
 		self::assertSame( $key, $tracer->getCurrentColumnName() );
 		self::assertSame( $expectedPosition, $actualPosition );
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Column ) );
+	}
+
+	#[Test]
+	public function itIgnoresTracedStructureOfNoBodyFound(): void {
+		$table = '<table><caption>This is caption</caption><thead><tr><th>This is head</th></tr></thead></table>';
+
+		$scanner = new DOMNodeScanner();
+
+		$scanner->inferTableFrom( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+
+		$this->assertEmpty( $scanner->getTableId() );
 	}
 }
 

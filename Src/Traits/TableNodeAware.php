@@ -36,7 +36,7 @@ trait TableNodeAware {
 	 *   tr      ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
 	 *   th      ?: Transformer<ThReturn>,
 	 *   td      ?: Transformer<TdReturn>,
-	 *   caption ?: Transformer<string|string[]>
+	 *   caption ?: Transformer<string>
 	 * }
 	 */
 	private array $discoveredTable__transformers;
@@ -44,6 +44,8 @@ trait TableNodeAware {
 	private array $discoveredTable__eventListeners;
 	/** @var int[] */
 	private array $discoveredTable__bodyIds = array();
+	/** @var array<int,?string> */
+	private array $discoveredTable__captions = array();
 	/** @var array<int,ArrayObject<int,ThReturn>> */
 	private array $discoveredTable__heads = array();
 	/** @var array<int,SplFixedArray<string>> */
@@ -108,6 +110,10 @@ trait TableNodeAware {
 		return $this->currentTable__columnNames[ $this->currentTable__bodyId ][0] ?? array();
 	}
 
+	public function getTableCaption(): array {
+		return $this->discoveredTable__captions;
+	}
+
 	public function getCurrentColumnName(): ?string {
 		return $this->currentIteration__columnName ?? null;
 	}
@@ -150,23 +156,30 @@ trait TableNodeAware {
 		$this->assertIsDOMNodeList( $elementList, 'Table' );
 
 		foreach ( $elementList as $node ) {
-			if ( ! $tableElements = $this->discoveredStructureIn( $node ) ) {
+			if ( ! $tableStructure = $this->traceStructureFrom( $node ) ) {
 				continue;
 			}
 
+			[$bodyNode, $captionNode, $headNode] = $tableStructure;
+
 			$splId = $this->currentTable__splId = spl_object_id( $node );
-			$id    = $splId * spl_object_id( $tableElements[1] );
+			$id    = $splId * spl_object_id( $bodyNode );
 
-			$this->dispatchEventListenerForDiscoveredTable( $id, $tableElements[1] );
+			$this->dispatchEventListenerForDiscoveredTable( $id, $bodyNode );
 
-			$iterator = $this->fromTableBodyRowStructure( ...$tableElements );
+			$this->discoveredTable__captions[ $id ] = $captionNode
+				? $this->captionStructureContentFrom( $captionNode )
+				: null;
+
+			$head     = $headNode ? $this->headStructureContentFrom( $headNode ) : null;
+			$iterator = $this->bodyStructureIteratorFrom( $head, $bodyNode );
 
 			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 
 			if ( $this->discoveredTargetedTable( $node ) ) {
 				break;
 			}
-		}
+		}//end foreach
 	}
 
 	/**
@@ -302,18 +315,24 @@ trait TableNodeAware {
 			: null;
 	}
 
+	private function toNextStructureIfInCurrentPosition( Table $target, Iterator $tableIterator ): ?DOMElement {
+		if ( AssertDOMElement::isValid( $node = $tableIterator->current(), $target ) ) {
+			$tableIterator->next();
+
+			return $this->shouldTraceTableStructure( $target ) ? $node : null;
+		}
+
+		return null;
+	}
+
+	private function captionStructureContentFrom( DOMElement $node ): ?string {
+		$transformer = $this->discoveredTable__transformers[ Table::Caption->value ] ?? null;
+
+		return $transformer?->transform( $node, 0, $this ) ?? trim( $node->textContent );
+	}
+
 	/** @return ?array{0:list<string>,1:list<ThReturn>} */
-	private function fromTableHeadStructureIn( Iterator $tableIterator, ?DOMElement $row = null ): ?array {
-		if ( ! AssertDOMElement::isValid( $node = $tableIterator->current(), Table::THead ) ) {
-			return null;
-		}
-
-		$tableIterator->next();
-
-		if ( ! $this->shouldTraceTableStructure( Table::THead ) ) {
-			return null;
-		}
-
+	private function headStructureContentFrom( DOMElement $node, ?DOMElement $row = null ): ?array {
 		/** @var Iterator<int,DOMNode> */
 		$headIterator = $node->childNodes->getIterator();
 
@@ -326,26 +345,23 @@ trait TableNodeAware {
 		return $row ? $this->inferTableHeadFrom( $row->childNodes ) : null;
 	}
 
-	/** @return ?array{0:?array{0:list<string>,1:list<ThReturn>},1:DOMElement} */
-	private function discoveredStructureIn( DOMNode $node, ?DOMElement $body = null ): ?array {
+	/** @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement} */
+	private function traceStructureFrom( DOMNode $node ): ?array {
 		if ( ! $tableIterator = $this->fromCurrentStructure( $node ) ) {
 			return null;
 		}
 
-		while ( ! $body && $tableIterator->valid() ) {
-			// Currently, <caption> element is skipped.
-			if ( AssertDOMElement::isValid( $tableIterator->current(), Table::Caption ) ) {
-				$tableIterator->next();
-			}
+		$bodyNode = $captionNode = $headNode = null;
 
-			$head = $this->fromTableHeadStructureIn( $tableIterator );
-
-			AssertDOMElement::isValid( $node = $tableIterator->current(), Table::TBody ) && ( $body = $node );
+		while ( ! $bodyNode && $tableIterator->valid() ) {
+			$captionNode = $this->toNextStructureIfInCurrentPosition( Table::Caption, $tableIterator );
+			$headNode    = $this->toNextStructureIfInCurrentPosition( Table::THead, $tableIterator );
+			$bodyNode    = $this->toNextStructureIfInCurrentPosition( Table::TBody, $tableIterator );
 
 			$tableIterator->next();
 		}
 
-		return $body ? array( $head ?? null, $body ) : null;
+		return $bodyNode ? array( $bodyNode, $captionNode, $headNode ) : null;
 	}
 
 	/**
@@ -353,7 +369,7 @@ trait TableNodeAware {
 	 * @param DOMElement                              $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
 	 */
-	private function fromTableBodyRowStructure( ?array $head, DOMElement $body ): Iterator {
+	private function bodyStructureIteratorFrom( ?array $head, DOMElement $body ): Iterator {
 		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
 		$rowIterator    = $body->childNodes->getIterator();
 		$rowTransformer = $this->discoveredTable__transformers[ Table::Row->value ] ?? null;
