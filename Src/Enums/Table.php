@@ -3,10 +3,10 @@ declare( strict_types=1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Enums;
 
-enum Table {
-	case Caption;
-	case Head;
-	case Body;
-	case Row;
-	case Column;
+enum Table: string {
+	case Caption = 'caption';
+	case Head    = 'th';
+	case Body    = 'tbody';
+	case Row     = 'tr';
+	case Column  = 'td';
 }
