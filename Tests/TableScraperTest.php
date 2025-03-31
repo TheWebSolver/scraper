@@ -11,6 +11,7 @@ use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
+use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
@@ -91,7 +92,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
-		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg() )
+		$tr = new /** @template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg() )
 		extends TableRowMarshaller{};
 
 		$table = '
@@ -119,7 +120,7 @@ class TableScraperTest extends TestCase {
 			sprintf( Collectable::INVALID_COUNT_MESSAGE, 3, 'name", "title", "address' )
 		);
 
-		$this->scraper->withTransformers( compact( 'tr' ) )->parse( $table )->current();
+		$this->scraper->transformWith( $tr, Table::Row )->parse( $table )->current();
 	}
 
 	#[Test]
@@ -140,7 +141,7 @@ class TableScraperTest extends TestCase {
 		$td   = new TableColumnTranslit( $td, $this->scraper->getDiacritics(), array( $translitCol ) );
 
 		$this->scraper
-			->withTransformers( compact( 'td' ) )
+			->transformWith( $td, Table::Column )
 			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
 		$this->assertCount( 1, $this->scraper->getTableId() );
@@ -162,7 +163,7 @@ class TableScraperTest extends TestCase {
 		DeveloperDetails $type,
 		?array $expectedValue = null
 	): void {
-		$tr = new /**@template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg(), 'address' )
+		$tr = new /** @template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg(), 'address' )
 		extends TableRowMarshaller{};
 
 		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
@@ -172,8 +173,12 @@ class TableScraperTest extends TestCase {
 			$this->expectExceptionMessage( $type->errorMsg() );
 		}
 
-		$iterator      = $this->scraper->withTransformers( compact( 'tr', 'td' ) )->parse( $table );
-		[$key, $value] = $expectedValue ?? array( null, null );
+		$iterator = $this->scraper
+			->transformWith( $tr, Table::Row )
+			->transformWith( $td, Table::Column )
+			->parse( $table );
+
+			[$key, $value] = $expectedValue ?? array( null, null );
 
 		$this->assertSame( $key, $iterator->key() );
 		$this->assertSame( $value, $iterator->current()->getArrayCopy() );
@@ -213,7 +218,7 @@ class TableScraperTest extends TestCase {
 	public function itOnlyCollectsDataWithRequestedKeys(): void {
 		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
 
-		$this->scraper->withTransformers( compact( 'td' ) )->useKeys( $requestedKeys = array( 'name', 'address' ) );
+		$this->scraper->transformWith( $td, Table::Column )->useKeys( $requestedKeys = array( 'name', 'address' ) );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 		$current  = $iterator->current();
@@ -242,7 +247,7 @@ class TableScraperTest extends TestCase {
 			}
 		};
 
-		$this->scraper->withTransformers( compact( 'td', 'tr' ) );
+		$this->scraper->transformWith( $td, Table::Column )->transformWith( $tr, Table::Row );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 

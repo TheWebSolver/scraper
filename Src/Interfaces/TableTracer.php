@@ -8,7 +8,6 @@ use Iterator;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 
 /**
@@ -27,13 +26,10 @@ interface TableTracer {
 	 * Each call made to this method must override previously set transformer, if any.
 	 * Also, each call must only override for its respective offset/index key.
 	 *
-	 * @param array{
-	 *   tr ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
-	 *   th ?: Transformer<ThReturn>,
-	 *   td ?: Transformer<TdReturn>
-	 * } $transformers
+	 * @param Transformer<TReturn> $transformer
+	 * @template TReturn
 	 */
-	public function withTransformers( array $transformers ): static;
+	public function transformWith( Transformer $transformer, Table $target ): static;
 
 	/**
 	 * Registers event listener for targeted table structure.

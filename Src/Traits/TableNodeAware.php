@@ -31,9 +31,10 @@ trait TableNodeAware {
 
 	/**
 	 * @var array{
-	 *   tr ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
-	 *   th ?: Transformer<ThReturn>,
-	 *   td ?: Transformer<TdReturn>
+	 *   tr      ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
+	 *   th      ?: Transformer<ThReturn>,
+	 *   td      ?: Transformer<TdReturn>,
+	 *   caption ?: Transformer<string|string[]>
 	 * }
 	 */
 	private array $discoveredTable__transformers;
@@ -82,10 +83,8 @@ trait TableNodeAware {
 		return $this;
 	}
 
-	public function withTransformers( array $transformers ): static {
-		isset( $transformers['tr'] ) && ( $this->discoveredTable__transformers['tr'] = $transformers['tr'] );
-		isset( $transformers['th'] ) && ( $this->discoveredTable__transformers['th'] = $transformers['th'] );
-		isset( $transformers['td'] ) && ( $this->discoveredTable__transformers['td'] = $transformers['td'] );
+	public function transformWith( Transformer $transformer, Table $target ): static {
+		$this->discoveredTable__transformers[ $target->value ] = $transformer;
 
 		return $this;
 	}
@@ -165,7 +164,7 @@ trait TableNodeAware {
 
 	/** @return ?array{0:list<string>,1:list<ThReturn>} */
 	public function inferTableHeadFrom( iterable $elementList ): ?array {
-		$thTransformer = $this->discoveredTable__transformers['th'] ?? null;
+		$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null;
 		$names         = $collection = array();
 		$skippedNodes  = 0;
 
@@ -198,7 +197,7 @@ trait TableNodeAware {
 		$skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__bodyId ] = 0;
 
 		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
-		$transformer = $this->discoveredTable__transformers['td'] ?? new TableColumnMarshaller();
+		$transformer = $this->discoveredTable__transformers[ Table::Column->value ] ?? new TableColumnMarshaller();
 
 		foreach ( $elementList as $currentIndex => $node ) {
 			if ( ! $this->isTableColumnStructure( $node ) ) {
@@ -339,7 +338,7 @@ trait TableNodeAware {
 	private function fromTableBodyRowStructure( ?array $head, DOMElement $body ): Iterator {
 		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
 		$rowIterator    = $body->childNodes->getIterator();
-		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
+		$rowTransformer = $this->discoveredTable__transformers[ Table::Row->value ] ?? null;
 		$headInspected  = false;
 		$position       = 0;
 

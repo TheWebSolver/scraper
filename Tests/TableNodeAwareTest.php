@@ -103,7 +103,7 @@ class TableNodeAwareTest extends TestCase {
 		/** @var TableRowMarshaller<string> */
 		$tr = new TableRowMarshaller( 'Should Not Throw exception' );
 
-		$scanner->withTransformers( compact( 'tr' ) )->traceTableIn( $dom->childNodes );
+		$scanner->transformWith( $tr, Table::Row )->traceTableIn( $dom->childNodes );
 
 		$this->assertSame(
 			$expected,
@@ -153,7 +153,7 @@ class TableNodeAwareTest extends TestCase {
 		};
 
 		$handler
-			->withTransformers( array( 'th' => $thMarshaller ) )
+			->transformWith( $thMarshaller, Table::Head )
 			->withAllTables()
 			->traceTableIn( $dom->childNodes );
 
@@ -301,7 +301,7 @@ class TableNodeAwareTest extends TestCase {
 			}
 		};
 
-		$scanner->withTransformers( array( 'td' => $tdMarshaller ) )
+		$scanner->transformWith( $tdMarshaller, Table::Column )
 			->traceTableIn( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
 		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ]->current()->getArrayCopy() );
@@ -447,13 +447,10 @@ class TableNodeAwareTest extends TestCase {
 		};
 
 		$scanner->withAllTables()
-			->withTransformers(
-				array(
-					'th' => new $transformer( $thAsserter ),
-					'tr' => new $transformer( $trAsserter ),
-					'td' => new $transformer( $tdAsserter ),
-				)
-			)->traceTableIn( $dom->childNodes );
+			->transformWith( new $transformer( $thAsserter ), Table::Head )
+			->transformWith( new $transformer( $trAsserter ), Table::Row )
+			->transformWith( new $transformer( $tdAsserter ), Table::Column )
+			->traceTableIn( $dom->childNodes );
 	}
 
 	/** @param TableTracer<string,string> $tracer */
