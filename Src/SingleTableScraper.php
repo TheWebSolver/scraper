@@ -48,18 +48,16 @@ abstract class SingleTableScraper implements Scrapable, TableTracer {
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->withAllTables( false );
 
-		empty( $this->getKeys() )
-			&& ( $source = $this->getCollectionSource() )
-			&& $this->useKeys( $source->items );
+		empty( $this->getKeys() ) && $this->useKeys( $this->getCollectionSource()->items ?? array() );
 
 		$this->inferTableFrom( DOMDocumentFactory::bodyFromHtml( $content, normalize: $normalize )->childNodes );
 
-		$data = $this->getTableData()[ $this->getTableId( current: true ) ]
-			?? ScraperError::withSourceMsg( 'Could not find parsable content.' );
+		$iterator = $this->getTableData()[ $this->getTableId( current: true ) ]
+			?? ScraperError::withSourceMsg( 'Could not find table column set iterator.' );
 
 		$this->flushDiscoveredTableStructure();
 
-		return $data;
+		return $iterator;
 	}
 
 	protected function tableBodyListener(): void {
