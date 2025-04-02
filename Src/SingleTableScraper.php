@@ -10,19 +10,16 @@ use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
-use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
-use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
+use TheWebSolver\Codegarage\Scraper\Interfaces\MappableTableScraper;
 
 /**
  * @template TdReturn
- * @template-implements Scrapable<array-key,ArrayObject<array-key,TdReturn>>
- * @template-implements TableTracer<string,TdReturn>
+ * @template-implements MappableTableScraper<TdReturn,ArrayObject<array-key,TdReturn>>
  */
-abstract class SingleTableScraper implements Scrapable, KeyMapper, TableTracer {
+abstract class SingleTableScraper implements MappableTableScraper {
 	/** @use HtmlTableFromNode<string,TdReturn> */
 	use ScrapeYard, HtmlTableFromNode, ScraperSource, CollectorSource;
 
