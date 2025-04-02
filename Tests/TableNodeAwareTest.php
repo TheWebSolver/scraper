@@ -15,12 +15,12 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
-use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
-class TableNodeAwareTest extends TestCase {
+class HtmlTableFromNodeTest extends TestCase {
 	final public const TABLE_SOURCE = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR . 'table.html';
 
 	#[Test]
@@ -522,8 +522,8 @@ class TableNodeAwareTest extends TestCase {
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 /** @template-implements TableTracer<string,string> */
 class DOMNodeScanner implements TableTracer {
-	/** @use TableNodeAware<string,string> */
-	use TableNodeAware;
+	/** @use HtmlTableFromNode<string,string> */
+	use HtmlTableFromNode;
 
 	/** @param Closure(DOMElement, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}

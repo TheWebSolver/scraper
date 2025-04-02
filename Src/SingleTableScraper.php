@@ -12,9 +12,9 @@ use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
-use TheWebSolver\Codegarage\Scraper\Traits\TableNodeAware;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
+use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
 
 /**
  * @template TdReturn
@@ -22,8 +22,8 @@ use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
  * @template-implements TableTracer<string,TdReturn>
  */
 abstract class SingleTableScraper implements Scrapable, TableTracer {
-	/** @use TableNodeAware<string,TdReturn> */
-	use ScrapeYard, ScraperSource, TableNodeAware, CollectorSource;
+	/** @use HtmlTableFromNode<string,TdReturn> */
+	use ScrapeYard, ScraperSource, HtmlTableFromNode, CollectorSource;
 
 	private Closure $unsubscribeError;
 

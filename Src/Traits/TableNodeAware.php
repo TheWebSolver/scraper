@@ -23,7 +23,7 @@ use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
  * @template ThReturn
  * @template TdReturn
  */
-trait TableNodeAware {
+trait HtmlTableFromNode {
 	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` reason. */
 	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table is discovered. Use listener passed to "%1$s::subscribeWith()" to %3$s';
 

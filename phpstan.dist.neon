@@ -7,6 +7,6 @@ parameters:
 		- Tests/
 	ignoreErrors:
 		- # Ignore transformers keyed by value of Table enum.
-			path: Src/Traits/TableNodeAware.php
+			path: Src/Traits/HtmlTableFromNode.php
 			identifier: assign.propertyType
 			message: '|\$discoveredTable__transformers|'
