@@ -6,36 +6,37 @@ namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 
 /** @template-implements Transformer<string> */
 class TableColumnTranslit implements Transformer {
 	/**
-	 * @param Transformer<string>  $transformer       Base transformer which transforms column content.
-	 * @param array<string,string> $translitPair      Diacritics with search as key & replacement as value.
-	 * @param list<string>         $targetColumnNames Column names to transit values of. If names not provided,
-	 *                                                translit runs for each column (which might not be ideal).
+	 * @param Transformer<string> $transformer       Base transformer which transforms column content.
+	 * @param list<string>        $targetColumnNames Column names to transit values of. If names not provided,
+	 *                                               translit runs for each column (which might not be ideal).
 	 */
 	public function __construct(
 		private readonly Transformer $transformer,
-		private readonly array $translitPair,
+		private readonly AccentedCharacter $handler,
 		private readonly ?array $targetColumnNames = null
 	) {}
 
 	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
-		$content = $this->transformer->transform( $element, $position, $tracer );
+		$content     = $this->transformer->transform( $element, $position, $tracer );
+		$targetNames = $this->targetColumnNames ?? $tracer->getColumnNames();
+		$currentCol  = $tracer->getCurrentColumnName();
 
-		if ( empty( $this->translitPair ) ) {
+		if ( ! $this->shouldTranslit() || ( $currentCol && ! in_array( $currentCol, $targetNames, strict: true ) ) ) {
 			return $content;
 		}
 
-		$targetNames = $this->targetColumnNames ?? $tracer->getColumnNames();
+		$characters = $this->handler->getDiacriticsList();
 
-		return ! in_array( $tracer->getCurrentColumnName(), $targetNames, strict: true )
-			? $content
-			: str_replace(
-				search: array_keys( $this->translitPair ),
-				replace: array_values( $this->translitPair ),
-				subject: $content
-			);
+		return str_replace( array_keys( $characters ), array_values( $characters ), $content );
+	}
+
+	private function shouldTranslit(): bool {
+		return AccentedCharacter::ACTION_TRANSLIT === $this->handler->getAccentOperationType()
+			&& ! empty( $this->handler->getDiacriticsList() );
 	}
 }

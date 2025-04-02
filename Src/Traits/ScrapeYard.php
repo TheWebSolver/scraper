@@ -11,16 +11,8 @@ use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 trait ScrapeYard {
 	use CachePath;
 
-	/** @var null|\TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable::DIACRITICS* */
-	private ?int $diacriticOperationType = null;
-
 	abstract public function getSourceUrl(): string;
 	abstract protected function getScraperSource(): ScrapeFrom;
-
-	/** @return array<string,string> */
-	protected function getDiacritics(): array {
-		return array();
-	}
 
 	public function hasCache(): bool {
 		return is_readable( $this->getCachePath() );
@@ -28,14 +20,6 @@ trait ScrapeYard {
 
 	public function invalidateCache(): bool {
 		return $this->hasCache() && unlink( $this->getCachePath() );
-	}
-
-	public function setDiacritic( ?int $operationType ): void {
-		$this->diacriticOperationType = $operationType;
-	}
-
-	public function getDiacritic(): ?int {
-		return $this->diacriticOperationType;
 	}
 
 	public function scrape(): string {

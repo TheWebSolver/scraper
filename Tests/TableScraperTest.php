@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Traits\Diacritic;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
@@ -21,6 +22,7 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnTranslit;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
@@ -58,7 +60,6 @@ class TableScraperTest extends TestCase {
 		$this->assertSame( DOMDocumentFactoryTest::RESOURCE_PATH . 'table.html', $this->scraper->getCachePath() );
 		$this->assertSame( 'https://scraper.test', $this->scraper->getSourceUrl() );
 		$this->assertTrue( $this->scraper->hasCache() );
-		$this->assertNull( $this->scraper->getDiacritic() );
 	}
 
 	#[Test]
@@ -125,6 +126,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itTranslitAndCollectOnlySubsetOfColumnProvided(): void {
+		$scraper = new AccentedCharScraper();
 		$title   = htmlentities( 'Develôper' );
 		$address = htmlentities( 'Curaçao' );
 		$table   = "
@@ -136,22 +138,36 @@ class TableScraperTest extends TestCase {
 			</table>
 		";
 
-		$cols = array( $translitCol = DeveloperDetails::Title->value, DeveloperDetails::Address->value );
-		$td   = new TableColumnMarshaller( $cols );
-		$td   = new TableColumnTranslit( $td, $this->scraper->getDiacritics(), array( $translitCol ) );
+		$nodes = DOMDocumentFactory::createFromHtml( $table )->childNodes;
+		$cols  = array( $translitCol = DeveloperDetails::Title->value, DeveloperDetails::Address->value );
+		$td    = new TableColumnMarshaller( $cols );
+		$td    = new TableColumnTranslit( $td, $scraper, array( $translitCol ) );
 
-		$this->scraper
-			->transformWith( $td, Table::Column )
-			->inferTableFrom( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+		$scraper->transformWith( new TableColumnTranslit( $td, $scraper, array( $translitCol ) ), Table::Column )
+			->inferTableFrom( $nodes );
 
-		$this->assertCount( 1, $this->scraper->getTableId() );
+		$this->assertCount( 1, $scraper->getTableId() );
+
+		$this->assertSame(
+			array(
+				'title'   => 'Develôper',
+				'address' => 'Curaçao',
+			),
+			$scraper->getTableData()[ $scraper->getTableId( true ) ]->current()->getArrayCopy()
+		);
+
+		$scraper = new AccentedCharScraper();
+
+		$scraper->setAccentOperationType( AccentedCharScraper::ACTION_TRANSLIT );
+		$scraper->transformWith( new TableColumnTranslit( $td, $scraper, array( $translitCol ) ), Table::Column )
+			->inferTableFrom( $nodes );
 
 		$this->assertSame(
 			array(
 				'title'   => 'Developer',
 				'address' => 'Curaçao',
 			),
-			$this->scraper->getTableData()[ $this->scraper->getTableId( true ) ]->current()->getArrayCopy()
+			$scraper->getTableData()[ $scraper->getTableId( true ) ]->current()->getArrayCopy()
 		);
 	}
 
@@ -377,4 +393,10 @@ enum DeveloperDetails: string implements Collectable {
 			self::Address => ctype_alpha( $data ) || ( $handler && $handler( self::Address->errorMsg() ) ),
 		};
 	}
+}
+
+#[ScrapeFrom( 'Translit Test', url: 'https://accentedCharacters.test', filename: '' )]
+#[CollectFrom( DeveloperDetails::class )]
+class AccentedCharScraper extends HtmlTableScraper implements AccentedCharacter {
+	use Diacritic;
 }

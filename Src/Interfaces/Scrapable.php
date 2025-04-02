@@ -11,10 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
  * @template TKey
  * @template TValue
  */
-interface Scrapable extends CollectionSet {
-	public const DIACRITICS_ESCAPE   = 1;
-	public const DIACRITICS_TRANSLIT = 2;
-
+interface Scrapable {
 	/**
 	 * Scrapes content for the source.
 	 *
@@ -68,13 +65,6 @@ interface Scrapable extends CollectionSet {
 	public function withCachePath( string $dirPath, string $filename ): static;
 
 	/**
-	 * Sets the operation mode for accented characters.
-	 *
-	 * @param null|self::DIACRITICS* $operationType
-	 */
-	public function setDiacritic( ?int $operationType ): void;
-
-	/**
 	 * Gets the resource URL from where content should be scraped.
 	 */
 	public function getSourceUrl(): string;
@@ -83,13 +73,6 @@ interface Scrapable extends CollectionSet {
 	 * Gets the cache file path.
 	 */
 	public function getCachePath(): string;
-
-	/**
-	 * Gets the operation mode for accented characters.
-	 *
-	 * @return null|self::DIACRITICS*
-	 */
-	public function getDiacritic(): ?int;
 
 	/**
 	 * Clears any garbage collected data during scraping.
