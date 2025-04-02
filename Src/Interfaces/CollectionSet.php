@@ -6,7 +6,7 @@ namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 use BackedEnum;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-interface CollectionSet {
+interface KeyMapper {
 	/**
 	 * Sets keys to be used for a collection set.
 	 *

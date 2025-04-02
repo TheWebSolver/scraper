@@ -10,11 +10,11 @@ use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
-use TheWebSolver\Codegarage\Scraper\Interfaces\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
 
 /**
@@ -22,7 +22,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
  * @template-implements Scrapable<array-key,ArrayObject<array-key,TdReturn>>
  * @template-implements TableTracer<string,TdReturn>
  */
-abstract class SingleTableScraper implements Scrapable, CollectionSet, TableTracer {
+abstract class SingleTableScraper implements Scrapable, KeyMapper, TableTracer {
 	/** @use HtmlTableFromNode<string,TdReturn> */
 	use ScrapeYard, HtmlTableFromNode, ScraperSource, CollectorSource;
 
