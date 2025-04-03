@@ -21,17 +21,14 @@ interface TableTracer {
 	public function withAllTables( bool $trace = true ): static;
 
 	/**
-	 * Registers target table structure(s) to not be traced and inferred.
+	 * Registers target table structure(s) to be omitted from being traced and inferred.
 	 *
 	 * @no-named-arguments
 	 */
 	public function traceWithout( Table ...$targets ): static;
 
 	/**
-	 * Registers transformers to transform traced element.
-	 *
-	 * Each call made to this method must override previously set transformer, if any.
-	 * Also, each call must only override for its respective offset/index key.
+	 * Registers transformers for targeted table structure.
 	 *
 	 * @param Transformer<TReturn> $transformer
 	 * @template TReturn
@@ -39,28 +36,19 @@ interface TableTracer {
 	public function transformWith( Transformer $transformer, Table $target ): static;
 
 	/**
-	 * Registers event listener for targeted table structure.
+	 * Registers event listeners for targeted table structure.
 	 *
 	 * @param callable( static ): void $eventListener
 	 */
 	public function subscribeWith( callable $eventListener, Table $target ): static;
 
 	/**
-	 * Traces table from given element list.
+	 * Infers table from given element list.
 	 *
 	 * @param iterable<int,TContent> $elementList
 	 * @template TContent of string|DOMNode
 	 */
 	public function inferTableFrom( iterable $elementList ): void;
-
-	/**
-	 * Infers table head from given element list.
-	 *
-	 * @param iterable<int,TElement> $elementList
-	 * @return ?array{0:list<string>,1:list<ThReturn>}
-	 * @template TElement of string|DOMNode
-	 */
-	public function inferTableHeadFrom( iterable $elementList ): ?array;
 
 	/**
 	 * Infers table data from given element list.
@@ -72,7 +60,7 @@ interface TableTracer {
 	public function inferTableDataFrom( iterable $elementList ): array;
 
 	/**
-	 * Sets index keys mappable to traced table data set.
+	 * Sets column names mappable to traced table dataset.
 	 *
 	 * @param list<string> $keys      Names to be used as index key for each mapped column. Extra columns after
 	 *                                last mappable key will automatically be omitted from being inferred.
@@ -90,27 +78,19 @@ interface TableTracer {
 	/**
 	 * Gets traced table IDs or current table being traced.
 	 *
-	 * @return ($current is true ? int : int[])
+	 * @return ($current is true ? int : array<int,int>)
 	 */
 	public function getTableId( bool $current = false ): int|array;
 
 	/**
-	 * Gets index keys mappable to traced table data set.
+	 * Gets column names mappable to traced table dataset.
 	 *
 	 * @return list<string>
 	 */
 	public function getColumnNames(): array;
 
 	/**
-	 * Gets collection of traced table head indexed by respective table ID.
-	 *
-	 * @return ($namesOnly is true ? array<int,SplFixedArray<string>> : array<int,ArrayObject<int,ThReturn>>)
-	 * Discovered tables' head contents indexed by respective table ID.
-	 */
-	public function getTableHead( bool $namesOnly = false ): array;
-
-	/**
-	 * Gets collection of traced table data indexed by respective table ID.
+	 * Gets collection of traced table dataset indexed by respective table ID.
 	 *
 	 * @return array<int,Iterator<int,ArrayObject<array-key,TdReturn>>>
 	 * Discovered tables' iterable column set indexed by respective table ID.
@@ -118,11 +98,20 @@ interface TableTracer {
 	public function getTableData(): array;
 
 	/**
-	 * Gets table caption, if set.
+	 * Gets table caption if not omitted from being traced.
 	 *
 	 * @return array<int,?string> Discovered tables' caption contents indexed by respective table ID.
 	 */
 	public function getTableCaption(): array;
+
+	/**
+	 * Gets table head if not omitted from being traced.
+	 *
+	 * @return ($namesOnly is true ? array<int,SplFixedArray<string>> : array<int,ArrayObject<int,ThReturn>>)
+	 * Discovered tables' head contents indexed by respective table ID.
+	 */
+	public function getTableHead( bool $namesOnly = false ): array;
+
 	/**
 	 * Gets current iteration table data column name, if set.
 	 *

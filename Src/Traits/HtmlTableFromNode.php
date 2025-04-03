@@ -182,39 +182,6 @@ trait HtmlTableFromNode {
 		}//end foreach
 	}
 
-	/**
-	 * @return ?array{0:list<string>,1:list<ThReturn>}
-	 * @throws InvalidSource When element list is not DOMNodeList.
-	 */
-	public function inferTableHeadFrom( iterable $elementList ): ?array {
-		$this->assertIsDOMNodeList( $elementList, 'Table Head' );
-
-		$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null;
-		$names         = $collection = array();
-		$skippedNodes  = 0;
-
-		foreach ( $elementList as $currentIndex => $headNode ) {
-			if ( ! AssertDOMElement::isValid( $headNode, Table::Head ) ) {
-				$this->tickCurrentHeadIterationSkippableNode( $headNode );
-
-				++$skippedNodes;
-
-				continue;
-			}
-
-			$position = $currentIndex - $skippedNodes;
-
-			$this->registerCurrentIterationTableHead( $position );
-
-			$trimmed      = trim( $headNode->textContent );
-			$content      = $thTransformer?->transform( $headNode, $position, $this ) ?? $trimmed;
-			$names[]      = is_string( $content ) ? $content : $trimmed;
-			$collection[] = $content;
-		}
-
-		return $collection ? array( $names, $collection ) : null;
-	}
-
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data         = array();
 		$columns      = $this->currentTable__columnNames[ $this->currentTable__bodyId ] ?? array();
@@ -252,6 +219,43 @@ trait HtmlTableFromNode {
 		unset( $this->currentIteration__columnName );
 
 		return $data;
+	}
+
+	/**
+	 * Infers table head from given element list.
+	 *
+	 * @param iterable<int,TElement> $elementList
+	 * @return ?array{0:list<string>,1:list<ThReturn>}
+	 * @throws InvalidSource When element list is not DOMNodeList.
+	 * @template TElement of string|DOMNode
+	 */
+	protected function inferTableHeadFrom( iterable $elementList ): ?array {
+		$this->assertIsDOMNodeList( $elementList, 'Table Head' );
+
+		$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null;
+		$names         = $collection = array();
+		$skippedNodes  = 0;
+
+		foreach ( $elementList as $currentIndex => $headNode ) {
+			if ( ! AssertDOMElement::isValid( $headNode, Table::Head ) ) {
+				$this->tickCurrentHeadIterationSkippableNode( $headNode );
+
+				++$skippedNodes;
+
+				continue;
+			}
+
+			$position = $currentIndex - $skippedNodes;
+
+			$this->registerCurrentIterationTableHead( $position );
+
+			$trimmed      = trim( $headNode->textContent );
+			$content      = $thTransformer?->transform( $headNode, $position, $this ) ?? $trimmed;
+			$names[]      = is_string( $content ) ? $content : $trimmed;
+			$collection[] = $content;
+		}
+
+		return $collection ? array( $names, $collection ) : null;
 	}
 
 	final protected function flushDiscoveredTableHooks(): void {
