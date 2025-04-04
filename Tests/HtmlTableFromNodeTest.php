@@ -4,9 +4,11 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Closure;
+use DOMNode;
 use Exception;
 use DOMElement;
 use ArrayObject;
+use DOMNodeList;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -527,6 +529,11 @@ class DOMNodeScanner implements TableTracer {
 
 	/** @param Closure(DOMElement, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}
+
+	/** @param DOMNodeList<DOMNode> $elementList */
+	public function inferTableFrom( DOMNodeList $elementList ): void {
+		$this->inferTableFromDOMNodeList( $elementList );
+	}
 
 	protected function isTargetedTable( DOMElement $node ): bool {
 		return $this->validator ? ( $this->validator )( $node, $this ) : true;

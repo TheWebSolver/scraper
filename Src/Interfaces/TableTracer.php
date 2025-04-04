@@ -43,14 +43,6 @@ interface TableTracer {
 	public function subscribeWith( callable $eventListener, Table $target ): static;
 
 	/**
-	 * Infers table from given element list.
-	 *
-	 * @param iterable<int,TContent> $elementList
-	 * @template TContent of string|DOMNode
-	 */
-	public function inferTableFrom( iterable $elementList ): void;
-
-	/**
 	 * Infers table data from given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList

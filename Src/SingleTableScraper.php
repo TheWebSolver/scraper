@@ -48,7 +48,9 @@ abstract class SingleTableScraper implements MappableTableScraper {
 
 		empty( $this->getKeys() ) && $this->useKeys( $this->getCollectionSource()->items ?? array() );
 
-		$this->inferTableFrom( DOMDocumentFactory::bodyFromHtml( $content, normalize: $normalize )->childNodes );
+		$this->inferTableFromDOMNodeList(
+			DOMDocumentFactory::bodyFromHtml( $content, normalize: $normalize )->childNodes
+		);
 
 		$iterator = $this->getTableData()[ $this->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg( 'Could not find Iterator that generates Table Dataset.' );

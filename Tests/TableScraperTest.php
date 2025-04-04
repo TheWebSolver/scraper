@@ -4,10 +4,12 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Closure;
+use DOMNode;
 use Iterator;
 use DOMElement;
 use ValueError;
 use ArrayObject;
+use DOMNodeList;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -399,4 +401,9 @@ enum DeveloperDetails: string implements Collectable {
 #[CollectFrom( DeveloperDetails::class )]
 class AccentedCharScraper extends HtmlTableScraper implements AccentedCharacter {
 	use Diacritic;
+
+	/** @param DOMNodeList<DOMNode> $elementList */
+	public function inferTableFrom( DOMNodeList $elementList ): void {
+		$this->inferTableFromDOMNodeList( $elementList );
+	}
 }

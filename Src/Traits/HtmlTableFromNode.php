@@ -152,36 +152,6 @@ trait HtmlTableFromNode {
 		return $this;
 	}
 
-	public function inferTableFrom( iterable $elementList ): void {
-		$this->assertIsDOMNodeList( $elementList, 'Table' );
-
-		foreach ( $elementList as $node ) {
-			if ( ! $tableStructure = $this->traceStructureFrom( $node ) ) {
-				continue;
-			}
-
-			[$bodyNode, $captionNode, $headNode] = $tableStructure;
-
-			$splId = $this->currentTable__splId = spl_object_id( $node );
-			$id    = $splId * spl_object_id( $bodyNode );
-
-			$this->dispatchEventListenerForDiscoveredTable( $id, $bodyNode );
-
-			$this->discoveredTable__captions[ $id ] = $captionNode
-				? $this->captionStructureContentFrom( $captionNode )
-				: null;
-
-			$head     = $headNode ? $this->headStructureContentFrom( $headNode ) : null;
-			$iterator = $this->bodyStructureIteratorFrom( $head, $bodyNode );
-
-			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
-
-			if ( $this->discoveredTargetedTable( $node ) ) {
-				break;
-			}
-		}//end foreach
-	}
-
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data         = array();
 		$columns      = $this->currentTable__columnNames[ $this->currentTable__bodyId ] ?? array();
@@ -221,17 +191,43 @@ trait HtmlTableFromNode {
 		return $data;
 	}
 
+	/** @param DOMNodeList<DOMNode> $elementList */
+	protected function inferTableFromDOMNodeList( DOMNodeList $elementList ): void {
+		foreach ( $elementList as $node ) {
+			if ( ! $tableStructure = $this->traceStructureFrom( $node ) ) {
+				continue;
+			}
+
+			[$bodyNode, $captionNode, $headNode] = $tableStructure;
+
+			$splId = $this->currentTable__splId = spl_object_id( $node );
+			$id    = $splId * spl_object_id( $bodyNode );
+
+			$this->dispatchEventListenerForDiscoveredTable( $id, $bodyNode );
+
+			$this->discoveredTable__captions[ $id ] = $captionNode
+				? $this->captionStructureContentFrom( $captionNode )
+				: null;
+
+			$head     = $headNode ? $this->headStructureContentFrom( $headNode ) : null;
+			$iterator = $this->bodyStructureIteratorFrom( $head, $bodyNode );
+
+			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
+
+			if ( $this->discoveredTargetedTable( $node ) ) {
+				break;
+			}
+		}//end foreach
+	}
+
 	/**
 	 * Infers table head from given element list.
 	 *
-	 * @param iterable<int,TElement> $elementList
+	 * @param DOMNodeList<DOMNode> $elementList
 	 * @return ?array{0:list<string>,1:list<ThReturn>}
 	 * @throws InvalidSource When element list is not DOMNodeList.
-	 * @template TElement of string|DOMNode
 	 */
-	protected function inferTableHeadFrom( iterable $elementList ): ?array {
-		$this->assertIsDOMNodeList( $elementList, 'Table Head' );
-
+	protected function inferTableHeadFrom( DOMNodeList $elementList ): ?array {
 		$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null;
 		$names         = $collection = array();
 		$skippedNodes  = 0;
@@ -287,7 +283,7 @@ trait HtmlTableFromNode {
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
 		( ! $this->getTableId() || $this->shouldPerform__allTableDiscovery )
 			&& ( ( $nodes = $node->childNodes )->length > $minChildNodesCount )
-			&& $this->inferTableFrom( $nodes );
+			&& $this->inferTableFromDOMNodeList( $nodes );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -481,17 +477,6 @@ trait HtmlTableFromNode {
 
 	private function shouldTraceTableStructure( Table $target ): bool {
 		return ! in_array( $target, $this->discoveredTable__excludedStructures, strict: true );
-	}
-
-	/**
-	 * @param iterable<mixed> $elementList
-	 * @throws InvalidSource When given element list is not DOMNodeList.
-	 * @phpstan-assert DOMNodeList<DOMNode> $elementList
-	 */
-	private function assertIsDOMNodeList( iterable $elementList, string $type ): void {
-		$elementList instanceof DOMNodeList || throw new InvalidSource(
-			sprintf( 'Table Node tracer only accepts "%1$s" when inferring %2$s.', DOMNodeList::class, $type )
-		);
 	}
 
 	private function tickCurrentHeadIterationSkippableNode( DOMNode $node ): void {
