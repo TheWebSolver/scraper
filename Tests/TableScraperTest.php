@@ -123,7 +123,7 @@ class TableScraperTest extends TestCase {
 			sprintf( Collectable::INVALID_COUNT_MESSAGE, 3, 'name", "title", "address' )
 		);
 
-		$this->scraper->transformWith( $tr, Table::Row )->parse( $table )->current();
+		$this->scraper->addTransformer( Table::Row, $tr )->parse( $table )->current();
 	}
 
 	#[Test]
@@ -145,7 +145,7 @@ class TableScraperTest extends TestCase {
 		$td    = new TableColumnMarshaller( $cols );
 		$td    = new TableColumnTranslit( $td, $scraper, array( $translitCol ) );
 
-		$scraper->transformWith( new TableColumnTranslit( $td, $scraper, array( $translitCol ) ), Table::Column )
+		$scraper->addTransformer( Table::Column, new TableColumnTranslit( $td, $scraper, array( $translitCol ) ) )
 			->inferTableFrom( $nodes );
 
 		$this->assertCount( 1, $scraper->getTableId() );
@@ -161,7 +161,7 @@ class TableScraperTest extends TestCase {
 		$scraper = new AccentedCharScraper();
 
 		$scraper->setAccentOperationType( AccentedCharScraper::ACTION_TRANSLIT );
-		$scraper->transformWith( new TableColumnTranslit( $td, $scraper, array( $translitCol ) ), Table::Column )
+		$scraper->addTransformer( Table::Column, new TableColumnTranslit( $td, $scraper, array( $translitCol ) ) )
 			->inferTableFrom( $nodes );
 
 		$this->assertSame(
@@ -192,8 +192,8 @@ class TableScraperTest extends TestCase {
 		}
 
 		$iterator = $this->scraper
-			->transformWith( $tr, Table::Row )
-			->transformWith( $td, Table::Column )
+			->addTransformer( Table::Row, $tr )
+			->addTransformer( Table::Column, $td )
 			->parse( $table );
 
 			[$key, $value] = $expectedValue ?? array( null, null );
@@ -236,7 +236,7 @@ class TableScraperTest extends TestCase {
 	public function itOnlyCollectsDataWithRequestedKeys(): void {
 		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
 
-		$this->scraper->transformWith( $td, Table::Column )->useKeys( $requestedKeys = array( 'name', 'address' ) );
+		$this->scraper->addTransformer( Table::Column, $td )->useKeys( $requestedKeys = array( 'name', 'address' ) );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 		$current  = $iterator->current();
@@ -265,7 +265,7 @@ class TableScraperTest extends TestCase {
 			}
 		};
 
-		$this->scraper->transformWith( $td, Table::Column )->transformWith( $tr, Table::Row );
+		$this->scraper->addTransformer( Table::Row, $tr )->addTransformer( Table::Column, $td );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 

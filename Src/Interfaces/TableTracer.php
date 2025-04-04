@@ -5,6 +5,7 @@ namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use DOMNode;
 use Iterator;
+use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
@@ -33,14 +34,14 @@ interface TableTracer {
 	 * @param Transformer<TReturn> $transformer
 	 * @template TReturn
 	 */
-	public function transformWith( Transformer $transformer, Table $target ): static;
+	public function addTransformer( Table $for, Transformer $transformer ): static;
 
 	/**
 	 * Registers event listeners for targeted table structure.
 	 *
-	 * @param callable( static ): void $eventListener
+	 * @param callable( static, string|DOMElement ): void $callback
 	 */
-	public function subscribeWith( callable $eventListener, Table $target ): static;
+	public function addEventListener( Table $for, callable $callback ): static;
 
 	/**
 	 * Infers table data from given element list.

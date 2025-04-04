@@ -48,9 +48,9 @@ class HtmlTableFromNodeTest extends TestCase {
 		};
 
 		$scanner = new DOMNodeScanner( $dev );
-		$scanner->subscribeWith(
-			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'title' ), $scanner->getTableId( true ) ),
-			Table::TBody
+		$scanner->addEventListener(
+			Table::TBody,
+			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'title' ), $scanner->getTableId( true ) )
 		);
 
 		$scanner->inferTableFrom( $dom->childNodes );
@@ -70,9 +70,9 @@ class HtmlTableFromNodeTest extends TestCase {
 			}
 		};
 
-		$scanner->subscribeWith(
-			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'address' ), $scanner->getTableId( true ) ),
-			Table::TBody
+		$scanner->addEventListener(
+			Table::TBody,
+			fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'address' ), $scanner->getTableId( true ) )
 		);
 
 		$scanner->inferTableFrom( $dom->childNodes );
@@ -97,15 +97,15 @@ class HtmlTableFromNodeTest extends TestCase {
 		$table   = '<table><tbody><tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody</table>';
 		$dom     = DOMDocumentFactory::createFromHtml( $table );
 		$scanner = new DOMNodeScanner();
-		$scanner->subscribeWith(
-			fn( $scanner ) => $scanner->setColumnNames( $columnNames, $scanner->getTableId( true ), ...$offset ),
-			Table::TBody
+		$scanner->addEventListener(
+			Table::TBody,
+			fn( $scanner ) => $scanner->setColumnNames( $columnNames, $scanner->getTableId( true ), ...$offset )
 		);
 
 		/** @var TableRowMarshaller<string> */
 		$tr = new TableRowMarshaller( 'Should Not Throw exception' );
 
-		$scanner->transformWith( $tr, Table::Row )->inferTableFrom( $dom->childNodes );
+		$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $dom->childNodes );
 
 		$this->assertSame(
 			$expected,
@@ -155,7 +155,7 @@ class HtmlTableFromNodeTest extends TestCase {
 		};
 
 		$handler
-			->transformWith( $thMarshaller, Table::Head )
+			->addTransformer( Table::Head, $thMarshaller )
 			->withAllTables()
 			->inferTableFrom( $dom->childNodes );
 
@@ -172,9 +172,9 @@ class HtmlTableFromNodeTest extends TestCase {
 		$this->assertEqualsCanonicalizing( array_keys( $first = $devTable->current()->getArrayCopy() ), $th );
 		$this->assertSame( array( 'John Doe', 'PHP Developer', 'Ktm' ), array_values( $first ) );
 
-		$handler->subscribeWith(
-			static fn( $i ) => $i->setColumnNames( array( 'finalAddress' ), $i->getTableId( true ) ),
-			Table::TBody
+		$handler->addEventListener(
+			Table::TBody,
+			static fn( $i ) => $i->setColumnNames( array( 'finalAddress' ), $i->getTableId( true ) )
 		);
 
 		$devTable->next();
@@ -314,7 +314,7 @@ class HtmlTableFromNodeTest extends TestCase {
 			}
 		};
 
-		$scanner->transformWith( $tdMarshaller, Table::Column )
+		$scanner->addTransformer( Table::Column, $tdMarshaller )
 			->inferTableFrom( DOMDocumentFactory::createFromHtml( $table )->childNodes );
 
 		$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ]->current()->getArrayCopy() );
@@ -472,10 +472,10 @@ class HtmlTableFromNodeTest extends TestCase {
 		};
 
 		$scanner->withAllTables()
-			->transformWith( new $transformer( $captionAsserter ), Table::Caption )
-			->transformWith( new $transformer( $thAsserter ), Table::Head )
-			->transformWith( new $transformer( $trAsserter ), Table::Row )
-			->transformWith( new $transformer( $tdAsserter ), Table::Column )
+			->addTransformer( Table::Caption, new $transformer( $captionAsserter ) )
+			->addTransformer( Table::Head, new $transformer( $thAsserter ) )
+			->addTransformer( Table::Row, new $transformer( $trAsserter ) )
+			->addTransformer( Table::Column, new $transformer( $tdAsserter ) )
 			->inferTableFrom( $dom->childNodes );
 
 		$this->assertSame(

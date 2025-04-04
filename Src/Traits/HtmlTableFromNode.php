@@ -25,7 +25,7 @@ use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
  */
 trait HtmlTableFromNode {
 	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` reason. */
-	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table is discovered. Use listener passed to "%1$s::subscribeWith()" to %3$s';
+	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table is discovered. Use event listener to %3$s';
 
 	private bool $shouldPerform__allTableDiscovery = false;
 
@@ -40,7 +40,7 @@ trait HtmlTableFromNode {
 	 * }
 	 */
 	private array $discoveredTable__transformers;
-	/** @var array<string,Closure( static, DOMElement ): mixed> */
+	/** @var array<string,Closure( static, string|DOMElement ): mixed> */
 	private array $discoveredTable__eventListeners;
 	/** @var int[] */
 	private array $discoveredTable__bodyIds = array();
@@ -87,15 +87,14 @@ trait HtmlTableFromNode {
 		return $this;
 	}
 
-	/** @param callable( static, DOMElement ): mixed $eventListener */
-	public function subscribeWith( callable $eventListener, Table $target ): static {
-		$this->discoveredTable__eventListeners[ $target->value ] = $eventListener( ... );
+	public function addTransformer( Table $for, Transformer $transformer ): static {
+		$this->discoveredTable__transformers[ $for->value ] = $transformer;
 
 		return $this;
 	}
 
-	public function transformWith( Transformer $transformer, Table $target ): static {
-		$this->discoveredTable__transformers[ $target->value ] = $transformer;
+	public function addEventListener( Table $for, callable $callback ): static {
+		$this->discoveredTable__eventListeners[ $for->value ] = $callback( ... );
 
 		return $this;
 	}

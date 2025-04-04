@@ -30,7 +30,7 @@ abstract class SingleTableScraper implements MappableTableScraper {
 
 		$this->sourceFromAttribute( $reflection )
 			->collectableFromAttribute( $reflection )
-			->subscribeWith( $this->tableBodyListener( ... ), target: Table::TBody )
+			->addEventListener( Table::TBody, $this->tableBodyListener( ... ) )
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename )
 			->useKeys( $this->getCollectionSource()->items ?? array() );
 
