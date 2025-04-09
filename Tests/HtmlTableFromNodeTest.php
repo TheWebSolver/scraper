@@ -23,7 +23,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromString;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
-class HtmlTableFromNodeTest extends TestCase {
+class HtmlTableExtractorTest extends TestCase {
 	final public const TABLE_SOURCE = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR . 'table.html';
 
 	#[Test]
