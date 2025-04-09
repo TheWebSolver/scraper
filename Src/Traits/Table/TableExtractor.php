@@ -1,0 +1,262 @@
+<?php
+declare( strict_types = 1 );
+
+namespace TheWebSolver\Codegarage\Scraper\Traits\Table;
+
+use Closure;
+use DOMNode;
+use Iterator;
+use DOMElement;
+use ArrayObject;
+use SplFixedArray;
+use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
+use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
+use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
+
+/**
+ * @template ThReturn
+ * @template TdReturn
+ */
+trait TableExtractor {
+	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` reason. */
+	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table is discovered. Use event listener to %3$s';
+
+	private bool $shouldPerform__allTableDiscovery = false;
+
+	/**
+	 * @var array{
+	 *   tr      ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
+	 *   th      ?: Transformer<ThReturn>,
+	 *   td      ?: Transformer<TdReturn>,
+	 *   caption ?: Transformer<string>
+	 * }
+	 */
+	private array $discoveredTable__transformers;
+	/** @var array<string,Closure( static, string|DOMElement ): mixed> */
+	private array $discoveredTable__eventListeners;
+
+	/** @var list<Table> */
+	private array $discoveredTable__excludedStructures = array();
+	/** @var (int|string)[] */
+	private array $discoveredTable__ids = array();
+	/** @var (string|null)[] */
+	private array $discoveredTable__captions = array();
+	/** @var ArrayObject<int,ThReturn>[] */
+	private array $discoveredTable__heads = array();
+	/** @var SplFixedArray<string>[] */
+	private array $discoveredTable__headNames = array();
+	/** @var Iterator<array-key,ArrayObject<array-key,TdReturn>>[] */
+	private array $discoveredTable__rows = array();
+
+	private bool $currentTable__headAsColumn = false;
+	private int|string $currentTable__id;
+	/** @var array{0:array<int,string>,1:array<int,int>,2:int}[] Names, offsets, & last index */
+	private array $currentTable__columnInfo;
+
+	/** @var int[] */
+	private array $currentIteration__columnCount  = array();
+	private bool $currentIteration__allTableHeads = true;
+	private string $currentIteration__columnName;
+	private int $currentIteration__headInfo;
+
+	public function withAllTables( bool $trace = true ): static {
+		$this->shouldPerform__allTableDiscovery = $trace;
+
+		return $this;
+	}
+
+	public function traceWithout( Table ...$targets ): static {
+		$this->discoveredTable__excludedStructures = $targets;
+
+		return $this;
+	}
+
+	public function addTransformer( Table $for, Transformer $transformer ): static {
+		$this->discoveredTable__transformers[ $for->value ] = $transformer;
+
+		return $this;
+	}
+
+	public function addEventListener( Table $for, callable $callback ): static {
+		$this->discoveredTable__eventListeners[ $for->value ] = $callback( ... );
+
+		return $this;
+	}
+
+	public function setColumnNames( array $keys, int|string $id, int ...$offset ): void {
+		( $id && $this->getTableId( current: true ) === $id ) || throw new ScraperError(
+			sprintf( self::USE_EVENT_DISPATCHER, static::class, __FUNCTION__, 'set column names.' )
+		);
+
+		$this->currentTable__columnInfo[ $id ] = Normalize::listWithOffset( $keys, $offset );
+	}
+
+	/** @return ($current is true ? int|string : (int|string)[]) */
+	public function getTableId( bool $current = false ): int|string|array {
+		return $current ? $this->currentTable__id ?? 0 : $this->discoveredTable__ids;
+	}
+
+	public function getTableCaption(): array {
+		return $this->discoveredTable__captions;
+	}
+
+	public function getTableHead( bool $namesOnly = false ): array {
+		return $namesOnly ? $this->discoveredTable__headNames : $this->discoveredTable__heads;
+	}
+
+	public function getTableData(): array {
+		return $this->discoveredTable__rows;
+	}
+
+	/** @return array<int,string> */
+	public function getColumnNames(): array {
+		return $this->currentTable__columnInfo[ $this->currentTable__id ][0] ?? array();
+	}
+
+	public function getCurrentColumnName(): ?string {
+		return $this->currentIteration__columnName ?? null;
+	}
+
+	public function getCurrentIterationCountOf( Table $element, bool $offsetInclusive = false ): ?int {
+		if ( Table::Head === $element ) {
+			return isset( $this->currentIteration__headInfo ) ? $this->currentIteration__headInfo + 1 : null;
+		} elseif ( Table::Column === $element ) {
+			if ( ! isset( $this->currentTable__id ) ) {
+				return null;
+			}
+
+			$count = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
+
+			if ( null === $count ) {
+				return null;
+			}
+
+			$column = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? null;
+
+			return ! $offsetInclusive && $column ? $count - count( $column[1] ) : $count;
+		}
+
+		return null;
+	}
+
+	/** Accepts either text content, extracted array or converted DOMElement from default Table Row Marshaller. */
+	protected function isTableColumnStructure( mixed $node ): bool {
+		$nodeName = match ( true ) {
+			$node instanceof DOMElement => $node->tagName,
+			is_array( $node )           => $node[1] ?? null,
+			is_string( $node )          => $node,
+			default                     => null
+		};
+
+		return ( $nodeName && ( Table::Head->value === $nodeName || Table::Column->value === $nodeName ) );
+	}
+
+	protected function dispatchEventListenerForDiscoveredTable( int|string $id, string|DOMElement $body ): void {
+		if ( ! in_array( $id, $this->discoveredTable__ids, true ) ) {
+			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
+		}
+
+		isset( $this->discoveredTable__eventListeners[ Table::TBody->value ] )
+			&& ( $this->discoveredTable__eventListeners[ Table::TBody->value ] )( $this, $body );
+
+		unset( $this->discoveredTable__eventListeners[ Table::TBody->value ] );
+	}
+
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
+	protected function isTargetedTable( string|DOMElement $node ): bool {
+		return true;
+	}
+
+	protected function flushDiscoveredTableHooks(): void {
+		unset(
+			$this->discoveredTable__transformers,
+			$this->discoveredTable__eventListeners
+		);
+	}
+
+	protected function flushDiscoveredTableStructure(): void {
+			$this->discoveredTable__excludedStructures = array();
+			$this->discoveredTable__captions           = array();
+			$this->discoveredTable__headNames          = array();
+			$this->discoveredTable__heads              = array();
+			$this->discoveredTable__rows               = array();
+	}
+
+	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<TdReturn>} */
+	private function useCurrenTableColumnDetails(): array {
+		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
+		$transformer = $this->discoveredTable__transformers['td'] ?? new TableColumnMarshaller();
+		$columns     = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
+
+		return array(
+			$keys         = $columns[0] ?? array(),
+			$offset       = $columns[1] ?? array(),
+			$lastPosition = $columns[2] ?? null,
+			$skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
+			$transformer,
+		);
+	}
+
+	private function shouldTraceTableStructure( Table $target ): bool {
+		return ! in_array( $target, $this->discoveredTable__excludedStructures, strict: true );
+	}
+
+	private function hasColumnReachedAtLastPosition( int $currentPosition, ?int $lastPosition ): bool {
+		return null !== $lastPosition && $currentPosition > $lastPosition;
+	}
+
+	private function tickCurrentHeadIterationSkippedHeadNode( mixed $node = null ): void {
+		$this->currentIteration__allTableHeads
+			&& ( $this->currentIteration__allTableHeads = $node instanceof DOMNode
+				&& XML_COMMENT_NODE === $node->nodeType );
+	}
+
+	/**
+	 * @param list<string>   $names
+	 * @param list<ThReturn> $contents
+	 */
+	private function registerCurrentTableHead( array $names, array $contents ): void {
+		$tableId                                      = $this->getTableId( current: true );
+		$this->discoveredTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
+		$this->discoveredTable__heads[ $tableId ]     = new ArrayObject( $contents );
+
+		$this->registerCurrentIterationTableHead( false );
+	}
+
+	private function registerCurrentIterationTableHead( int|false $index = 0 ): void {
+		if ( false === $index ) {
+			unset( $this->currentIteration__headInfo );
+
+			return;
+		}
+
+		$this->currentIteration__headInfo = $index;
+	}
+
+	/**
+	 * @param Transformer<TdReturn>     $transformer
+	 * @param array<array-key,TdReturn> $data
+	 * @return ?TdReturn
+	 */
+	private function registerCurrentTableColumn(
+		string|DOMElement $element,
+		Transformer $transformer,
+		array &$data
+	): mixed {
+		$count    = $this->getCurrentIterationCountOf( Table::Column );
+		$position = $count ? $count - 1 : 0;
+		$value    = $transformer->transform( $element, $position, $this );
+
+		return ( ! is_null( $value ) && '' !== $value )
+			? ( $data[ $this->getCurrentColumnName() ?? $position ] = $value )
+			: null;
+	}
+
+	private function registerCurrentIterationTableColumn( ?string $name, int $count ): void {
+		$this->currentIteration__columnCount[ $this->currentTable__id ] = $count;
+		$name && $this->currentIteration__columnName                    = $name;
+	}
+}

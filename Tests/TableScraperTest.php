@@ -356,8 +356,8 @@ class HtmlTableScraper extends SingleTableScraper {
 		return DOMDocumentFactoryTest::RESOURCE_PATH;
 	}
 
-	protected function isTargetedTable( DOMElement $node ): bool {
-		return 'caption' === $node->firstChild?->nodeName;
+	protected function isTargetedTable( string|DOMElement $node ): bool {
+		return $node instanceof DOMElement && 'caption' === $node->firstChild?->nodeName;
 	}
 }
 

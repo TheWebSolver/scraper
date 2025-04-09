@@ -7,6 +7,6 @@ parameters:
 		- Tests/
 	ignoreErrors:
 		- # Ignore transformers keyed by value of Table enum.
-			path: Src/Traits/HtmlTableFromNode.php
+			path: Src/Traits/Table/TableExtractor.php
 			identifier: assign.propertyType
-			message: '|\$discoveredTable__transformers|'
+			message: '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'

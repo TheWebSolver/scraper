@@ -3,13 +3,13 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
-use DOMNode;
 use Iterator;
 use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /**
  * @template ThReturn
@@ -39,7 +39,7 @@ interface TableTracer {
 	/**
 	 * Registers event listeners for targeted table structure.
 	 *
-	 * @param callable( static, string|DOMElement ): void $callback
+	 * @param callable(static, string|DOMElement): void $callback
 	 */
 	public function addEventListener( Table $for, callable $callback ): static;
 
@@ -47,8 +47,10 @@ interface TableTracer {
 	 * Infers table data from given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList
-	 * @return TdReturn[]
-	 * @template TElement of string|DOMNode
+	 * @return array<TdReturn>
+	 * @throws InvalidSource When TElement is an unsupported item.
+	 *
+	 * @template TElement
 	 */
 	public function inferTableDataFrom( iterable $elementList ): array;
 
@@ -66,14 +68,14 @@ interface TableTracer {
 	 * @throws ScraperError When this method is invoked before table is discovered.
 	 * @no-named-arguments
 	 */
-	public function setColumnNames( array $keys, int $id, int ...$offset ): void;
+	public function setColumnNames( array $keys, int|string $id, int ...$offset ): void;
 
 	/**
 	 * Gets traced table IDs or current table being traced.
 	 *
-	 * @return ($current is true ? int : array<int,int>)
+	 * @return ($current is true ? int|string : array<int|string>)
 	 */
-	public function getTableId( bool $current = false ): int|array;
+	public function getTableId( bool $current = false ): int|string|array;
 
 	/**
 	 * Gets column names mappable to traced table dataset.
@@ -85,7 +87,7 @@ interface TableTracer {
 	/**
 	 * Gets collection of traced table dataset indexed by respective table ID.
 	 *
-	 * @return array<int,Iterator<int,ArrayObject<array-key,TdReturn>>>
+	 * @return array<Iterator<int,ArrayObject<array-key,TdReturn>>>
 	 * Discovered tables' iterable column set indexed by respective table ID.
 	 */
 	public function getTableData(): array;
@@ -93,14 +95,14 @@ interface TableTracer {
 	/**
 	 * Gets table caption if not omitted from being traced.
 	 *
-	 * @return array<int,?string> Discovered tables' caption contents indexed by respective table ID.
+	 * @return array<string|null> Discovered tables' caption contents indexed by respective table ID.
 	 */
 	public function getTableCaption(): array;
 
 	/**
 	 * Gets table head if not omitted from being traced.
 	 *
-	 * @return ($namesOnly is true ? array<int,SplFixedArray<string>> : array<int,ArrayObject<int,ThReturn>>)
+	 * @return ($namesOnly is true ? array<SplFixedArray<string>> : array<ArrayObject<int,ThReturn>>)
 	 * Discovered tables' head contents indexed by respective table ID.
 	 */
 	public function getTableHead( bool $namesOnly = false ): array;
