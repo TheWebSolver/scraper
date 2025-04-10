@@ -97,7 +97,7 @@ trait HtmlTableFromString {
 	 * @return ?array{0:list<string>,1:list<ThReturn>}
 	 */
 	protected function inferTableHeadFrom( iterable $elementList ): ?array {
-		$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null;
+		$thTransformer = $this->discoveredTable__transformers['th'] ?? null;
 		$names         = $collection = array();
 		$skippedNodes  = 0;
 
@@ -115,7 +115,7 @@ trait HtmlTableFromString {
 			$this->registerCurrentIterationTableHead( $position );
 
 			$trimmed      = trim( $content );
-			$content      = $thTransformer?->transform( $content, $position, $this ) ?? $trimmed;
+			$content      = $thTransformer?->transform( $node, $position, $this ) ?? $trimmed;
 			$names[]      = is_string( $content ) ? $content : $trimmed;
 			$collection[] = $content;
 		}
@@ -125,16 +125,16 @@ trait HtmlTableFromString {
 
 	protected function captionStructureContentFrom( string $content ): ?string {
 		$matched     = preg_match( '/<caption(.*?)>(.*?)<\/caption>/', subject: $content, matches: $caption );
-		$transformer = $this->discoveredTable__transformers[ Table::Caption->value ] ?? null;
+		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
 
-		return $matched && isset( $caption[2] ) ? $transformer?->transform( $caption[2], 0, $this ) : null;
+		return $matched && ! empty( $caption[2] ) ? $transformer?->transform( $caption[0], 0, $this ) : null;
 	}
 
 	/** @return ?array{0:list<string>,1:list<ThReturn>} */
 	protected function headStructureContentFrom( string $string ): ?array {
 		$matched = preg_match( '/<thead(.*?)>(.*?)<\/thead>/', subject: $string, matches: $thead );
 
-		if ( ! $matched || ! isset( $thead[2] ) ) {
+		if ( ! $matched || empty( $thead[2] ) ) {
 			return null;
 		}
 
@@ -144,13 +144,9 @@ trait HtmlTableFromString {
 			return null;
 		}
 
-		[$dataFound, $tableData] = $this->extractTableColumnFrom( $firstRow[2] );
+		[$columnsFound, $tableColumns] = $this->extractTableColumnFrom( $firstRow[2] );
 
-		if ( ! $dataFound ) {
-			return null;
-		}
-
-		return $this->inferTableHeadFrom( $tableData );
+		return $columnsFound ? $this->inferTableHeadFrom( $tableColumns ) : null;
 	}
 
 	/** @return ?list<array{0:string,1:string,2:string}> */
@@ -222,7 +218,7 @@ trait HtmlTableFromString {
 		return array( $matched, $tableRows );
 	}
 
-	/** @return array{0:int|false,1:list<array{0:string,1:string,2:string,3:string}>} */
+	/** @return array{0:int|false,1:list<array{0:string,1:string,2:string,3:string,4:string}>} */
 	private function extractTableColumnFrom( string $string ): array {
 		$matched = preg_match_all(
 			pattern: '/<(th|td)(.*?)>(.*?)<\/(th|td)>/',
@@ -240,23 +236,22 @@ trait HtmlTableFromString {
 	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, array $body ): Iterator {
-		$traceHead      = $this->shouldTraceTableStructure( Table::THead );
 		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
 		$headInspected  = false;
 		$position       = 0;
 		$iterator       = ( new ArrayObject( $body ) )->getIterator();
 
 		while ( $iterator->valid() ) {
-			[$node, $attribute, $content] = $iterator->current();
-			[$rowFound, $columns]         = $this->extractTableColumnFrom( $content );
+			[$node, $attribute, $content]  = $iterator->current();
+			[$columnsFound, $tableColumns] = $this->extractTableColumnFrom( $content );
 
-			if ( ! $rowFound || empty( $columns ) ) {
+			if ( ! $columnsFound || empty( $tableColumns ) ) {
 				$iterator->next();
 
 				continue;
 			}
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $iterator, $columns );
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $iterator, $tableColumns );
 			$headInspected = true;
 
 			if ( $isHead ) {
@@ -265,7 +260,7 @@ trait HtmlTableFromString {
 
 			$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0], $this->getTableId( true ) );
 
-			$content = $rowTransformer?->transform( $node, $position, $this ) ?? $columns;
+			$content = $rowTransformer?->transform( $node, $position, $this ) ?? $tableColumns;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,

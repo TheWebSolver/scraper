@@ -461,34 +461,23 @@ class HtmlTableExtractorTest extends TestCase {
 
 		$captionAsserter = static function ( string|DOMElement $el, int $position, TableTracer $tracer ) {
 			$data = array();
+			$el   = $el instanceof DOMElement ? $el : DOMDocumentFactory::bodyFromHtml( $el, false )->firstChild;
+			$list = $el?->childNodes;
 
-			if ( ! $el instanceof DOMElement ) {
-				$parts = explode( 'b>', $el );
-
-				$data['text1'] = substr( $parts[0], 1, -2 );
-				$data['bold1'] = substr( $parts[1], 0, -2 );
-				$data['text2'] = trim( $parts[2] );
-
-				return json_encode( $data );
-			}
-
-			$list = $el->childNodes;
-
-			$data['text1'] = trim( $list->item( 0 )->textContent ?? '' );
-			$data['bold1'] = trim( $list->item( 1 )->textContent ?? '' );
-			$data['text2'] = trim( $list->item( 2 )->textContent ?? '' );
+			$data['text1'] = trim( $list?->item( 0 )->textContent ?? '' );
+			$data['bold1'] = trim( $list?->item( 1 )->textContent ?? '' );
+			$data['text2'] = trim( $list?->item( 2 )->textContent ?? '' );
 
 			return json_encode( $data );
 		};
 
 		$thAsserter = static function ( string|DOMElement $el, int $position, TableTracer $tracer ) {
-			$text     = trim( $el instanceof DOMElement ? $el->textContent : $el );
-			$expected = (int) substr( $text, -1 );
+			$text = trim( $el instanceof DOMElement ? $el->textContent : $el );
 
 			if ( ! $el instanceof DOMElement ) {
-				$text = explode( '-->', $el, 2 )[1] ?? $text; // trim comment.
+				$text     = strip_tags( $el );
+				$expected = (int) substr( $text, -1 );
 
-				// NOTE: Accepts <th> content only instead of whole <th> node.
 				match ( true ) {
 					default => throw new LogicException( 'This should never be thrown. All <th>s are covered.' ),
 
@@ -497,6 +486,8 @@ class HtmlTableExtractorTest extends TestCase {
 
 				return $text;
 			}
+
+			$expected = (int) substr( $text, -1 );
 
 			match ( true ) {
 				default => throw new LogicException( 'This should never be thrown. All <th>s are covered.' ),
@@ -619,7 +610,7 @@ class HtmlTableExtractorTest extends TestCase {
 		int $expectedPosition,
 		int $actualPosition
 	): void {
-		self::assertTrue( str_ends_with( $headContent, (string) $expectedPosition ) );
+		self::assertTrue( str_ends_with( $headContent, (string) $actualPosition ) );
 		self::assertSame( $expectedPosition, $actualPosition );
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Head ) );
 	}
