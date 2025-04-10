@@ -40,6 +40,7 @@ abstract class SingleTableScraper implements MappableTableScraper {
 	public function flush(): void {
 		( $this->unsubscribeError )();
 		$this->flushDiscoveredTableHooks();
+		$this->flushDiscoveredTableStructure();
 	}
 
 	/** @return Iterator<string|int,ArrayObject<array-key,TdReturn>> */
