@@ -180,7 +180,9 @@ trait HtmlTableFromString {
 	}
 
 	private function isValidStructureIfTraceable( Table $target, string $node ): bool {
-		return $this->shouldTraceTableStructure( $target ) && str_contains( $node, "<{$target->value}" );
+		return $this->shouldTraceTableStructure( $target )
+			&& str_contains( $node, "<{$target->value}" )
+			&& str_contains( $node, "</{$target->value}>" );
 	}
 
 	/**
