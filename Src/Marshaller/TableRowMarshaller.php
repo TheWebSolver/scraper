@@ -14,8 +14,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /**
- * @template TdReturn
- * @template-implements Transformer<CollectionSet<TdReturn>>
+ * @template TColumnReturn
+ * @template-implements Transformer<CollectionSet<TColumnReturn>>
  */
 class TableRowMarshaller implements Transformer {
 	private const TR_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
@@ -29,7 +29,7 @@ class TableRowMarshaller implements Transformer {
 	public function __construct( private string $invalidCountMsg = '', private ?string $indexKey = null ) {}
 
 	/**
-	 * @param TableTracer<mixed,TdReturn> $tracer
+	 * @param TableTracer<TColumnReturn> $tracer
 	 * @throws ScraperError When cannot validate transformed data.
 	 */
 	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): CollectionSet {
@@ -53,7 +53,7 @@ class TableRowMarshaller implements Transformer {
 		return $el ?? throw new InvalidSource( sprintf( self::TR_NOT_FOUND, $type ) );
 	}
 
-	/** @param TdReturn[] $dataset */
+	/** @param TColumnReturn[] $dataset */
 	protected function discoverIndexKeyFrom( array $dataset ): string|int|null {
 		if ( ! $this->indexKey ) {
 			return null;
@@ -64,7 +64,7 @@ class TableRowMarshaller implements Transformer {
 		return is_string( $value ) || is_int( $value ) ? $value : null;
 	}
 
-	/** @param TableTracer<mixed,TdReturn> $tracer */
+	/** @param TableTracer<TColumnReturn> $tracer */
 	private function validateColumnNamesCount( TableTracer $tracer ): void {
 		$count = count( $names = $tracer->getColumnNames() );
 

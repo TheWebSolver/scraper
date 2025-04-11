@@ -12,12 +12,9 @@ use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
-/**
- * @template ThReturn
- * @template TdReturn
- */
+/** @template TColumnReturn */
 trait HtmlTableFromString {
-	/** @use TableExtractor<ThReturn,TdReturn> */
+	/** @use TableExtractor<TColumnReturn> */
 	use TableExtractor {
 		TableExtractor::withAllTables as protected extractWithAllTables;
 	}
@@ -96,11 +93,11 @@ trait HtmlTableFromString {
 
 	/**
 	 * @param iterable<array-key,array{0:string,1:string,2:string,3:string}> $elementList
-	 * @return ?array{0:list<string>,1:list<ThReturn>}
+	 * @return ?list<string>
 	 */
 	protected function inferTableHeadFrom( iterable $elementList ): ?array {
 		$thTransformer = $this->discoveredTable__transformers['th'] ?? null;
-		$names         = $collection = array();
+		$names         = array();
 		$skippedNodes  = 0;
 
 		foreach ( $elementList as $currentIndex => [$node, $nodeName, $attribute, $content] ) {
@@ -116,13 +113,10 @@ trait HtmlTableFromString {
 
 			$this->registerCurrentIterationTableHead( $position );
 
-			$trimmed      = trim( $content );
-			$content      = $thTransformer?->transform( $node, $position, $this ) ?? $trimmed;
-			$names[]      = is_string( $content ) ? $content : $trimmed;
-			$collection[] = $content;
+			$names[] = $thTransformer?->transform( $node, $position, $this ) ?? trim( $content );
 		}
 
-		return $collection ? array( $names, $collection ) : null;
+		return $names ?: null;
 	}
 
 	protected function captionStructureContentFrom( string $content ): ?string {
@@ -132,7 +126,7 @@ trait HtmlTableFromString {
 		return $matched && ! empty( $caption[2] ) ? $transformer?->transform( $caption[0], 0, $this ) : null;
 	}
 
-	/** @return ?array{0:list<string>,1:list<ThReturn>} */
+	/** @return ?list<string> */
 	protected function headStructureContentFrom( string $string ): ?array {
 		$matched = preg_match( '/<thead(.*?)>(.*?)<\/thead>/', subject: $string, matches: $thead );
 
@@ -235,9 +229,9 @@ trait HtmlTableFromString {
 	}
 
 	/**
-	 * @param ?array{0:list<string>,1:list<ThReturn>} $head
+	 * @param ?list<string>                           $head
 	 * @param list<array{0:string,1:string,2:string}> $body
-	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
+	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, array $body ): Iterator {
 		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
@@ -262,7 +256,7 @@ trait HtmlTableFromString {
 				continue;
 			}
 
-			$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0], $this->getTableId( true ) );
+			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
 
 			$content = $rowTransformer?->transform( $node, $position, $this ) ?? $tableColumns;
 
@@ -279,7 +273,7 @@ trait HtmlTableFromString {
 	}
 
 	/**
-	 * @param ?array{0:list<string>,1:list<ThReturn>}      $head
+	 * @param ?list<string>                                $head
 	 * @param array{0:string,1:string,2:string,3:string}[] $row
 	 */
 	private function inspectFirstRowForHeadStructure( ?array &$head, Iterator $iterator, array $row ): bool {
@@ -290,7 +284,7 @@ trait HtmlTableFromString {
 		// Advance iterator to next <tr> if first row is collected as head.
 		( $isHead = $this->currentIteration__allTableHeads ) && $iterator->next();
 
-		$head && $this->registerCurrentTableHead( ...$head );
+		$head && $this->registerCurrentTableHead( $head );
 
 		return $isHead;
 	}

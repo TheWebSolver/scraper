@@ -29,15 +29,15 @@ class TableScraperTest extends TestCase {
 	private HtmlTableScraper $scraper;
 
 	/**
-	 * @param Closure(string|DOMElement, int, TableTracer<mixed,string>): string $marshaller
+	 * @param Closure(string|DOMElement, int, TableTracer<string>): string $marshaller
 	 * @return Transformer<string>
 	 */
 	private function withTransformedTDUsing( Closure $marshaller ): Transformer {
 		return new class( $marshaller ) implements Transformer {
-			/** @param Closure(string|DOMElement, int, TableTracer<mixed,string>): string $marshaller */
+			/** @param Closure(string|DOMElement, int, TableTracer<string>): string $marshaller */
 			public function __construct( private Closure $marshaller ) {}
 
-			/** @param TableTracer<mixed,string> $tracer */
+			/** @param TableTracer<string> $tracer */
 			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
 				return ( $this->marshaller )( $element, $position, $tracer );
 			}
@@ -239,7 +239,7 @@ class TableScraperTest extends TestCase {
 		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
 		$tr = new /** @template-implements Transformer<CollectionSet<string>> */ class()
 		implements Transformer{
-			/** @param TableTracer<string,string> $tracer */
+			/** @param TableTracer<string> $tracer */
 			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
 				assert( $element instanceof DOMElement );
 
@@ -268,7 +268,7 @@ class TableScraperTest extends TestCase {
 	public function itRegistersCollectableSourceUsingEnumName(): void {
 		$iterator = $this->createStub( Iterator::class );
 		$scraper  = new /** @template-extends SingleTableScraper<string> */ class( $iterator ) extends SingleTableScraper {
-			/** @use HTMLTableFromString<string,string> */
+			/** @use HTMLTableFromString<string> */
 			use HtmlTableFromString;
 
 			public function __construct( private readonly Iterator $iterator ) {
@@ -287,7 +287,7 @@ class TableScraperTest extends TestCase {
 		$this->assertCount( 3, $scraper->getKeys() );
 
 		$scraper = new /** @template-extends SingleTableScraper<string> */ class( $iterator ) extends SingleTableScraper {
-			/** @use HTMLTableFromString<string,string> */
+			/** @use HTMLTableFromString<string> */
 			use HtmlTableFromString;
 
 			public function __construct( private readonly Iterator $iterator ) {
@@ -317,7 +317,7 @@ class TableScraperTest extends TestCase {
 #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )]
 #[CollectFrom( DeveloperDetails::class )]
 class HtmlTableScraper extends SingleTableScraper {
-	/** @use HtmlTableFromNode<string,string> */
+	/** @use HtmlTableFromNode<string> */
 	use HtmlTableFromNode;
 
 	public function parse( string $content ): Iterator {
@@ -384,7 +384,7 @@ enum DeveloperDetails: string implements Collectable {
 #[ScrapeFrom( 'Translit Test', url: 'https://accentedCharacters.test', filename: '' )]
 #[CollectFrom( DeveloperDetails::class, DeveloperDetails::Title, DeveloperDetails::Address )]
 class AccentedCharScraper extends AccentedSingleTableScraper {
-	/** @use HtmlTableFromString<string,string> */
+	/** @use HtmlTableFromString<string> */
 	use HtmlTableFromString;
 
 	public function __construct( string ...$translitNames ) {

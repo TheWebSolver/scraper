@@ -41,7 +41,7 @@ abstract class SingleTableScraper implements MappableTableScraper {
 		$this->resetTableHooks();
 	}
 
-	/** @return Iterator<string|int,ArrayObject<array-key,TValue>> */
+	/** @return Iterator<array-key,ArrayObject<array-key,TValue>> */
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->withAllTables( false );
 		$this->useCollectedKeys();

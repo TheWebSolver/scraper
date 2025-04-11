@@ -152,8 +152,8 @@ class HtmlTableExtractorTest extends TestCase {
 	}
 
 	/**
-	 * @param mixed[]                    $args
-	 * @param TableTracer<string,string> $scanner
+	 * @param mixed[]             $args
+	 * @param TableTracer<string> $scanner
 	 */
 	#[Test]
 	#[DataProvider( 'provideMethodsThatThrowsException' )]
@@ -207,7 +207,7 @@ class HtmlTableExtractorTest extends TestCase {
 				->inferTableFrom( $this->getTableFromSource() );
 
 			$ids                  = $scanner->getTableId();
-			$th                   = $scanner->getTableHead( true )[ $ids[0] ]->toArray(); // @phpstan-ignore-line
+			$th                   = $scanner->getTableHead()[ $ids[0] ]->toArray();
 			$data                 = $scanner->getTableData();
 			$devTable             = $data[ $ids[0] ];
 			$firstTableColumNames = array( 'Name', 'Title', 'Address' );
@@ -299,11 +299,11 @@ class HtmlTableExtractorTest extends TestCase {
 			$scanner->inferTableFrom( $source );
 
 			$tableIds  = $scanner->getTableId();
-			$fixedHead = $scanner->getTableHead( namesOnly: true )[ $tableIds[0] ];
+			$fixedHead = $scanner->getTableHead()[ $tableIds[0] ];
 			$data      = $scanner->getTableData()[ $tableIds[0] ];
 
 			$this->assertCount( 1, $tableIds );
-			$this->assertSame( $headers = array( 'Title', 'Another Title' ), $fixedHead->toArray() ); // @phpstan-ignore-line
+			$this->assertSame( $headers = array( 'Title', 'Another Title' ), $fixedHead->toArray() );
 
 			foreach ( $data as $index => $tableData ) {
 				$value = 0 === $index ? array( 'Heading 1', 'Value One' ) : array( 'Heading 2', 'Value Two' );
@@ -383,7 +383,7 @@ class HtmlTableExtractorTest extends TestCase {
 		';
 
 		$tdMarshaller = new class() implements Transformer {
-			/** @param TableTracer<mixed,string> $tracer */
+			/** @param TableTracer<string> $tracer */
 			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element;
 
@@ -594,7 +594,7 @@ class HtmlTableExtractorTest extends TestCase {
 		}
 	}
 
-	/** @param TableTracer<string,string> $tracer */
+	/** @param TableTracer<string> $tracer */
 	private static function assertKeyAndPositionInTH(
 		TableTracer $tracer,
 		string $headContent,
@@ -606,7 +606,7 @@ class HtmlTableExtractorTest extends TestCase {
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Head ) );
 	}
 
-	/** @param TableTracer<string,string> $tracer */
+	/** @param TableTracer<string> $tracer */
 	private static function assertKeyAndPositionInTD(
 		TableTracer $tracer,
 		string $key,
@@ -632,9 +632,9 @@ class HtmlTableExtractorTest extends TestCase {
 
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
-/** @template-implements TableTracer<string,string> */
+/** @template-implements TableTracer<string> */
 class DOMNodeScanner implements TableTracer {
-	/** @use HtmlTableFromNode<string,string> */
+	/** @use HtmlTableFromNode<string> */
 	use HtmlTableFromNode;
 
 	/** @param Closure(DOMElement, self): bool $validator */
@@ -645,9 +645,9 @@ class DOMNodeScanner implements TableTracer {
 	}
 }
 
-/** @template-implements TableTracer<string,string> */
+/** @template-implements TableTracer<string> */
 class DOMStringScanner implements TableTracer {
-	/** @use HtmlTableFromString<string,string> */
+	/** @use HtmlTableFromString<string> */
 	use HtmlTableFromString;
 
 	/** @param Closure(string, self): bool $validator */

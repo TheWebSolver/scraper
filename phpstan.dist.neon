@@ -10,3 +10,7 @@ parameters:
 			path: Src/Traits/Table/TableExtractor.php
 			identifier: assign.propertyType
 			message: '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
+		- # Ignore DOMNodeList->getIterator() not being Iterator.
+			path: Src/Traits/HtmlTableFromNode.php
+			identifier: return.type
+			message: '#^Method .*?::getChildNodesIteratorFrom\(\) should return Iterator\<int, DOMNode\> but returns Traversable\<int, DOMNode\>.$#'

@@ -16,10 +16,7 @@ use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
 
-/**
- * @template ThReturn
- * @template TdReturn
- */
+/** @template TColumnReturn */
 trait TableExtractor {
 	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` reason. */
 	final public const USE_EVENT_DISPATCHER = 'Calling "%1$s::%2$s()" is not allowed before table is discovered. Use event listener to %3$s';
@@ -28,10 +25,10 @@ trait TableExtractor {
 
 	/**
 	 * @var array{
-	 *   tr      ?: Transformer<CollectionSet<TdReturn>|iterable<int,string|DOMNode>>,
-	 *   th      ?: Transformer<ThReturn>,
-	 *   td      ?: Transformer<TdReturn>,
-	 *   caption ?: Transformer<string>
+	 *   tr      ?: Transformer<CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>,
+	 *   caption ?: Transformer<string>,
+	 *   th      ?: Transformer<string>,
+	 *   td      ?: Transformer<TColumnReturn>,
 	 * }
 	 */
 	private array $discoveredTable__transformers;
@@ -47,12 +44,9 @@ trait TableExtractor {
 	private array $discoveredTable__captions = array();
 	/** @var SplFixedArray<string>[] */
 	private array $discoveredTable__headNames = array();
-	/** @var ArrayObject<int,ThReturn>[] */
-	private array $discoveredTable__heads = array();
-	/** @var Iterator<array-key,ArrayObject<array-key,TdReturn>>[] */
+	/** @var Iterator<array-key,ArrayObject<array-key,TColumnReturn>>[] */
 	private array $discoveredTable__rows = array();
 
-	private bool $currentTable__headAsColumn = false;
 	private int|string $currentTable__id;
 	/** @var array{0:array<int,string>,1:array<int,int>,2:int}[] Names, offsets, & last index */
 	private array $currentTable__columnInfo;
@@ -104,8 +98,8 @@ trait TableExtractor {
 		return $this->discoveredTable__captions;
 	}
 
-	public function getTableHead( bool $namesOnly = false ): array {
-		return $namesOnly ? $this->discoveredTable__headNames : $this->discoveredTable__heads;
+	public function getTableHead(): array {
+		return $this->discoveredTable__headNames;
 	}
 
 	public function getTableData(): array {
@@ -182,18 +176,16 @@ trait TableExtractor {
 			$this->discoveredTable__excludedStructures = array();
 			$this->discoveredTable__captions           = array();
 			$this->discoveredTable__headNames          = array();
-			$this->discoveredTable__heads              = array();
 			$this->discoveredTable__rows               = array();
 	}
 
-	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<TdReturn>} */
+	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<TColumnReturn>} */
 	private function useCurrenTableColumnDetails(): array {
-		/** @var Transformer<TdReturn> Marshaller's TReturn is always string. */
 		$transformer = $this->discoveredTable__transformers['td'] ?? new TableColumnMarshaller();
 		$columns     = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
 
 		return array(
-			$keys         = $columns[0] ?? array(),
+			$columnNames  = $columns[0] ?? array(),
 			$offset       = $columns[1] ?? array(),
 			$lastPosition = $columns[2] ?? null,
 			$skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
@@ -215,14 +207,10 @@ trait TableExtractor {
 				&& XML_COMMENT_NODE === $node->nodeType );
 	}
 
-	/**
-	 * @param list<string>   $names
-	 * @param list<ThReturn> $contents
-	 */
-	private function registerCurrentTableHead( array $names, array $contents ): void {
+	/** @param list<string> $names */
+	private function registerCurrentTableHead( array $names ): void {
 		$tableId                                      = $this->getTableId( current: true );
 		$this->discoveredTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
-		$this->discoveredTable__heads[ $tableId ]     = new ArrayObject( $contents );
 
 		$this->registerCurrentIterationTableHead( false );
 	}
@@ -238,9 +226,9 @@ trait TableExtractor {
 	}
 
 	/**
-	 * @param Transformer<TdReturn>     $transformer
-	 * @param array<array-key,TdReturn> $data
-	 * @return ?TdReturn
+	 * @param Transformer<TColumnReturn>     $transformer
+	 * @param array<array-key,TColumnReturn> $data
+	 * @return ?TColumnReturn
 	 */
 	private function registerCurrentTableColumn(
 		string|DOMElement $element,

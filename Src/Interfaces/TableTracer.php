@@ -11,10 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-/**
- * @template ThReturn
- * @template TdReturn
- */
+/** @template TColumnReturn */
 interface TableTracer {
 	/**
 	 * Sets whether all traced tables should be scanned or not.
@@ -55,7 +52,7 @@ interface TableTracer {
 	 * Infers table data from given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList
-	 * @return array<TdReturn>
+	 * @return array<TColumnReturn>
 	 * @throws InvalidSource When TElement is an unsupported item.
 	 *
 	 * @template TElement
@@ -95,7 +92,7 @@ interface TableTracer {
 	/**
 	 * Gets collection of traced table dataset indexed by respective table ID.
 	 *
-	 * @return array<Iterator<int,ArrayObject<array-key,TdReturn>>>
+	 * @return array<Iterator<int,ArrayObject<array-key,TColumnReturn>>>
 	 * traced tables' iterable column set indexed by respective table ID.
 	 */
 	public function getTableData(): array;
@@ -110,10 +107,10 @@ interface TableTracer {
 	/**
 	 * Gets table head if not omitted from being traced.
 	 *
-	 * @return ($namesOnly is true ? array<SplFixedArray<string>> : array<ArrayObject<int,ThReturn>>)
+	 * @return array<SplFixedArray<string>>
 	 * Traced tables' head contents indexed by respective table ID.
 	 */
-	public function getTableHead( bool $namesOnly = false ): array;
+	public function getTableHead(): array;
 
 	/**
 	 * Gets current iteration table data column name, if set.

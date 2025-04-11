@@ -15,12 +15,9 @@ use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
-/**
- * @template ThReturn
- * @template TdReturn
- */
+/** @template TColumnReturn */
 trait HtmlTableFromNode {
-	/** @use TableExtractor<ThReturn,TdReturn> */
+	/** @use TableExtractor<TColumnReturn> */
 	use TableExtractor;
 
 	public function inferTableFrom( string $source, bool $normalize = true ): void {
@@ -98,7 +95,7 @@ trait HtmlTableFromNode {
 	 * Infers table head from given element list.
 	 *
 	 * @param DOMNodeList<DOMNode> $elementList
-	 * @return ?array{0:list<string>,1:list<ThReturn>}
+	 * @return ?list<string>
 	 * @throws InvalidSource When element list is not DOMNodeList.
 	 */
 	protected function inferTableHeadFrom( DOMNodeList $elementList ): ?array {
@@ -119,13 +116,10 @@ trait HtmlTableFromNode {
 
 			$this->registerCurrentIterationTableHead( $position );
 
-			$trimmed      = trim( $headNode->textContent );
-			$content      = $thTransformer?->transform( $headNode, $position, $this ) ?? $trimmed;
-			$names[]      = is_string( $content ) ? $content : $trimmed;
-			$collection[] = $content;
+			$names[] = $thTransformer?->transform( $headNode, $position, $this ) ?? trim( $headNode->textContent );
 		}
 
-		return $collection ? array( $names, $collection ) : null;
+		return $names ?: null;
 	}
 
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
@@ -137,6 +131,11 @@ trait HtmlTableFromNode {
 	/** @phpstan-assert-if-true =DOMElement $node */
 	final protected function isTableRowStructure( DOMNode $node ): bool {
 		return $node->childNodes->length && AssertDOMElement::isValid( $node, Table::Row );
+	}
+
+	/** @return Iterator<int,DOMNode> */
+	private function getChildNodesIteratorFrom( DOMNode $node ): Iterator {
+		return $node->childNodes->getIterator();
 	}
 
 	/**
@@ -161,9 +160,8 @@ trait HtmlTableFromNode {
 			return null;
 		}
 
-		/** @var ?Iterator<int,DOMNode> */
 		return $this->isTargetedTable( $node ) && $node->childNodes->length
-			? $node->childNodes->getIterator()
+			? $this->getChildNodesIteratorFrom( $node )
 			: null;
 	}
 
@@ -183,10 +181,9 @@ trait HtmlTableFromNode {
 		return $transformer?->transform( $node, 0, $this ) ?? trim( $node->textContent );
 	}
 
-	/** @return ?array{0:list<string>,1:list<ThReturn>} */
+	/** @return ?list<string> */
 	private function headStructureContentFrom( DOMElement $node ): ?array {
-		/** @var Iterator<int,DOMNode> */
-		$headIterator = $node->childNodes->getIterator();
+		$headIterator = $this->getChildNodesIteratorFrom( $node );
 		$row          = null;
 
 		while ( ! $row && $headIterator->valid() ) {
@@ -218,13 +215,12 @@ trait HtmlTableFromNode {
 	}
 
 	/**
-	 * @param ?array{0:list<string>,1:list<ThReturn>} $head
-	 * @param DOMElement                              $body
-	 * @return Iterator<array-key,ArrayObject<array-key,TdReturn>>
+	 * @param ?list<string> $head
+	 * @param DOMElement    $body
+	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, DOMElement $body ): Iterator {
-		/** @var Iterator<int,DOMElement> Expected. May contain comment nodes. */
-		$rowIterator    = $body->childNodes->getIterator();
+		$rowIterator    = $this->getChildNodesIteratorFrom( $body );
 		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
 		$headInspected  = false;
 		$position       = 0;
@@ -250,7 +246,7 @@ trait HtmlTableFromNode {
 				return;
 			}
 
-			$head && ! $this->getColumnNames() && $this->setColumnNames( $head[0], $this->getTableId( true ) );
+			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
 
 			$content = $rowTransformer?->transform( $row, $position, $this ) ?? $row->childNodes;
 
@@ -266,7 +262,7 @@ trait HtmlTableFromNode {
 		}//end while
 	}
 
-	/** @param ?array{0:list<string>,1:list<ThReturn>} $head */
+	/** @param ?list<string> $head */
 	private function inspectFirstRowForHeadStructure( ?array &$head, Iterator $iterator, DOMNode $row ): bool {
 		$firstRowContent = $this->inferTableHeadFrom( $row->childNodes );
 		$head          ??= $this->currentIteration__allTableHeads ? $firstRowContent : null;
@@ -275,7 +271,7 @@ trait HtmlTableFromNode {
 		// Advance iterator to next <tr> if first row is collected as head.
 		( $isHead = $this->currentIteration__allTableHeads ) && $iterator->next();
 
-		$head && $this->registerCurrentTableHead( ...$head );
+		$head && $this->registerCurrentTableHead( $head );
 
 		return $isHead;
 	}
