@@ -44,7 +44,7 @@ abstract class SingleTableScraper implements MappableTableScraper {
 	/** @return Iterator<string|int,ArrayObject<array-key,TValue>> */
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->withAllTables( false );
-		$this->withCollectedKeys();
+		$this->useCollectedKeys();
 		$this->inferTableFrom( $content, $normalize );
 
 		$iterator = $this->getTableData()[ $this->getTableId( current: true ) ]
@@ -56,7 +56,7 @@ abstract class SingleTableScraper implements MappableTableScraper {
 	}
 
 	/** @return list<string> */
-	protected function withCollectedKeys(): array {
+	protected function useCollectedKeys(): array {
 		empty( $this->getKeys() ) && $this->useKeys( $this->getCollectionSource()->items ?? array() );
 
 		return $this->getKeys();

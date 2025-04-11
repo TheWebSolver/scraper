@@ -388,7 +388,7 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 	use HtmlTableFromString;
 
 	public function __construct( string ...$translitNames ) {
-		parent::__construct( ...$translitNames );
+		parent::__construct( null, null, ...$translitNames );
 
 		$setColumnNamesWithoutName = static fn( self $s )
 			=> $s->setColumnNames( $s->getKeys(), $s->getTableId( true ), /* offset: DeveloperDetails::Name */ 0 );
