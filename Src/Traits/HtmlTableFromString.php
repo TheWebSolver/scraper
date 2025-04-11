@@ -32,6 +32,27 @@ trait HtmlTableFromString {
 		return $this;
 	}
 
+	public function inferTableFrom( string $source, bool $normalize = true ): void {
+		$node = $normalize ? Normalize::controlsAndWhitespacesIn( $source ) : $source;
+
+		if ( ! $tableStructure = $this->traceStructureFrom( $node ) ) {
+			return;
+		}
+
+		[[$table], $body, $traceCaption, $traceHead] = $tableStructure;
+
+		$this->dispatchEventListenerForDiscoveredTable( $id = $this->get64bitHash( $table ), $table );
+
+		$this->discoveredTable__captions[ $id ] = $traceCaption
+			? $this->captionStructureContentFrom( $table )
+			: null;
+
+		$head     = $traceHead ? $this->headStructureContentFrom( $table ) : null;
+		$iterator = $this->bodyStructureIteratorFrom( $head, $body );
+
+		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
+	}
+
 	/**
 	 * Accepts either internally extracted row as array, or from transformer as DOMNode (or string expected).
 	 *
@@ -71,25 +92,6 @@ trait HtmlTableFromString {
 		}//end foreach
 
 		return $data;
-	}
-
-	protected function inferTableFromString( string $content ): void {
-		if ( ! $tableStructure = $this->traceStructureFrom( $content ) ) {
-			return;
-		}
-
-		[[$table], $body, $traceCaption, $traceHead] = $tableStructure;
-
-		$this->dispatchEventListenerForDiscoveredTable( $id = $this->get64bitHash( $table ), $table );
-
-		$this->discoveredTable__captions[ $id ] = $traceCaption
-			? $this->captionStructureContentFrom( $table )
-			: null;
-
-		$head     = $traceHead ? $this->headStructureContentFrom( $table ) : null;
-		$iterator = $this->bodyStructureIteratorFrom( $head, $body );
-
-		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 	}
 
 	/**

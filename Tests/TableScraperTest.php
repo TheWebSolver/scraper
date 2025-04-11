@@ -4,19 +4,15 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Closure;
-use DOMNode;
 use Iterator;
 use DOMElement;
 use ValueError;
 use ArrayObject;
-use DOMNodeList;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Scraper\Traits\Diacritic;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
-use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
@@ -24,10 +20,10 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
+use TheWebSolver\Codegarage\Scraper\AccentedSingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnTranslit;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
+use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
+use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromString;
 
 class TableScraperTest extends TestCase {
 	private HtmlTableScraper $scraper;
@@ -140,36 +136,24 @@ class TableScraperTest extends TestCase {
 			</table>
 		";
 
-		$nodes = DOMDocumentFactory::createFromHtml( $table )->childNodes;
-		$cols  = array( $translitCol = DeveloperDetails::Title->value, DeveloperDetails::Address->value );
-		$td    = new TableColumnMarshaller( $cols );
-		$td    = new TableColumnTranslit( $td, $scraper, array( $translitCol ) );
-
-		$scraper->addTransformer( Table::Column, new TableColumnTranslit( $td, $scraper, array( $translitCol ) ) )
-			->inferTableFrom( $nodes );
-
-		$this->assertCount( 1, $scraper->getTableId() );
-
 		$this->assertSame(
 			array(
 				'title'   => 'Develôper',
 				'address' => 'Curaçao',
 			),
-			$scraper->getTableData()[ $scraper->getTableId( true ) ]->current()->getArrayCopy()
+			$scraper->parse( $table )->current()->getArrayCopy()
 		);
 
-		$scraper = new AccentedCharScraper();
+		$scraper = new AccentedCharScraper( DeveloperDetails::Title->value );
 
 		$scraper->setAccentOperationType( AccentedCharScraper::ACTION_TRANSLIT );
-		$scraper->addTransformer( Table::Column, new TableColumnTranslit( $td, $scraper, array( $translitCol ) ) )
-			->inferTableFrom( $nodes );
 
 		$this->assertSame(
 			array(
 				'title'   => 'Developer',
 				'address' => 'Curaçao',
 			),
-			$scraper->getTableData()[ $scraper->getTableId( true ) ]->current()->getArrayCopy()
+			$scraper->parse( $table )->current()->getArrayCopy()
 		);
 	}
 
@@ -283,7 +267,10 @@ class TableScraperTest extends TestCase {
 	#[Test]
 	public function itRegistersCollectableSourceUsingEnumName(): void {
 		$iterator = $this->createStub( Iterator::class );
-		$scraper  = new class( $iterator ) extends SingleTableScraper {
+		$scraper  = new /** @template-extends SingleTableScraper<string> */ class( $iterator ) extends SingleTableScraper {
+			/** @use HTMLTableFromString<string,string> */
+			use HtmlTableFromString;
+
 			public function __construct( private readonly Iterator $iterator ) {
 				$this->useKeys( $this->collectableFromConcrete( DeveloperDetails::class )->items );
 			}
@@ -299,7 +286,10 @@ class TableScraperTest extends TestCase {
 
 		$this->assertCount( 3, $scraper->getKeys() );
 
-		$scraper = new class( $iterator ) extends SingleTableScraper {
+		$scraper = new /** @template-extends SingleTableScraper<string> */ class( $iterator ) extends SingleTableScraper {
+			/** @use HTMLTableFromString<string,string> */
+			use HtmlTableFromString;
+
 			public function __construct( private readonly Iterator $iterator ) {
 				$this->useKeys(
 					$this->collectableFromConcrete( DeveloperDetails::class, DeveloperDetails::Name, 'address' )->items
@@ -327,6 +317,9 @@ class TableScraperTest extends TestCase {
 #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )]
 #[CollectFrom( DeveloperDetails::class )]
 class HtmlTableScraper extends SingleTableScraper {
+	/** @use HtmlTableFromNode<string,string> */
+	use HtmlTableFromNode;
+
 	public function parse( string $content ): Iterator {
 		yield from $this->currentTableIterator( $content );
 	}
@@ -340,16 +333,6 @@ class HtmlTableScraper extends SingleTableScraper {
 			$source->concrete::validate( $value, $columnName, ScraperError::withSourceMsg( ... ) );
 
 		return $value;
-	}
-
-	/** @return array<string,string> */
-	public function getDiacritics(): array {
-		return array(
-			'ä' => 'ae',
-			'ç' => 'c',
-			'ė' => 'e',
-			'ô' => 'o',
-		);
 	}
 
 	protected function defaultCachePath(): string {
@@ -397,13 +380,32 @@ enum DeveloperDetails: string implements Collectable {
 	}
 }
 
+/** @template-extends AccentedSingleTableScraper<string> */
 #[ScrapeFrom( 'Translit Test', url: 'https://accentedCharacters.test', filename: '' )]
-#[CollectFrom( DeveloperDetails::class )]
-class AccentedCharScraper extends HtmlTableScraper implements AccentedCharacter {
-	use Diacritic;
+#[CollectFrom( DeveloperDetails::class, DeveloperDetails::Title, DeveloperDetails::Address )]
+class AccentedCharScraper extends AccentedSingleTableScraper {
+	/** @use HtmlTableFromString<string,string> */
+	use HtmlTableFromString;
 
-	/** @param DOMNodeList<DOMNode> $elementList */
-	public function inferTableFrom( DOMNodeList $elementList ): void {
-		$this->inferTableFromDOMNodeList( $elementList );
+	public function __construct( string ...$translitNames ) {
+		parent::__construct( ...$translitNames );
+
+		$setColumnNamesWithoutName = static fn( self $s )
+			=> $s->setColumnNames( $s->getKeys(), $s->getTableId( true ), /* offset: DeveloperDetails::Name */ 0 );
+
+		$this->addEventListener( Table::TBody, $setColumnNamesWithoutName );
+	}
+
+	public function getDiacriticsList(): array {
+			return array(
+				'ä' => 'ae',
+				'ç' => 'c',
+				'ė' => 'e',
+				'ô' => 'o',
+			);
+	}
+
+	protected function defaultCachePath(): string {
+		return DOMDocumentFactoryTest::RESOURCE_PATH;
 	}
 }

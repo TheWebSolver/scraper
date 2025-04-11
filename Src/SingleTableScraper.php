@@ -12,16 +12,14 @@ use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
-use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\Interfaces\MappableTableScraper;
 
 /**
- * @template TdReturn
- * @template-implements MappableTableScraper<TdReturn,ArrayObject<array-key,TdReturn>>
+ * @template TValue
+ * @template-implements MappableTableScraper<TValue,ArrayObject<array-key,TValue>>
  */
 abstract class SingleTableScraper implements MappableTableScraper {
-	/** @use HtmlTableFromNode<string,TdReturn> */
-	use ScrapeYard, HtmlTableFromNode, ScraperSource, CollectorSource;
+	use ScrapeYard, ScraperSource, CollectorSource;
 
 	private Closure $unsubscribeError;
 
@@ -39,26 +37,29 @@ abstract class SingleTableScraper implements MappableTableScraper {
 
 	public function flush(): void {
 		( $this->unsubscribeError )();
-		$this->flushDiscoveredTableHooks();
-		$this->flushDiscoveredTableStructure();
+		$this->resetTableTraced();
+		$this->resetTableHooks();
 	}
 
-	/** @return Iterator<string|int,ArrayObject<array-key,TdReturn>> */
+	/** @return Iterator<string|int,ArrayObject<array-key,TValue>> */
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->withAllTables( false );
-
-		empty( $this->getKeys() ) && $this->useKeys( $this->getCollectionSource()->items ?? array() );
-
-		$this->inferTableFromDOMNodeList(
-			DOMDocumentFactory::bodyFromHtml( $content, normalize: $normalize )->childNodes
-		);
+		$this->withCollectedKeys();
+		$this->inferTableFrom( $content, $normalize );
 
 		$iterator = $this->getTableData()[ $this->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg( 'Could not find Iterator that generates Table Dataset.' );
 
-		$this->flushDiscoveredTableStructure();
+		$this->resetTableTraced();
 
 		return $iterator;
+	}
+
+	/** @return list<string> */
+	protected function withCollectedKeys(): array {
+		empty( $this->getKeys() ) && $this->useKeys( $this->getCollectionSource()->items ?? array() );
+
+		return $this->getKeys();
 	}
 
 	protected function tableBodyListener(): void {

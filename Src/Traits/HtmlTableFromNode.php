@@ -11,6 +11,7 @@ use DOMNodeList;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
+use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
@@ -21,6 +22,12 @@ use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 trait HtmlTableFromNode {
 	/** @use TableExtractor<ThReturn,TdReturn> */
 	use TableExtractor;
+
+	public function inferTableFrom( string $source, bool $normalize = true ): void {
+		$this->inferTableFromDOMNodeList(
+			DOMDocumentFactory::bodyFromHtml( $source, normalize: $normalize )->childNodes
+		);
+	}
 
 	/** @param iterable<array-key,string|DOMNode> $elementList */
 	public function inferTableDataFrom( iterable $elementList ): array {

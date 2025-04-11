@@ -26,12 +26,15 @@ use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 class HtmlTableExtractorTest extends TestCase {
 	final public const TABLE_SOURCE = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR . 'table.html';
 
+	private function getTableFromSource(): string {
+		return file_get_contents( self::TABLE_SOURCE ) ?: '';
+	}
+
 	#[Test]
 	public function itOnlyScansTargetedTable(): void {
-		$dom         = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
 		$nodeScanner = new DOMNodeScanner( fn( $node ) => AssertDOMElement::hasId( $node, 'inner-content-table' ) );
 
-		$nodeScanner->inferTableFrom( $dom->childNodes );
+		$nodeScanner->inferTableFrom( $source = $this->getTableFromSource() );
 
 		$this->assertCount( 1, $tableIds = $nodeScanner->getTableId() );
 		$this->assertSame(
@@ -44,7 +47,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 		$stringScanner = new DOMStringScanner( $targetedString );
 
-		$stringScanner->inferTableFrom( file_get_contents( self::TABLE_SOURCE ) ?: '' );
+		$stringScanner->inferTableFrom( $source );
 		$tableIds = $stringScanner->getTableId();
 
 		$this->assertCount( 1, $tableIds, 'Target validation does not apply. First table found.' );
@@ -57,8 +60,6 @@ class HtmlTableExtractorTest extends TestCase {
 
 	#[Test]
 	public function itOnlyScansTargetedTableWithProvidedColumnNames(): void {
-		$dom           = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
-		$string        = file_get_contents( self::TABLE_SOURCE ) ?: '';
 		$nodeScanner   = new DOMNodeScanner( fn ( $node ) => AssertDOMElement::hasId( $node, id: 'developer-list' ) );
 		$stringScanner = new DOMStringScanner( /* Validator does nothing for string scanner. */ );
 
@@ -68,7 +69,7 @@ class HtmlTableExtractorTest extends TestCase {
 				fn( $s ) => $s->setColumnNames( array( 'name', 'title' ), $s->getTableId( true ) )
 			);
 
-			$scanner->inferTableFrom( $scanner instanceof DOMNodeScanner ? $dom->childNodes : $string );
+			$scanner->inferTableFrom( $source = $this->getTableFromSource() );
 
 			$this->assertSame(
 				array(
@@ -101,7 +102,7 @@ class HtmlTableExtractorTest extends TestCase {
 				fn( $scanner ) => $scanner->setColumnNames( array( 'name', 'address' ), $scanner->getTableId( true ) )
 			);
 
-			$scanner->inferTableFrom( $scanner instanceof DOMNodeScanner ? $dom->childNodes : $string );
+			$scanner->inferTableFrom( $source );
 
 			$id     = $scanner->getTableId( true );
 			$actual = $scanner->getTableData()[ $id ]->current()->getArrayCopy();
@@ -120,7 +121,7 @@ class HtmlTableExtractorTest extends TestCase {
 	#[Test]
 	#[DataProvider( 'provideTableColumnDataWithOffset' )]
 	public function itOffsetsInBetweenIndicesOfColumnNames( array $columnNames, array $offset, array $expected ): void {
-		$table = '<table><tbody><tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody></table>';
+		$source = '<table><tbody><tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td></tr></tbody></table>';
 
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
 			$scanner->addEventListener(
@@ -129,10 +130,9 @@ class HtmlTableExtractorTest extends TestCase {
 			);
 
 			/** @var TableRowMarshaller<string> */
-			$tr   = new TableRowMarshaller( 'Should Not Throw exception' );
-			$node = $scanner instanceof DOMNodeScanner ? DOMDocumentFactory::createFromHtml( $table )->childNodes : $table;
+			$tr = new TableRowMarshaller( 'Should Not Throw exception' );
 
-			$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $node );
+			$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $source );
 
 			$this->assertSame(
 				$expected,
@@ -175,8 +175,6 @@ class HtmlTableExtractorTest extends TestCase {
 	#[Test]
 	public function itGetsTheTargetedTableNode(): void {
 		$domScanner   = new DOMNodeScanner();
-		$dom          = DOMDocumentFactory::createFromHtml( self::TABLE_SOURCE );
-		$content      = file_get_contents( self::TABLE_SOURCE ) ?: '';
 		$thMarshaller = new class() implements Transformer {
 			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element;
@@ -206,7 +204,7 @@ class HtmlTableExtractorTest extends TestCase {
 				->addTransformer( Table::Head, $thMarshaller )
 				->addTransformer( Table::Column, $tdMarshaller )
 				->withAllTables()
-				->inferTableFrom( $scanner instanceof DOMNodeScanner ? $dom->childNodes : $content );
+				->inferTableFrom( $this->getTableFromSource() );
 
 			$ids                  = $scanner->getTableId();
 			$th                   = $scanner->getTableHead( true )[ $ids[0] ]->toArray(); // @phpstan-ignore-line
@@ -269,7 +267,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 	#[Test]
 	public function itScrapesDataFromTableHeadAndBodyElement(): void {
-		$table = '
+		$source = '
 		<table>
 			  <caption>This is a test with Table Head</caption>
 
@@ -297,12 +295,8 @@ class HtmlTableExtractorTest extends TestCase {
 				</table>
 		';
 
-		$nodeList = DOMDocumentFactory::createFromHtml( $table )->childNodes;
-
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
-			$content = $scanner instanceof DOMNodeScanner ? $nodeList : $table;
-
-			$scanner->inferTableFrom( $content );
+			$scanner->inferTableFrom( $source );
 
 			$tableIds  = $scanner->getTableId();
 			$fixedHead = $scanner->getTableHead( namesOnly: true )[ $tableIds[0] ];
@@ -319,12 +313,15 @@ class HtmlTableExtractorTest extends TestCase {
 			}
 
 			$this->assertSame( 2, (int) ( $index ?? 0 ) + 1 );
+
+			$scanner->resetTableTraced();
+
+			$this->assertCount( 1, $scanner->getTableId(), 'Table ID will not be reset' );
+			$this->assertEmpty( $scanner->getTableData() );
 		}//end foreach
 
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
-			$content = $scanner instanceof DOMNodeScanner ? $nodeList : $table;
-
-			$scanner->traceWithout( Table::THead )->inferTableFrom( $content );
+			$scanner->traceWithout( Table::THead )->inferTableFrom( $source );
 
 			$this->assertEmpty( $scanner->getTableHead() );
 
@@ -339,13 +336,11 @@ class HtmlTableExtractorTest extends TestCase {
 
 	#[Test]
 	#[DataProvider( 'provideInvalidHtmlTable' )]
-	public function itParsesInvalidTableGracefully( string $table, bool $hasHead = false ): void {
+	public function itParsesInvalidTableGracefully( string $source, bool $hasHead = false ): void {
 		$scanner = new DOMNodeScanner();
 
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
-			$content = $scanner instanceof DOMNodeScanner ? DOMDocumentFactory::createFromHtml( $table )->childNodes : $table;
-
-			$scanner->inferTableFrom( $content );
+			$scanner->inferTableFrom( $source );
 
 			$this->assertEmpty( $scanner->getTableData() );
 
@@ -372,7 +367,7 @@ class HtmlTableExtractorTest extends TestCase {
 	#[Test]
 	public function itDoesNotCollectValueIfTransformerReturnsFalsyValue(): void {
 		$scanner = new DOMNodeScanner();
-		$table   = '
+		$source  = '
 			<table>
 				<thead><tr><th>First</th><th>Last</th></tr></thead>
 				<tbody>
@@ -397,9 +392,7 @@ class HtmlTableExtractorTest extends TestCase {
 		};
 
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
-			$content = $scanner instanceof DOMNodeScanner ? DOMDocumentFactory::createFromHtml( $table )->childNodes : $table;
-
-			$scanner->addTransformer( Table::Column, $tdMarshaller )->inferTableFrom( $content );
+			$scanner->addTransformer( Table::Column, $tdMarshaller )->inferTableFrom( $source );
 
 			$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ]->current()->getArrayCopy() );
 			$this->assertSame( 2, $scanner->getCurrentIterationCountOf( Table::Column ) );
@@ -410,7 +403,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 	#[Test]
 	public function itCascadesParentCurrentCountIfTdHasTable(): void {
-		$table = '
+		$source = '
 			<table id="first-table">
 				<caption> This is a <b>Caption</b> content </caption>
 				<tbody id="first-body">
@@ -500,7 +493,7 @@ class HtmlTableExtractorTest extends TestCase {
 			return $text;
 		};
 
-		$trAsserter = static function ( string|DOMElement $el, int $pos, TableTracer $tracer ) use ( $table ) {
+		$trAsserter = static function ( string|DOMElement $el, int $pos, TableTracer $tracer ) use ( $source ) {
 			self::assertNull(
 				$tracer->getCurrentIterationCountOf( Table::Head ),
 				'Head count is not accessible when inferring <tr> content.'
@@ -509,7 +502,7 @@ class HtmlTableExtractorTest extends TestCase {
 			if ( ! $el instanceof DOMElement ) {
 				self::assertStringContainsString(
 					base64_decode( (string) $tracer->getTableId( true ) ), // phpcs:ignore
-					Normalize::controlsAndWhitespacesIn( $table ),
+					Normalize::controlsAndWhitespacesIn( $source ),
 					'64-bit hash is set as Table ID when using ' . HtmlTableFromString::class
 				);
 
@@ -592,9 +585,7 @@ class HtmlTableExtractorTest extends TestCase {
 				->addTransformer( Table::Head, new $transformer( $thAsserter ) )
 				->addTransformer( Table::Row, new $transformer( $trAsserter ) )
 				->addTransformer( Table::Column, new $transformer( $tdAsserter ) )
-				->inferTableFrom(
-					$scanner instanceof DOMNodeScanner ? DOMDocumentFactory::createFromHtml( $table )->childNodes : $table
-				);
+				->inferTableFrom( $source );
 
 			$this->assertSame(
 				array( 'text1' => 'This is a', 'bold1' => 'Caption', 'text2' => 'content' ),
@@ -629,11 +620,11 @@ class HtmlTableExtractorTest extends TestCase {
 
 	#[Test]
 	public function itIgnoresTracedStructureOfNoBodyFound(): void {
-		$table = '<table><caption>This is caption</caption><thead><tr><th>This is head</th></tr></thead></table>';
+		$source = '<table><caption>This is caption</caption><thead><tr><th>This is head</th></tr></thead></table>';
 
 		$scanner = new DOMNodeScanner();
 
-		$scanner->inferTableFrom( DOMDocumentFactory::createFromHtml( $table )->childNodes );
+		$scanner->inferTableFrom( $source );
 
 		$this->assertEmpty( $scanner->getTableId() );
 	}
@@ -649,16 +640,6 @@ class DOMNodeScanner implements TableTracer {
 	/** @param Closure(DOMElement, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}
 
-	public function flush(): void {
-		$this->flushDiscoveredTableHooks();
-		$this->flushDiscoveredTableStructure();
-	}
-
-	/** @param DOMNodeList<DOMNode> $elementList */
-	public function inferTableFrom( DOMNodeList $elementList ): void {
-		$this->inferTableFromDOMNodeList( $elementList );
-	}
-
 	protected function isTargetedTable( DOMElement $node ): bool {
 		return $this->validator ? ( $this->validator )( $node, $this ) : true;
 	}
@@ -671,15 +652,6 @@ class DOMStringScanner implements TableTracer {
 
 	/** @param Closure(string, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}
-
-	public function flush(): void {
-		$this->flushDiscoveredTableHooks();
-		$this->flushDiscoveredTableStructure();
-	}
-
-	public function inferTableFrom( string $content ): void {
-		$this->inferTableFromString( $content );
-	}
 
 	protected function isTargetedTable( string $node ): bool {
 		return $this->validator ? ( $this->validator )( $node, $this ) : true;

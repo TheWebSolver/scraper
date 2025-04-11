@@ -38,16 +38,17 @@ trait TableExtractor {
 	/** @var array<string,Closure( static, string|DOMElement ): mixed> */
 	private array $discoveredTable__eventListeners;
 
-	/** @var list<Table> */
-	private array $discoveredTable__excludedStructures = array();
 	/** @var (int|string)[] */
 	private array $discoveredTable__ids = array();
+
+	/** @var list<Table> */
+	private array $discoveredTable__excludedStructures = array();
 	/** @var (string|null)[] */
 	private array $discoveredTable__captions = array();
-	/** @var ArrayObject<int,ThReturn>[] */
-	private array $discoveredTable__heads = array();
 	/** @var SplFixedArray<string>[] */
 	private array $discoveredTable__headNames = array();
+	/** @var ArrayObject<int,ThReturn>[] */
+	private array $discoveredTable__heads = array();
 	/** @var Iterator<array-key,ArrayObject<array-key,TdReturn>>[] */
 	private array $discoveredTable__rows = array();
 
@@ -170,14 +171,14 @@ trait TableExtractor {
 		return true;
 	}
 
-	protected function flushDiscoveredTableHooks(): void {
+	public function resetTableHooks(): void {
 		unset(
 			$this->discoveredTable__transformers,
 			$this->discoveredTable__eventListeners
 		);
 	}
 
-	protected function flushDiscoveredTableStructure(): void {
+	public function resetTableTraced(): void {
 			$this->discoveredTable__excludedStructures = array();
 			$this->discoveredTable__captions           = array();
 			$this->discoveredTable__headNames          = array();

@@ -17,7 +17,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
  */
 interface TableTracer {
 	/**
-	 * Sets whether all found tables should be scanned or not.
+	 * Sets whether all traced tables should be scanned or not.
 	 */
 	public function withAllTables( bool $trace = true ): static;
 
@@ -44,6 +44,14 @@ interface TableTracer {
 	public function addEventListener( Table $for, callable $callback ): static;
 
 	/**
+	 * Infers table(s) from given HTML content source.
+	 *
+	 * @param bool $normalize When set to true, whitespaces/tabs/newlines and other
+	 *                        similar characters and controls must get cleaned.
+	 */
+	public function inferTableFrom( string $source, bool $normalize ): void;
+
+	/**
 	 * Infers table data from given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList
@@ -65,7 +73,7 @@ interface TableTracer {
 	 *                                table contains `seven` columns. To properly map each table column name to
 	 *                                its respective value, `$offset` indices must be passed: `0`, `2`, & `4`.
 	 *                                Last/seventh column at the sixth index will automatically gets omitted.
-	 * @throws ScraperError When this method is invoked before table is discovered.
+	 * @throws ScraperError When this method is invoked before any table is traced.
 	 * @no-named-arguments
 	 */
 	public function setColumnNames( array $keys, int|string $id, int ...$offset ): void;
@@ -88,14 +96,14 @@ interface TableTracer {
 	 * Gets collection of traced table dataset indexed by respective table ID.
 	 *
 	 * @return array<Iterator<int,ArrayObject<array-key,TdReturn>>>
-	 * Discovered tables' iterable column set indexed by respective table ID.
+	 * traced tables' iterable column set indexed by respective table ID.
 	 */
 	public function getTableData(): array;
 
 	/**
 	 * Gets table caption if not omitted from being traced.
 	 *
-	 * @return array<string|null> Discovered tables' caption contents indexed by respective table ID.
+	 * @return array<string|null> Traced tables' caption contents indexed by respective table ID.
 	 */
 	public function getTableCaption(): array;
 
@@ -103,7 +111,7 @@ interface TableTracer {
 	 * Gets table head if not omitted from being traced.
 	 *
 	 * @return ($namesOnly is true ? array<SplFixedArray<string>> : array<ArrayObject<int,ThReturn>>)
-	 * Discovered tables' head contents indexed by respective table ID.
+	 * Traced tables' head contents indexed by respective table ID.
 	 */
 	public function getTableHead( bool $namesOnly = false ): array;
 
@@ -123,4 +131,19 @@ interface TableTracer {
 	 *                              count even if provided offset indices have been omitted during trace.
 	 */
 	public function getCurrentIterationCountOf( Table $element, bool $offsetInclusive = false ): ?int;
+
+	/**
+	 * Resets traced structures' details.
+	 *
+	 * This may only be invoked after retrieving a table Iterator and no further table tracing is required.
+	 */
+	public function resetTableTraced(): void;
+
+	/**
+	 * Resets registered hooks such as event listeners and transformers after trace completion.
+	 *
+	 * This may only be invoked after any iteration is complete to prevent side-effects
+	 * of hooks not being applied to remaining items of an Iterator being iterated.
+	 */
+	public function resetTableHooks(): void;
 }
