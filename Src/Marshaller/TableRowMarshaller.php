@@ -35,7 +35,7 @@ class TableRowMarshaller implements Transformer {
 	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): CollectionSet {
 		$set = $tracer->inferTableDataFrom( self::validate( $element )->childNodes );
 
-		$this->invalidCountMsg && $this->validateColumnNamesCount( $tracer );
+		$this->invalidCountMsg && $this->validateColumnNamesCount( $tracer, defaultCount: count( $set ) );
 
 		return new CollectionSet( $this->discoverIndexKeyFrom( $set ) ?? $position, new ArrayObject( $set ) );
 	}
@@ -65,8 +65,8 @@ class TableRowMarshaller implements Transformer {
 	}
 
 	/** @param TableTracer<TColumnReturn> $tracer */
-	private function validateColumnNamesCount( TableTracer $tracer ): void {
-		$count = count( $names = $tracer->getColumnNames() );
+	private function validateColumnNamesCount( TableTracer $tracer, int $defaultCount ): void {
+		$count = count( $names = $tracer->getColumnNames() ) ?: $defaultCount;
 
 		$count === $tracer->getCurrentIterationCountOf( Table::Column )
 			|| ScraperError::withSourceMsg( $this->invalidCountMsg, $count, implode( '", "', $names ) );
