@@ -15,9 +15,9 @@ use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
 use TheWebSolver\Codegarage\Scraper\Interfaces\SingleTableScraperWithAccent;
 
 /**
- * @template TValue
- * @template-extends SingleTableScraper<TValue>
- * @template-implements SingleTableScraperWithAccent<TValue>
+ * @template TColumnReturn
+ * @template-extends SingleTableScraper<TColumnReturn>
+ * @template-implements SingleTableScraperWithAccent<TColumnReturn>
  */
 abstract class AccentedSingleTableScraper extends SingleTableScraper implements SingleTableScraperWithAccent {
 	use Diacritic;
@@ -29,10 +29,10 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	 * Accepts transformers to validate and translit columns.
 	 *
 	 * If transformers not injected via constructor, then defaults are used.
-	 * They only support collecting transformed `TValue` as a "string".
+	 * They only support collecting transformed `TColumnReturn` as a "string".
 	 *
-	 * @param ?Transformer<TValue> $validateRow    Uses `TableRowMarshaller` if not provided.
-	 * @param ?Transformer<TValue> $translitColumn Uses `TableColumnTranslit` if not provided.
+	 * @param ?Transformer<TColumnReturn> $validateRow    Uses `TableRowMarshaller` if not provided.
+	 * @param ?Transformer<TColumnReturn> $translitColumn Uses `TableColumnTranslit` if not provided.
 	 * @no-named-arguments
 	 */
 	public function __construct(
@@ -58,7 +58,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		return $this->addTransformer( TableEnum::Row, $row )->addTransformer( TableEnum::Column, $column );
 	}
 
-	/** @return array{0:Transformer<TValue>,1:Transformer<TValue>} */
+	/** @return array{0:Transformer<TColumnReturn>,1:Transformer<TColumnReturn>} */
 	protected function getInjectedOrDefaultTransformers(): array {
 		$invalidCount = $this->getScraperSource()->name . ' ' . KeyMapper::INVALID_COUNT;
 

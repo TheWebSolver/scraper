@@ -15,8 +15,8 @@ use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\MappableTableScraper;
 
 /**
- * @template TValue
- * @template-implements MappableTableScraper<TValue,ArrayObject<array-key,TValue>>
+ * @template TColumnReturn
+ * @template-implements MappableTableScraper<TColumnReturn>
  */
 abstract class SingleTableScraper implements MappableTableScraper {
 	use ScrapeYard, ScraperSource, CollectorSource;
@@ -41,7 +41,7 @@ abstract class SingleTableScraper implements MappableTableScraper {
 		$this->resetTableHooks();
 	}
 
-	/** @return Iterator<array-key,ArrayObject<array-key,TValue>> */
+	/** @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>> */
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->withAllTables( false );
 		$this->useCollectedKeys();

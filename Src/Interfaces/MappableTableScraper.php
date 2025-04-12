@@ -3,10 +3,11 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
+use ArrayObject;
+
 /**
- * @template TTracedValue
- * @template TInferredValue
- * @template-extends TableTracer<TTracedValue>
- * @template-extends Scrapable<array-key,TInferredValue>
+ * @template TColumnReturn
+ * @template-extends TableTracer<TColumnReturn>
+ * @template-extends Scrapable<array-key,ArrayObject<array-key,TColumnReturn>>
  */
 interface MappableTableScraper extends Scrapable, KeyMapper, TableTracer {}
