@@ -3,46 +3,27 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test;
 
-use Closure;
 use Iterator;
 use DOMElement;
-use ValueError;
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
+use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\AccentedSingleTableScraper;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
+use TheWebSolver\Codegarage\Scraper\AccentedSingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromString;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
 
 class TableScraperTest extends TestCase {
 	private HtmlTableScraper $scraper;
-
-	/**
-	 * @param Closure(string|DOMElement, int, TableTracer<string>): string $marshaller
-	 * @return Transformer<string>
-	 */
-	private function withTransformedTDUsing( Closure $marshaller ): Transformer {
-		return new class( $marshaller ) implements Transformer {
-			/** @param Closure(string|DOMElement, int, TableTracer<string>): string $marshaller */
-			public function __construct( private Closure $marshaller ) {}
-
-			/** @param TableTracer<string> $tracer */
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
-				return ( $this->marshaller )( $element, $position, $tracer );
-			}
-		};
-	}
 
 	protected function setUp(): void {
 		$this->scraper = new HtmlTableScraper();
@@ -91,7 +72,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
-		$tr = new /** @template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg() )
+		$tr = new /** @template-extends TableRowMarshaller<string> */ class( KeyMapper::INVALID_COUNT )
 		extends TableRowMarshaller{};
 
 		$table = '
@@ -116,7 +97,7 @@ class TableScraperTest extends TestCase {
 
 		$this->expectException( ScraperError::class );
 		$this->expectExceptionMessage(
-			sprintf( Collectable::INVALID_COUNT_MESSAGE, 3, 'name", "title", "address' )
+			sprintf( KeyMapper::INVALID_COUNT, 3, 'name", "title", "address' )
 		);
 
 		$this->scraper->addTransformer( Table::Row, $tr )->parse( $table )->current();
@@ -157,35 +138,6 @@ class TableScraperTest extends TestCase {
 		);
 	}
 
-	/** @param ?array{0:array-key,1:string[]} $expectedValue */
-	#[Test]
-	#[DataProvider( 'providesValidAndInvalidTableData' )]
-	public function itThrowsExceptionWhenEachScrapedDataIsValidated(
-		string $content,
-		DeveloperDetails $type,
-		?array $expectedValue = null
-	): void {
-		$tr = new /** @template-extends TableRowMarshaller<string> */ class( DeveloperDetails::invalidCountMsg(), 'address' )
-		extends TableRowMarshaller{};
-
-		$table = "<table> <caption></caption> <tbody> {$content} </tbody></table>";
-		$td    = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
-
-		if ( null === $expectedValue ) {
-			$this->expectExceptionMessage( $type->errorMsg() );
-		}
-
-		$iterator = $this->scraper
-			->addTransformer( Table::Row, $tr )
-			->addTransformer( Table::Column, $td )
-			->parse( $table );
-
-			[$key, $value] = $expectedValue ?? array( null, null );
-
-		$this->assertSame( $key, $iterator->key() );
-		$this->assertSame( $value, $iterator->current()->getArrayCopy() );
-	}
-
 	/** @return mixed[] */
 	public static function providesValidAndInvalidTableData(): array {
 		return array(
@@ -218,26 +170,36 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itOnlyCollectsDataWithRequestedKeys(): void {
-		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
+		$requestedKeys = array( 'name', 'address' );
+		$validateKeys  = new class( $requestedKeys ) implements Transformer {
+			/** @param string[] $requestedKeys */
+			public function __construct( private array $requestedKeys ) {}
 
-		$this->scraper->addTransformer( Table::Column, $td )->useKeys( $requestedKeys = array( 'name', 'address' ) );
+			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
+				$content    = trim( is_string( $element ) ? $element : $element->textContent );
+				$columnName = $tracer->getCurrentColumnName() ?? '';
+				$value      = in_array( $columnName, $this->requestedKeys, true ) ? $content : '';
+
+				return $value;
+			}
+		};
+
+		$this->scraper->addTransformer( Table::Column, $validateKeys );
 
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
-		$current  = $iterator->current();
+		$dataset  = $iterator->current()->getArrayCopy();
 
 		$this->assertSame( 0, $iterator->key() );
+		$this->assertArrayNotHasKey( 'title', $dataset );
 
 		foreach ( $requestedKeys as $key ) {
-			$this->assertArrayHasKey( $key, $current->getArrayCopy() );
+			$this->assertArrayHasKey( $key, $dataset );
 		}
-
-		$this->assertArrayNotHasKey( 'title', $current->getArrayCopy() );
 	}
 
 	#[Test]
 	public function itYieldsKeyAsValueThatOffsetsDeveloperDetailsEnumCaseValue(): void {
-		$td = $this->withTransformedTDUsing( $this->scraper->validateTableData( ... ) );
-		$tr = new /** @template-implements Transformer<CollectionSet<string>> */ class()
+		$collectDataset = new /** @template-implements Transformer<CollectionSet<string>> */ class()
 		implements Transformer{
 			/** @param TableTracer<string> $tracer */
 			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
@@ -249,9 +211,9 @@ class TableScraperTest extends TestCase {
 			}
 		};
 
-		$this->scraper->addTransformer( Table::Row, $tr )->addTransformer( Table::Column, $td );
-
-		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
+		$iterator = $this->scraper
+			->addTransformer( Table::Row, $collectDataset )
+			->parse( $this->scraper->fromCache() );
 
 		$this->assertSame( 'John Doe', $iterator->key() );
 		$this->assertSame(
@@ -272,7 +234,7 @@ class TableScraperTest extends TestCase {
 			use HtmlTableFromString;
 
 			public function __construct( private readonly Iterator $iterator ) {
-				$this->useKeys( $this->collectableFromConcrete( DeveloperDetails::class )->items );
+				$this->useKeys( $this->collectFromMappable( DeveloperDetails::class )->items );
 			}
 
 			public function parse( string $content ): Iterator {
@@ -292,7 +254,7 @@ class TableScraperTest extends TestCase {
 
 			public function __construct( private readonly Iterator $iterator ) {
 				$this->useKeys(
-					$this->collectableFromConcrete( DeveloperDetails::class, DeveloperDetails::Name, 'address' )->items
+					$this->collectFromMappable( DeveloperDetails::class, DeveloperDetails::Name, 'address' )->items
 				);
 			}
 
@@ -324,17 +286,6 @@ class HtmlTableScraper extends SingleTableScraper {
 		yield from $this->currentTableIterator( $content );
 	}
 
-	public function validateTableData( string|DOMElement $element ): string {
-		$content    = trim( is_string( $element ) ? $element : $element->textContent );
-		$columnName = $this->getCurrentColumnName() ?? '';
-		$value      = $this->isRequestedKey( $columnName ) ? $content : '';
-
-		$value && ( $source = $this->getCollectionSource() ) &&
-			$source->concrete::validate( $value, $columnName, ScraperError::withSourceMsg( ... ) );
-
-		return $value;
-	}
-
 	protected function defaultCachePath(): string {
 		return DOMDocumentFactoryTest::RESOURCE_PATH;
 	}
@@ -344,40 +295,10 @@ class HtmlTableScraper extends SingleTableScraper {
 	}
 }
 
-enum DeveloperDetails: string implements Collectable {
+enum DeveloperDetails: string {
 	case Name    = 'name';
 	case Title   = 'title';
 	case Address = 'address';
-
-	public function errorMsg(): string {
-		return match ( $this ) {
-			self::Name    => 'First & Last name must be separated by space.',
-			self::Title   => 'Title must be less than or equal to 15 characters',
-			self::Address => 'Address can only be alpha characters.',
-		};
-	}
-
-	public static function label(): string {
-		return 'Developer Names';
-	}
-
-	public static function invalidCountMsg(): string {
-		return self::label() . ' ' . self::INVALID_COUNT_MESSAGE;
-	}
-
-	public static function toArray(): array {
-		return array_column( self::cases(), column_key: 'value' );
-	}
-
-	public static function validate( mixed $data, string $item, ?Closure $handler = null ): bool {
-		is_string( $data ) || throw new ValueError( 'Data must be string.' );
-
-		return match ( self::from( $item ) ) {
-			self::Name    => str_contains( $data, ' ' ) || ( $handler && $handler( self::Name->errorMsg() ) ),
-			self::Title   => strlen( $data ) <= 15 || ( $handler && $handler( self::Title->errorMsg() ) ),
-			self::Address => ctype_alpha( $data ) || ( $handler && $handler( self::Address->errorMsg() ) ),
-		};
-	}
 }
 
 /** @template-extends AccentedSingleTableScraper<string> */

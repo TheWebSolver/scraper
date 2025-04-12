@@ -5,7 +5,6 @@ namespace TheWebSolver\Codegarage\Scraper\Attributes;
 
 use Attribute;
 use BackedEnum;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 
 #[Attribute( flags: Attribute::TARGET_CLASS )]
 final readonly class CollectFrom {
@@ -13,29 +12,15 @@ final readonly class CollectFrom {
 	public array $items;
 
 	/**
-	 * @param class-string<Collectable> $concrete The concrete classname that provides collectable items as an array.
-	 * @param string|BackedEnum         ...$only  If only subset of collectable items is required and passed as arg
-	 *                                            to this parameter, only these items will be used. Order matters.
+	 * @param class-string<BackedEnum> $enumClass The BackedEnum classname whose cases will be used as mappable keys.
+	 * @param string|BackedEnum        ...$only   If only subset of mappable keys is required and passed as arg to
+	 *                                            this param, only these keys will be used. Passed order matters.
 	 */
-	public function __construct( public string $concrete, string|BackedEnum ...$only ) {
-		$this->items = $this->onlyItems( $only ) ?? $concrete::toArray();
+	public function __construct( public string $enumClass, string|BackedEnum ...$only ) {
+		$this->items = array_map( self::collect( ... ), $only ?: $enumClass::cases() );
 	}
 
-	/**
-	 * @param (string|BackedEnum)[] $collectables
-	 * @return ?list<string>
-	 */
-	private function onlyItems( array $collectables ): ?array {
-		if ( empty( $collectables ) ) {
-			return null;
-		}
-
-		$items = array();
-
-		foreach ( $collectables as $collectable ) {
-			$items[] = $collectable instanceof BackedEnum ? (string) $collectable->value : $collectable;
-		}
-
-		return $items;
+	private static function collect( string|BackedEnum $item ): string {
+		return $item instanceof BackedEnum ? (string) $item->value : $item;
 	}
 }

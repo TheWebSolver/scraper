@@ -7,9 +7,11 @@ use BackedEnum;
 use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Collectable;
 
 trait CollectorSource {
+	/** @placeholder `1:` the given source's string value. */
+	private const INVALID_COLLECTION_SOURCE = 'Collection keys can either be an array of strings or a BackedEnum classname. "%s" given.';
+
 	private CollectFrom $collectionSource;
 	/** @var list<string> */
 	private array $requestedKeys = array();
@@ -18,9 +20,9 @@ trait CollectorSource {
 	/** @param class-string<BackedEnum>|list<string> $keys */
 	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): static {
 		$this->requestedKeys = match ( true ) {
-			is_array( $keys )                  => $keys,
-			$this->isCollectableClass( $keys ) => $this->collectableFromConcrete( $keys )->items,
-			default                            => $this->throwInvalidCollectable( $keys ),
+			is_array( $keys )                    => $keys,
+			$this->isBackedEnumMappable( $keys ) => $this->collectFromMappable( $keys )->items,
+			default                              => $this->throwInvalidCollectable( $keys ),
 		};
 
 		! is_null( $indexKey )
@@ -49,27 +51,21 @@ trait CollectorSource {
 		return $this;
 	}
 
-	/** @param class-string<Collectable> $classname */
-	protected function collectableFromConcrete( string $classname, string|BackedEnum ...$only ): CollectFrom {
-		return $this->collectionSource = new CollectFrom( $classname, ...$only );
+	/** @param class-string<BackedEnum> $enumClass */
+	protected function collectFromMappable( string $enumClass, string|BackedEnum ...$only ): CollectFrom {
+		return $this->collectionSource = new CollectFrom( $enumClass, ...$only );
 	}
 
 	final protected function isRequestedKey( string $collectable ): bool {
 		return in_array( $collectable, $this->getKeys(), strict: true );
 	}
 
-	/** @phpstan-assert-if-true =class-string<Collectable> $value */
-	private function isCollectableClass( string $value ): bool {
-		return is_a( $value, Collectable::class, allow_string: true );
+	/** @phpstan-assert-if-true =class-string<BackedEnum> $value */
+	private function isBackedEnumMappable( string $value ): bool {
+		return is_a( $value, BackedEnum::class, allow_string: true );
 	}
 
 	private function throwInvalidCollectable( string $value ): never {
-		throw new InvalidSource(
-			sprintf(
-				'Collection keys can either be an array of string or a BackedEnum classname implementing "%1$s" interface. %2$s given.',
-				Collectable::class,
-				$value
-			)
-		);
+		throw new InvalidSource( sprintf( self::INVALID_COLLECTION_SOURCE, $value ) );
 	}
 }

@@ -14,3 +14,7 @@ parameters:
 			path: Src/Traits/HtmlTableFromNode.php
 			identifier: return.type
 			message: '#^Method .*?::getChildNodesIteratorFrom\(\) should return Iterator\<int, DOMNode\> but returns Traversable\<int, DOMNode\>.$#'
+		- # Ignore ...$only param not being a list.
+			path: Src/Attributes/CollectFrom.php
+			identifier: assign.propertyType
+			message: '#^Property .*?CollectFrom::\$items \(list<string>\) does not accept array<int\|string, string>.$#'
