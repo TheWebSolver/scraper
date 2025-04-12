@@ -25,10 +25,10 @@ trait TableExtractor {
 
 	/**
 	 * @var array{
-	 *   tr      ?: Transformer<CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>,
-	 *   caption ?: Transformer<string>,
-	 *   th      ?: Transformer<string>,
-	 *   td      ?: Transformer<TColumnReturn>,
+	 *   tr      ?: Transformer<static, CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>,
+	 *   caption ?: Transformer<static, string>,
+	 *   th      ?: Transformer<static, string>,
+	 *   td      ?: Transformer<static, TColumnReturn>,
 	 * }
 	 */
 	private array $discoveredTable__transformers;
@@ -179,8 +179,8 @@ trait TableExtractor {
 			$this->discoveredTable__rows               = array();
 	}
 
-	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<TColumnReturn>} */
-	private function useCurrenTableColumnDetails(): array {
+	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
+	private function useCurrentTableColumnDetails(): array {
 		$transformer = $this->discoveredTable__transformers['td'] ?? new TableColumnMarshaller();
 		$columns     = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
 
@@ -226,8 +226,8 @@ trait TableExtractor {
 	}
 
 	/**
-	 * @param Transformer<TColumnReturn>     $transformer
-	 * @param array<array-key,TColumnReturn> $data
+	 * @param Transformer<static,TColumnReturn> $transformer
+	 * @param array<array-key,TColumnReturn>    $data
 	 * @return ?TColumnReturn
 	 */
 	private function registerCurrentTableColumn(

@@ -58,7 +58,7 @@ trait HtmlTableFromString {
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data = array();
 
-		[$keys, $offset, $lastPosition, $skippedNodes, $transformer] = $this->useCurrenTableColumnDetails();
+		[$keys, $offset, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
 
 		foreach ( $elementList as $currentIndex => $column ) {
 			if ( ! $this->isTableColumnStructure( $column ) ) {

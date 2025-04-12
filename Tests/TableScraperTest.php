@@ -72,8 +72,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
-		$tr = new /** @template-extends TableRowMarshaller<string> */ class( KeyMapper::INVALID_COUNT )
-		extends TableRowMarshaller{};
+		$tr = new TableRowMarshaller( KeyMapper::INVALID_COUNT );
 
 		$table = '
 		<table>
@@ -100,7 +99,7 @@ class TableScraperTest extends TestCase {
 			sprintf( KeyMapper::INVALID_COUNT, 3, 'name", "title", "address' )
 		);
 
-		$this->scraper->addTransformer( Table::Row, $tr )->parse( $table )->current();
+		$this->scraper->addTransformer( Table::Row, $tr )->parse( $table )->current(); // @phpstan-ignore-line
 	}
 
 	#[Test]
@@ -171,11 +170,12 @@ class TableScraperTest extends TestCase {
 	#[Test]
 	public function itOnlyCollectsDataWithRequestedKeys(): void {
 		$requestedKeys = array( 'name', 'address' );
-		$validateKeys  = new class( $requestedKeys ) implements Transformer {
+		$validateKeys  = new /** @template-implements Transformer<HtmlTableScraper,string> */ class( $requestedKeys )
+		implements Transformer {
 			/** @param string[] $requestedKeys */
 			public function __construct( private array $requestedKeys ) {}
 
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
+			public function transform( string|DOMElement $element, int $position, object $tracer ): mixed {
 				$content    = trim( is_string( $element ) ? $element : $element->textContent );
 				$columnName = $tracer->getCurrentColumnName() ?? '';
 				$value      = in_array( $columnName, $this->requestedKeys, true ) ? $content : '';
@@ -199,10 +199,10 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itYieldsKeyAsValueThatOffsetsDeveloperDetailsEnumCaseValue(): void {
-		$collectDataset = new /** @template-implements Transformer<CollectionSet<string>> */ class()
+		$collectDataset = new /** @template-implements Transformer<HtmlTableScraper,CollectionSet<string>> */ class()
 		implements Transformer{
 			/** @param TableTracer<string> $tracer */
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
+			public function transform( string|DOMElement $element, int $position, object $tracer ): mixed {
 				assert( $element instanceof DOMElement );
 
 				$data = $tracer->inferTableDataFrom( $element->childNodes );
@@ -273,9 +273,7 @@ class TableScraperTest extends TestCase {
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 
-/**
- * @template-extends SingleTableScraper<string>
- */
+/** @template-extends SingleTableScraper<string> */
 #[ScrapeFrom( 'Test', url: 'https://scraper.test', filename: 'table.html' )]
 #[CollectFrom( DeveloperDetails::class )]
 class HtmlTableScraper extends SingleTableScraper {

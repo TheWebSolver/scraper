@@ -8,12 +8,12 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 
-/** @template-implements Transformer<string> */
+/** @template-implements Transformer<TableTracer<string>,string> */
 class TableColumnTranslit implements Transformer {
 	/**
-	 * @param Transformer<string> $transformer       Base transformer which transforms column content.
-	 * @param list<string>        $targetColumnNames Column names to transit values of. If names not provided,
-	 *                                               translit runs for each column (which might not be ideal).
+	 * @param Transformer<TableTracer<string>,string> $transformer       Base transformer which transforms column content.
+	 * @param list<string>                            $targetColumnNames Column names to transit values of. If names not provided,
+	 *                                                                   translit runs for each column (which might not be ideal).
 	 */
 	public function __construct(
 		private readonly Transformer $transformer,
@@ -21,7 +21,7 @@ class TableColumnTranslit implements Transformer {
 		private readonly ?array $targetColumnNames = null
 	) {}
 
-	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
+	public function transform( string|DOMElement $element, int $position, object $tracer ): string {
 		$content     = $this->transformer->transform( $element, $position, $tracer );
 		$targetNames = $this->targetColumnNames ?? $tracer->getColumnNames();
 		$currentCol  = $tracer->getCurrentColumnName();

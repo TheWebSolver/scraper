@@ -15,7 +15,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /**
  * @template TColumnReturn
- * @template-implements Transformer<CollectionSet<TColumnReturn>>
+ * @template-implements Transformer<TableTracer<TColumnReturn>,CollectionSet<TColumnReturn>>
  */
 class TableRowMarshaller implements Transformer {
 	private const TR_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
@@ -28,11 +28,7 @@ class TableRowMarshaller implements Transformer {
 	 */
 	public function __construct( private string $invalidCountMsg = '', private ?string $indexKey = null ) {}
 
-	/**
-	 * @param TableTracer<TColumnReturn> $tracer
-	 * @throws ScraperError When cannot validate transformed data.
-	 */
-	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): CollectionSet {
+	public function transform( string|DOMElement $element, int $position, object $tracer ): CollectionSet {
 		$set = $tracer->inferTableDataFrom( self::validate( $element )->childNodes );
 
 		$this->invalidCountMsg && $this->validateColumnNamesCount( $tracer, defaultCount: count( $set ) );

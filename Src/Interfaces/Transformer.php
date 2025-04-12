@@ -7,16 +7,18 @@ use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-/** @template-covariant TTransformedValue */
+/**
+ * @template TScopedInstance of object
+ * @template-covariant TTransformedValue
+ */
 interface Transformer {
 	/**
 	 * Transforms given element to the generic datatype.
 	 *
-	 * @param TableTracer<TColumnReturn> $tracer
+	 * @param TScopedInstance $scope
 	 * @return TTransformedValue
 	 * @throws InvalidSource When $element is string and cannot be inferred to DOMElement.
 	 * @throws ScraperError When cannot validate transformed data.
-	 * @template TColumnReturn
 	 */
-	public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed;
+	public function transform( string|DOMElement $element, int $position, object $scope ): mixed;
 }

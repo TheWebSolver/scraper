@@ -129,10 +129,9 @@ class HtmlTableExtractorTest extends TestCase {
 				fn( $scanner ) => $scanner->setColumnNames( $columnNames, $scanner->getTableId( true ), ...$offset )
 			);
 
-			/** @var TableRowMarshaller<string> */
 			$tr = new TableRowMarshaller( 'Should Not Throw exception' );
 
-			$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $source );
+			$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $source ); // @phpstan-ignore-line
 
 			$this->assertSame(
 				$expected,
@@ -175,16 +174,18 @@ class HtmlTableExtractorTest extends TestCase {
 	#[Test]
 	public function itGetsTheTargetedTableNode(): void {
 		$domScanner   = new DOMNodeScanner();
-		$thMarshaller = new class() implements Transformer {
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
+		$thMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
+		implements Transformer {
+			public function transform( string|DOMElement $element, int $position, object $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element;
 
 				return explode( '[', strip_tags( html_entity_decode( $content ) ) )[0];
 			}
 		};
 
-		$tdMarshaller = new class() implements Transformer {
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
+		$tdMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
+			implements Transformer {
+			public function transform( string|DOMElement $element, int $position, object $tracer ): string {
 				if ( $element instanceof DOMElement ) {
 					TestCase::assertInstanceOf( DOMNodeScanner::class, $tracer );
 
@@ -382,9 +383,10 @@ class HtmlTableExtractorTest extends TestCase {
 			</table>
 		';
 
-		$tdMarshaller = new class() implements Transformer {
+		$tdMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
+		implements Transformer {
 			/** @param TableTracer<string> $tracer */
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): string {
+			public function transform( string|DOMElement $element, int $position, object $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element;
 
 				return str_contains( $content, 'Two' ) ? '' : $content;
@@ -444,10 +446,11 @@ class HtmlTableExtractorTest extends TestCase {
 			</tbody></table>
 		';
 
-		$transformer = new class() implements Transformer {
+		$transformer = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
+		implements Transformer {
 			public function __construct( private ?Closure $asserter = null ) {}
 
-			public function transform( string|DOMElement $element, int $position, TableTracer $tracer ): mixed {
+			public function transform( string|DOMElement $element, int $position, object $tracer ): mixed {
 				return ( $this->asserter )( $element, $position, $tracer ); // @phpstan-ignore-line
 			}
 		};
