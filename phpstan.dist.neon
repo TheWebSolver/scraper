@@ -18,3 +18,8 @@ parameters:
 			path: Src/Attributes/CollectFrom.php
 			identifier: assign.propertyType
 			message: '#^Property .*?CollectFrom::\$items \(list<string>\) does not accept array<int\|string, string>.$#'
+		- # Ignore default transformers used.
+			path: Src/AccentedSingleTableScraper.php
+			messages:
+				- '#^Parameter \#1 \$transformer of class .*?TableColumnTranslit constructor expects .*?Transformer<string>, .*?Transformer<TValue> given.$#'
+				- '#^Method .*?AccentedSingleTableScraper::getInjectedOrDefaultTransformers\(\) should return array{.*?Transformer<TValue>, .*?Transformer<TValue>} but returns array{.*?Transformer<TValue>\|.*?TableRowMarshaller<mixed>, .*?Transformer<TValue>\|.*?TableColumnMarshaller}.$#'

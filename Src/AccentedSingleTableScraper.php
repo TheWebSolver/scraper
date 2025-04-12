@@ -6,6 +6,7 @@ namespace TheWebSolver\Codegarage\Scraper;
 use Iterator;
 use TheWebSolver\Codegarage\Scraper\Traits\Diacritic;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
+use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Enums\Table as TableEnum;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
@@ -25,6 +26,11 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	protected array $transliterationColumnNames = array();
 
 	/**
+	 * Accepts transformers to validate and translit columns.
+	 *
+	 * If transformers not injected via constructor, then defaults are used.
+	 * They only support collecting transformed `TValue` as a "string".
+	 *
 	 * @param ?Transformer<TValue> $validateRow    Uses `TableRowMarshaller` if not provided.
 	 * @param ?Transformer<TValue> $translitColumn Uses `TableColumnTranslit` if not provided.
 	 * @no-named-arguments
@@ -44,26 +50,21 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	}
 
 	protected function withInjectedOrDefaultTransformers(): static {
-		$countErrorMsg = $this->getCollectionSource()?->concrete::invalidCountMsg() ?? '';
-
-		$this->addTransformer(
-			TableEnum::Row,
-			$this->validateRow ?? new TableRowMarshaller( $countErrorMsg, $this->getIndexKey() )
-		);
-
-		if ( $this->translitColumn ) {
-			return $this->addTransformer( TableEnum::Column, $this->translitColumn );
-		}
-
-		if ( ! $keys = $this->useCollectedKeys() ) {
-			return $this;
-		}
-
-		$td = new TableColumnMarshaller( $keys );
+		[$row, $column] = $this->getInjectedOrDefaultTransformers();
 
 		! empty( $this->transliterationColumnNames )
-			&& ( $td = new TableColumnTranslit( $td, $this, $this->transliterationColumnNames ) );
+			&& ( $column = new TableColumnTranslit( $column, $this, $this->transliterationColumnNames ) );
 
-		return $this->addTransformer( TableEnum::Column, $td );
+		return $this->addTransformer( TableEnum::Row, $row )->addTransformer( TableEnum::Column, $column );
+	}
+
+	/** @return array{0:Transformer<TValue>,1:Transformer<TValue>} */
+	protected function getInjectedOrDefaultTransformers(): array {
+		$invalidCount = $this->getScraperSource()->name . ' ' . KeyMapper::INVALID_COUNT;
+
+		return array(
+			$this->validateRow ?? new TableRowMarshaller( $invalidCount, $this->getIndexKey() ),
+			$this->translitColumn ?? new TableColumnMarshaller( $this->useCollectedKeys() ),
+		);
 	}
 }
