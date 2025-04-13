@@ -40,7 +40,8 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		private ?Transformer $translitColumn = null,
 		string ...$transliterationColumnNames
 	) {
-		$this->transliterationColumnNames = $transliterationColumnNames;
+		// Prevents override when transliteration column names are set to property by inheriting class.
+		empty( $transliterationColumnNames ) || $this->transliterationColumnNames = $transliterationColumnNames;
 
 		parent::__construct();
 	}
