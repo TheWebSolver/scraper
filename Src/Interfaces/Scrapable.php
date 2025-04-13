@@ -24,7 +24,8 @@ interface Scrapable {
 	 *
 	 * @param string $content The scraped content.
 	 * @return Iterator<TKey,TValue>
-	 * @throws ScraperError When cannot parse the content.
+	 * @throws InvalidSource When cannot infer expected type from the content.
+	 * @throws ScraperError  When cannot parse the content.
 	 */
 	public function parse( string $content ): Iterator;
 
