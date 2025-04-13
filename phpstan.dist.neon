@@ -31,3 +31,7 @@ parameters:
 		- # Ignore default transformers used.
 			path: Src/AccentedSingleTableScraper.php
 			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\} but returns array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableRowMarshaller\<mixed\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableColumnMarshaller\|.*?TableColumnTranslit\}\.$#'
+		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
+			path: Src/Marshaller/TableRowMarshaller.php
+			identifier: return.type
+			message: '#^Method .*?TableRowMarshaller\:\:validate\(\) should return iterable\<int, DOMNode\|list\<array\{string, string, string, string, string\}\>\> but returns array\<mixed\>\|Traversable\<int, DOMNode\>\.$#'
