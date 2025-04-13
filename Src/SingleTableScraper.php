@@ -28,11 +28,19 @@ abstract class SingleTableScraper implements MappableTableScraper {
 
 		$this->sourceFromAttribute( $reflection )
 			->collectableFromAttribute( $reflection )
-			->addEventListener( Table::TBody, $this->tableBodyListener( ... ) )
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename )
-			->useKeys( $this->getCollectionSource()->items ?? array() );
+			->useCollectedKeys();
+
+		$this->getCollectionSource() && $this->addEventListener( Table::TBody, $this->tableBodyListener( ... ) );
 
 		$this->unsubscribeError = ScraperError::for( $this->getScraperSource() );
+	}
+
+	/** @return list<string> */
+	final protected function useCollectedKeys(): array {
+		empty( $this->getKeys() ) && $this->useKeys( $this->getCollectionSource()->items ?? array() );
+
+		return $this->getKeys();
 	}
 
 	public function flush(): void {
@@ -55,15 +63,11 @@ abstract class SingleTableScraper implements MappableTableScraper {
 		return $iterator;
 	}
 
-	/** @return list<string> */
-	protected function useCollectedKeys(): array {
-		empty( $this->getKeys() ) && $this->useKeys( $this->getCollectionSource()->items ?? array() );
-
-		return $this->getKeys();
-	}
-
+	/**
+	 * Inheriting class may override this method to provide column names with offset position(s).
+	 * By default, it is only invoked if collection source exists. Hence, source is never null.
+	 */
 	protected function tableBodyListener(): void {
-		( $source = $this->getCollectionSource() )
-			&& $this->setColumnNames( $source->items, $this->getTableId( current: true ) );
+		$this->setColumnNames( $this->getCollectionSource()->items, $this->getTableId( current: true ) );
 	}
 }

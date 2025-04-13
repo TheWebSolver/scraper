@@ -15,6 +15,11 @@ parameters:
 			path: Src/Traits/HtmlTableFromNode.php
 			identifier: return.type
 			message: '#^Method .*?::getChildNodesIteratorFrom\(\) should return Iterator\<int, DOMNode\> but returns Traversable\<int, DOMNode\>.$#'
+		- # Ignore already checked collection source being nullable.
+			path: Src/SingleTableScraper.php
+			identifier: property.nonObject
+			count: 1
+			message: '#^Cannot access property $items on .*?CollectFrom|null.$#'
 		- # Ignore default transformers used.
 			path: Src/AccentedSingleTableScraper.php
 			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\} but returns array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableRowMarshaller\<mixed\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableColumnMarshaller\|.*?TableColumnTranslit\}\.$#'

@@ -39,7 +39,11 @@ trait CollectorSource {
 		return $this->indexKey;
 	}
 
-	protected function getCollectionSource(): ?CollectFrom {
+	final protected function isRequestedKey( string $collectable ): bool {
+		return in_array( $collectable, $this->getKeys(), strict: true );
+	}
+
+	final protected function getCollectionSource(): ?CollectFrom {
 		return $this->collectionSource ?? null;
 	}
 
@@ -57,10 +61,6 @@ trait CollectorSource {
 	 */
 	protected function collectFromMappable( string $enumClass, string|BackedEnum ...$only ): CollectFrom {
 		return $this->collectionSource = new CollectFrom( $enumClass, ...$only );
-	}
-
-	final protected function isRequestedKey( string $collectable ): bool {
-		return in_array( $collectable, $this->getKeys(), strict: true );
 	}
 
 	/** @phpstan-assert-if-true =class-string<BackedEnum> $value */
