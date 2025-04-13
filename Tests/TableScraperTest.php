@@ -174,7 +174,7 @@ class TableScraperTest extends TestCase {
 			/** @param string[] $requestedKeys */
 			public function __construct( private array $requestedKeys ) {}
 
-			public function transform( mixed $element, int $position, object $tracer ): mixed {
+			public function transform( mixed $element, object $tracer ): mixed {
 				// @phpstan-ignore-next-line -- $textContent is not null.
 				$content    = trim( is_string( $element ) ? $element : $element->textContent );
 				$columnName = $tracer->getCurrentColumnName() ?? '';
@@ -202,7 +202,7 @@ class TableScraperTest extends TestCase {
 		$collectDataset = new /** @template-implements Transformer<HtmlTableScraper,CollectionSet<string>> */ class()
 		implements Transformer{
 			/** @param TableTracer<string> $tracer */
-			public function transform( mixed $element, int $position, object $tracer ): mixed {
+			public function transform( mixed $element, object $tracer ): mixed {
 				assert( $element instanceof DOMElement );
 
 				$data = $tracer->inferTableDataFrom( $element->childNodes );

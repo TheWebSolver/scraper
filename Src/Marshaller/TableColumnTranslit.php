@@ -21,12 +21,12 @@ class TableColumnTranslit implements Transformer {
 		private readonly ?array $targetColumnNames = null
 	) {}
 
-	public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
-		$content     = $this->transformer->transform( $element, $position, $tracer );
+	public function transform( string|array|DOMElement $element, object $tracer ): string {
+		$content     = $this->transformer->transform( $element, $tracer );
 		$targetNames = $this->targetColumnNames ?? $tracer->getColumnNames();
-		$currentCol  = $tracer->getCurrentColumnName();
+		$name        = $tracer->getCurrentColumnName();
 
-		if ( ! $this->shouldTranslit() || ( $currentCol && ! in_array( $currentCol, $targetNames, strict: true ) ) ) {
+		if ( ! $this->shouldTranslit() || ( $name && ! in_array( $name, $targetNames, strict: true ) ) ) {
 			return $content;
 		}
 

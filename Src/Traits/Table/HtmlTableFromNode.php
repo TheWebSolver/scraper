@@ -99,13 +99,13 @@ trait HtmlTableFromNode {
 	 * @throws InvalidSource When element list is not DOMNodeList.
 	 */
 	protected function inferTableHeadFrom( DOMNodeList $elementList ): ?array {
-		$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null;
-		$names         = $collection = array();
+		$thTransformer = $this->discoveredTable__transformers['th'] ?? null;
+		$names         = array();
 		$skippedNodes  = 0;
 
-		foreach ( $elementList as $currentIndex => $headNode ) {
-			if ( ! AssertDOMElement::isValid( $headNode, Table::Head ) ) {
-				$this->tickCurrentHeadIterationSkippedHeadNode( $headNode );
+		foreach ( $elementList as $currentIndex => $node ) {
+			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
+				$this->tickCurrentHeadIterationSkippedHeadNode( $node );
 
 				++$skippedNodes;
 
@@ -116,7 +116,7 @@ trait HtmlTableFromNode {
 
 			$this->registerCurrentIterationTableHead( $position );
 
-			$names[] = $thTransformer?->transform( $headNode, $position, $this ) ?? trim( $headNode->textContent );
+			$names[] = $thTransformer?->transform( $node, $this ) ?? trim( $node->textContent );
 		}
 
 		return $names ?: null;
@@ -176,9 +176,9 @@ trait HtmlTableFromNode {
 	}
 
 	private function captionStructureContentFrom( DOMElement $node ): ?string {
-		$transformer = $this->discoveredTable__transformers[ Table::Caption->value ] ?? null;
+		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
 
-		return $transformer?->transform( $node, 0, $this ) ?? trim( $node->textContent );
+		return $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
 	}
 
 	/** @return ?list<string> */
@@ -226,29 +226,31 @@ trait HtmlTableFromNode {
 		$position       = 0;
 
 		while ( $rowIterator->valid() ) {
-			if ( ! $row = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
+			if ( ! $node = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
 				return;
 			}
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $rowIterator, $row );
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $rowIterator, $node );
 			$headInspected = true;
 
 			if ( $isHead ) {
 				continue;
 			}
 
-			if ( ! $row = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
+			if ( ! $node = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
 				return;
 			}
 
 			// TODO: add support whether to skip yielding empty <tr> or not.
-			if ( ! trim( $row->textContent ) ) {
-				return;
+			if ( ! trim( $node->textContent ) ) {
+				$rowIterator->next();
+
+				continue;
 			}
 
 			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
 
-			$content = $rowTransformer?->transform( $row, $position, $this ) ?? $row->childNodes;
+			$content = $rowTransformer?->transform( $node, $this ) ?? $node->childNodes;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,

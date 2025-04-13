@@ -8,16 +8,16 @@ use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /**
- * @template TScopedInstance of object
+ * @template TScope of object
  * @template-covariant TTransformedValue
  */
 interface Transformer {
 	/**
 	 * Transforms given element to the generic datatype.
 	 *
-	 * @param TElement        $element Either a scraped string element, a traced DOMElement, or a
-	 *                                 parsed array from string element using Normalize helpers.
-	 * @param TScopedInstance $scope
+	 * @param TElement $element Either a scraped string element, a traced DOMElement, or a
+	 *                          parsed array from string element using Normalize helpers.
+	 * @param TScope   $scope   The scoped class instance where transformer is being used.
 	 * @return TTransformedValue
 	 *
 	 * @throws InvalidSource When given $element type is not supported by the current transformer.
@@ -25,5 +25,5 @@ interface Transformer {
 	 *
 	 * @template TElement of string|non-empty-list|DOMElement
 	 */
-	public function transform( string|array|DOMElement $element, int $position, object $scope ): mixed;
+	public function transform( string|array|DOMElement $element, object $scope ): mixed;
 }

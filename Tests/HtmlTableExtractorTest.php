@@ -176,7 +176,7 @@ class HtmlTableExtractorTest extends TestCase {
 		$domScanner   = new DOMNodeScanner();
 		$thMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
 		implements Transformer {
-			public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
+			public function transform( string|array|DOMElement $element, object $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element;
 
 				TestCase::assertIsString( $content );
@@ -187,7 +187,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 		$tdMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
 			implements Transformer {
-			public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
+			public function transform( string|array|DOMElement $element, object $tracer ): string {
 				if ( $element instanceof DOMElement ) {
 					TestCase::assertInstanceOf( DOMNodeScanner::class, $tracer );
 
@@ -389,7 +389,7 @@ class HtmlTableExtractorTest extends TestCase {
 		$tdMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
 		implements Transformer {
 			/** @param TableTracer<string> $tracer */
-			public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
+			public function transform( string|array|DOMElement $element, object $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element[3];
 
 				TestCase::assertIsString( $content );
@@ -455,13 +455,13 @@ class HtmlTableExtractorTest extends TestCase {
 		implements Transformer {
 			public function __construct( private ?Closure $asserter = null ) {}
 
-			public function transform( string|array|DOMElement $element, int $position, object $tracer ): mixed {
+			public function transform( string|array|DOMElement $element, object $tracer ): mixed {
 				// @phpstan-ignore-next-line -- Invocable & returns value based on $this->asserter.
-				return ( $this->asserter )( $element, $position, $tracer );
+				return ( $this->asserter )( $element, $tracer );
 			}
 		};
 
-		$captionAsserter = static function ( string|array|DOMElement $el, int $position, TableTracer $tracer ) {
+		$captionAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) {
 			$data = array();
 
 			// @phpstan-ignore-next-line -- Always a string if not DOMElement.
@@ -475,7 +475,7 @@ class HtmlTableExtractorTest extends TestCase {
 			return json_encode( $data );
 		};
 
-		$thAsserter = static function ( string|array|DOMElement $el, int $position, TableTracer $tracer ) {
+		$thAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) {
 			if ( ! $el instanceof DOMElement ) {
 				TestCase::assertIsString( $el );
 
@@ -485,7 +485,7 @@ class HtmlTableExtractorTest extends TestCase {
 				match ( true ) {
 					default => throw new LogicException( 'This should never be thrown. All <th>s are covered.' ),
 
-					str_starts_with( $text, 'Top' ) => self::assertKeyAndPositionInTH( $tracer, $text, $expected, $position )
+					str_starts_with( $text, 'Top' ) => self::assertKeyAndPositionInTH( $tracer, $text, $expected )
 				};
 
 				return $text;
@@ -497,15 +497,15 @@ class HtmlTableExtractorTest extends TestCase {
 			match ( true ) {
 				default => throw new LogicException( 'This should never be thrown. All <th>s are covered.' ),
 
-				str_starts_with( $text, 'Top' )    => self::assertKeyAndPositionInTH( $tracer, $text, $expected, $position ),
-				str_starts_with( $text, 'Middle' ) => self::assertKeyAndPositionInTH( $tracer, $text, $expected, $position ),
-				str_starts_with( $text, 'Last' )   => self::assertKeyAndPositionInTH( $tracer, $text, $expected, $position ),
+				str_starts_with( $text, 'Top' )    => self::assertKeyAndPositionInTH( $tracer, $text, $expected ),
+				str_starts_with( $text, 'Middle' ) => self::assertKeyAndPositionInTH( $tracer, $text, $expected ),
+				str_starts_with( $text, 'Last' )   => self::assertKeyAndPositionInTH( $tracer, $text, $expected ),
 			};
 
 			return $text;
 		};
 
-		$trAsserter = static function ( string|array|DOMElement $el, int $pos, TableTracer $tracer ) use ( $source ) {
+		$trAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) use ( $source ) {
 			self::assertNull(
 				$tracer->getCurrentIterationCountOf( Table::Head ),
 				'Head count is not accessible when inferring <tr> content.'
@@ -552,7 +552,7 @@ class HtmlTableExtractorTest extends TestCase {
 			return new ArrayObject( $result );
 		};
 
-		$tdAsserter = static function ( string|array|DOMElement $el, int $pos, TableTracer $tracer ) {
+		$tdAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) {
 			self::assertNull(
 				$tracer->getCurrentIterationCountOf( Table::Head ),
 				'Head count is not accessible when inferring <td> content.'
@@ -563,11 +563,11 @@ class HtmlTableExtractorTest extends TestCase {
 					default => throw new LogicException( 'This should never be thrown. All <td>s are covered.' ),
 
 					'td' === $el[1] && 'td' === $el[4] // top level table.
-						=> self::assertKeyAndPositionInTD( $tracer, 'Top 0', 0, $pos ),
+						=> self::assertKeyAndPositionInTD( $tracer, 'Top 0', 0 ),
 					'td' === $el[1] && 'th' === $el[4] // switches to inner table.
-						=> self::assertKeyAndPositionInTD( $tracer, 'Top 1', 1, $pos ),
+						=> self::assertKeyAndPositionInTD( $tracer, 'Top 1', 1 ),
 					'th' === $el[1] && 'th' === $el[4] // continues with inner table.
-						=> self::assertKeyAndPositionInTD( $tracer, 'Top 2', 2, $pos )
+						=> self::assertKeyAndPositionInTD( $tracer, 'Top 2', 2 )
 
 					// NOTE: second closing </tr> stops after this table head. No further tracing.
 				};
@@ -580,16 +580,16 @@ class HtmlTableExtractorTest extends TestCase {
 			match ( true ) {
 				default => throw new LogicException( 'This should never be thrown. All <td>s are covered.' ),
 
-				str_starts_with( $text, '0' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 0', 0, $pos ),
-				str_starts_with( $text, '1' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 1', 1, $pos ),
-				str_starts_with( $text, '2' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 2', 2, $pos ),
+				str_starts_with( $text, '0' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 0', 0 ),
+				str_starts_with( $text, '1' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 1', 1 ),
+				str_starts_with( $text, '2' )  => self::assertKeyAndPositionInTD( $tracer, 'Top 2', 2 ),
 
-				str_starts_with( $text, 'zero:' ) => self::assertKeyAndPositionInTD( $tracer, 'Middle 0', 0, $pos ),
-				str_starts_with( $text, 'one:' )  => self::assertKeyAndPositionInTD( $tracer, 'Middle 1', 1, $pos ),
-				str_starts_with( $text, 'two:' )  => self::assertKeyAndPositionInTD( $tracer, 'Middle 2', 2, $pos ),
+				str_starts_with( $text, 'zero:' ) => self::assertKeyAndPositionInTD( $tracer, 'Middle 0', 0 ),
+				str_starts_with( $text, 'one:' )  => self::assertKeyAndPositionInTD( $tracer, 'Middle 1', 1 ),
+				str_starts_with( $text, 'two:' )  => self::assertKeyAndPositionInTD( $tracer, 'Middle 2', 2 ),
 
-				str_starts_with( $text, 'O=' ) => self::assertKeyAndPositionInTD( $tracer, 'Last 0', 0, $pos ),
-				str_starts_with( $text, 'I=' ) => self::assertKeyAndPositionInTD( $tracer, 'Last 1', 1, $pos ),
+				str_starts_with( $text, 'O=' ) => self::assertKeyAndPositionInTD( $tracer, 'Last 0', 0 ),
+				str_starts_with( $text, 'I=' ) => self::assertKeyAndPositionInTD( $tracer, 'Last 1', 1 ),
 			};
 
 			return $text;
@@ -615,10 +615,8 @@ class HtmlTableExtractorTest extends TestCase {
 		TableTracer $tracer,
 		string $headContent,
 		int $expectedPosition,
-		int $actualPosition
 	): void {
-		self::assertTrue( str_ends_with( $headContent, (string) $actualPosition ) );
-		self::assertSame( $expectedPosition, $actualPosition );
+		self::assertTrue( str_ends_with( $headContent, (string) $expectedPosition ) );
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Head ) );
 	}
 
@@ -627,10 +625,8 @@ class HtmlTableExtractorTest extends TestCase {
 		TableTracer $tracer,
 		string $key,
 		int $expectedPosition,
-		int $actualPosition
 	): void {
 		self::assertSame( $key, $tracer->getCurrentColumnName() );
-		self::assertSame( $expectedPosition, $actualPosition );
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Column ) );
 	}
 

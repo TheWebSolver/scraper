@@ -13,7 +13,7 @@ class TableColumnMarshaller implements Transformer {
 	/** @param list<string> $collectable Subset of column names to be collected. */
 	public function __construct( private readonly array $collectable = array() ) {}
 
-	public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
+	public function transform( string|array|DOMElement $element, object $tracer ): string {
 		return ! $this->columnNameExistsInCollectable( $tracer ) ? '' : trim(
 			match ( true ) {
 				$element instanceof DOMElement => $element->textContent,

@@ -238,7 +238,7 @@ trait TableExtractor {
 	): mixed {
 		$count    = $this->getCurrentIterationCountOf( Table::Column );
 		$position = $count ? $count - 1 : 0;
-		$value    = $transformer->transform( $element, $position, $this );
+		$value    = $transformer->transform( $element, $this );
 
 		return ( ! is_null( $value ) && '' !== $value )
 			? ( $data[ $this->getCurrentColumnName() ?? $position ] = $value )

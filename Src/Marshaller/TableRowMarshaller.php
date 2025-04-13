@@ -20,7 +20,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
  * @template-implements Transformer<TableTracer<TColumnReturn>,CollectionSet<TColumnReturn>>
  */
 class TableRowMarshaller implements Transformer {
-	private const TR_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
+	private const TABLE_ROW_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
 
 	/**
 	 * @param string  $invalidCountMsg The exception msg when table column names count does not match with inferred data
@@ -30,8 +30,10 @@ class TableRowMarshaller implements Transformer {
 	 */
 	public function __construct( private string $invalidCountMsg = '', private ?string $indexKey = null ) {}
 
-	public function transform( string|array|DOMElement $element, int $position, object $tracer ): CollectionSet {
-		$set = $tracer->inferTableDataFrom( self::validate( $element ) );
+	public function transform( string|array|DOMElement $element, object $tracer ): CollectionSet {
+		$set      = $tracer->inferTableDataFrom( self::validate( $element ) );
+		$count    = $tracer->getCurrentIterationCountOf( Table::Column );
+		$position = $count ? $count - 1 : 0;
 
 		$this->invalidCountMsg && $this->validateColumnNamesCount( $tracer, defaultCount: count( $set ) );
 
@@ -58,7 +60,7 @@ class TableRowMarshaller implements Transformer {
 			$type = 'array';
 		}
 
-		return $el ?? throw new InvalidSource( sprintf( self::TR_NOT_FOUND, $type ) ); // @phpstan-ignore-line
+		return $el ?? throw new InvalidSource( sprintf( self::TABLE_ROW_NOT_FOUND, $type ) );
 	}
 
 	/** @param TColumnReturn[] $dataset */

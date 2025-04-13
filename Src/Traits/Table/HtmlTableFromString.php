@@ -111,7 +111,7 @@ trait HtmlTableFromString {
 
 			$this->registerCurrentIterationTableHead( $position );
 
-			$names[] = $thTransformer?->transform( $node, $position, $this ) ?? trim( $content );
+			$names[] = $thTransformer?->transform( $node, $this ) ?? trim( $content );
 		}
 
 		return $names ?: null;
@@ -121,7 +121,7 @@ trait HtmlTableFromString {
 		$matched     = preg_match( '/<caption(.*?)>(.*?)<\/caption>/', subject: $content, matches: $caption );
 		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
 
-		return $matched && ! empty( $caption[2] ) ? $transformer?->transform( $caption[0], 0, $this ) : null;
+		return $matched && ! empty( $caption[2] ) ? $transformer?->transform( $caption[0], $this ) : null;
 	}
 
 	/** @return ?list<string> */
@@ -232,7 +232,7 @@ trait HtmlTableFromString {
 
 			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
 
-			$content = $rowTransformer?->transform( $tableColumns, $position, $this ) ?? $tableColumns;
+			$content = $rowTransformer?->transform( $tableColumns, $this ) ?? $tableColumns;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,
