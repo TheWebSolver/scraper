@@ -99,22 +99,21 @@ class TableScraperTest extends TestCase {
 			sprintf( KeyMapper::INVALID_COUNT, 3, 'name", "title", "address' )
 		);
 
-		$this->scraper->addTransformer( Table::Row, $tr )->parse( $table )->current(); // @phpstan-ignore-line
+		// @phpstan-ignore-next-line -- Ignore $tr generic type.
+		$this->scraper->addTransformer( Table::Row, $tr )->parse( $table )->current();
 	}
 
 	#[Test]
 	public function itTranslitAndCollectOnlySubsetOfColumnProvided(): void {
 		$scraper = new AccentedCharScraper();
-		$title   = htmlentities( 'Develôper' );
-		$address = htmlentities( 'Curaçao' );
-		$table   = "
+		$table   = '
 			<table>
 				<caption></caption>
 				<tbody>
-					<tr><td>Valid Name</td><td>{$title}</td><td>{$address}</td></tr>
+					<tr><td>Valid Name</td><td>Develôper</td><td>Curaçao</td></tr>
 				</tbody>
 			</table>
-		";
+		';
 
 		$this->assertSame(
 			array(
@@ -175,7 +174,8 @@ class TableScraperTest extends TestCase {
 			/** @param string[] $requestedKeys */
 			public function __construct( private array $requestedKeys ) {}
 
-			public function transform( string|DOMElement $element, int $position, object $tracer ): mixed {
+			public function transform( mixed $element, int $position, object $tracer ): mixed {
+				// @phpstan-ignore-next-line -- $textContent is not null.
 				$content    = trim( is_string( $element ) ? $element : $element->textContent );
 				$columnName = $tracer->getCurrentColumnName() ?? '';
 				$value      = in_array( $columnName, $this->requestedKeys, true ) ? $content : '';
@@ -202,7 +202,7 @@ class TableScraperTest extends TestCase {
 		$collectDataset = new /** @template-implements Transformer<HtmlTableScraper,CollectionSet<string>> */ class()
 		implements Transformer{
 			/** @param TableTracer<string> $tracer */
-			public function transform( string|DOMElement $element, int $position, object $tracer ): mixed {
+			public function transform( mixed $element, int $position, object $tracer ): mixed {
 				assert( $element instanceof DOMElement );
 
 				$data = $tracer->inferTableDataFrom( $element->childNodes );

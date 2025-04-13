@@ -226,12 +226,13 @@ trait TableExtractor {
 	}
 
 	/**
-	 * @param Transformer<static,TColumnReturn> $transformer
-	 * @param array<array-key,TColumnReturn>    $data
+	 * @param string|array{0:string,1:string,2:string,3:string,4:string}|DOMElement $element
+	 * @param Transformer<static,TColumnReturn>                                     $transformer
+	 * @param array<array-key,TColumnReturn>                                        $data
 	 * @return ?TColumnReturn
 	 */
 	private function registerCurrentTableColumn(
-		string|DOMElement $element,
+		string|array|DOMElement $element,
 		Transformer $transformer,
 		array &$data
 	): mixed {

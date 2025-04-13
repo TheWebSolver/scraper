@@ -53,7 +53,7 @@ trait HtmlTableFromString {
 	/**
 	 * Accepts either internally extracted row as array, or from transformer as DOMNode (or string expected).
 	 *
-	 * @param iterable<array-key,string|DOMNode|array{0:string,1:string,2:string,3:string}> $elementList
+	 * @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList
 	 */
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data = array();
@@ -68,9 +68,6 @@ trait HtmlTableFromString {
 			}
 
 			$currentPosition = $currentIndex - $skippedNodes;
-			$content         = $column instanceof DOMNode
-				? $column->textContent
-				: ( is_string( $column ) ? $column : $column[3] ); // REVIEW: Transformer may never return string.
 
 			if ( false !== ( $offset[ $currentPosition ] ?? false ) ) {
 				continue;
@@ -82,8 +79,9 @@ trait HtmlTableFromString {
 
 			$this->registerCurrentIterationTableColumn( $keys[ $currentPosition ] ?? null, $currentPosition + 1 );
 
+			// Value of $column depends on row transformer return. Default is normalized array.
 			// Nested table structure discovery is not supported.
-			$this->registerCurrentTableColumn( $content, $transformer, $data );
+			$this->registerCurrentTableColumn( $column, $transformer, $data );
 
 			unset( $this->currentIteration__columnName );
 		}//end foreach
@@ -92,7 +90,7 @@ trait HtmlTableFromString {
 	}
 
 	/**
-	 * @param iterable<array-key,array{0:string,1:string,2:string,3:string}> $elementList
+	 * @param iterable<array-key,array{0:string,1:string,2:string,3:string,4:string}> $elementList
 	 * @return ?list<string>
 	 */
 	protected function inferTableHeadFrom( iterable $elementList ): ?array {
@@ -134,13 +132,13 @@ trait HtmlTableFromString {
 			return null;
 		}
 
-		[$rowsFound, $tableRows] = $this->extractTableRowsFrom( $thead[2] );
+		[$rowsFound, $tableRows] = Normalize::tableRowsFrom( $thead[2] );
 
 		if ( ! $rowsFound || empty( $tableRows ) || ! $firstRow = reset( $tableRows ) ) {
 			return null;
 		}
 
-		[$columnsFound, $tableColumns] = $this->extractTableColumnFrom( $firstRow[2] );
+		[$columnsFound, $tableColumns] = Normalize::tableColumnsFrom( $firstRow[2] );
 
 		return $columnsFound ? $this->inferTableHeadFrom( $tableColumns ) : null;
 	}
@@ -154,7 +152,7 @@ trait HtmlTableFromString {
 			return null;
 		}
 
-		[$rowFound, $tableRows] = $this->extractTableRowsFrom( $tbody[2] );
+		[$rowFound, $tableRows] = Normalize::tableRowsFrom( $tbody[2] );
 
 		if ( ! $rowFound || empty( $tableRows ) ) {
 			return null;
@@ -204,30 +202,6 @@ trait HtmlTableFromString {
 		return array( $table, $body, $traceCaption, $traceHead );
 	}
 
-	/** @return array{0:int|false,1:list<array{0:string,1:string,2:string}>} */
-	private function extractTableRowsFrom( string $string ): array {
-		$matched = preg_match_all(
-			pattern: '/<tr(.*?)>(.*?)<\/tr>/',
-			subject: $string,
-			matches: $tableRows,
-			flags: PREG_SET_ORDER
-		);
-
-		return array( $matched, $tableRows );
-	}
-
-	/** @return array{0:int|false,1:list<array{0:string,1:string,2:string,3:string,4:string}>} */
-	private function extractTableColumnFrom( string $string ): array {
-		$matched = preg_match_all(
-			pattern: '/<(th|td)(.*?)>(.*?)<\/(th|td)>/',
-			subject: $string,
-			matches: $tableColumns,
-			flags: PREG_SET_ORDER
-		);
-
-		return array( $matched, $tableColumns );
-	}
-
 	/**
 	 * @param ?list<string>                           $head
 	 * @param list<array{0:string,1:string,2:string}> $body
@@ -241,7 +215,7 @@ trait HtmlTableFromString {
 
 		while ( $iterator->valid() ) {
 			[$node, $attribute, $content]  = $iterator->current();
-			[$columnsFound, $tableColumns] = $this->extractTableColumnFrom( $content );
+			[$columnsFound, $tableColumns] = Normalize::tableColumnsFrom( $content );
 
 			if ( ! $columnsFound || empty( $tableColumns ) ) {
 				$iterator->next();
@@ -258,7 +232,7 @@ trait HtmlTableFromString {
 
 			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
 
-			$content = $rowTransformer?->transform( $node, $position, $this ) ?? $tableColumns;
+			$content = $rowTransformer?->transform( $tableColumns, $position, $this ) ?? $tableColumns;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,
@@ -273,8 +247,8 @@ trait HtmlTableFromString {
 	}
 
 	/**
-	 * @param ?list<string>                                $head
-	 * @param array{0:string,1:string,2:string,3:string}[] $row
+	 * @param ?list<string>                                         $head
+	 * @param array{0:string,1:string,2:string,3:string,4:string}[] $row
 	 */
 	private function inspectFirstRowForHeadStructure( ?array &$head, Iterator $iterator, array $row ): bool {
 		$firstRowContent = $this->inferTableHeadFrom( $row );

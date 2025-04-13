@@ -21,7 +21,7 @@ class TableColumnTranslit implements Transformer {
 		private readonly ?array $targetColumnNames = null
 	) {}
 
-	public function transform( string|DOMElement $element, int $position, object $tracer ): string {
+	public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
 		$content     = $this->transformer->transform( $element, $position, $tracer );
 		$targetNames = $this->targetColumnNames ?? $tracer->getColumnNames();
 		$currentCol  = $tracer->getCurrentColumnName();

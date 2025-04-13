@@ -3,10 +3,12 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 
+use DOMNode;
 use DOMElement;
 use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
+use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
@@ -28,25 +30,35 @@ class TableRowMarshaller implements Transformer {
 	 */
 	public function __construct( private string $invalidCountMsg = '', private ?string $indexKey = null ) {}
 
-	public function transform( string|DOMElement $element, int $position, object $tracer ): CollectionSet {
-		$set = $tracer->inferTableDataFrom( self::validate( $element )->childNodes );
+	public function transform( string|array|DOMElement $element, int $position, object $tracer ): CollectionSet {
+		$set = $tracer->inferTableDataFrom( self::validate( $element ) );
 
 		$this->invalidCountMsg && $this->validateColumnNamesCount( $tracer, defaultCount: count( $set ) );
 
 		return new CollectionSet( $this->discoverIndexKeyFrom( $set ) ?? $position, new ArrayObject( $set ) );
 	}
 
-	/** @throws InvalidSource When given $element is not <tr> or does not have child nodes. */
-	public static function validate( string|DOMElement $element ): DOMElement {
-		if ( ! $element instanceof DOMElement ) {
-			$el   = AssertDOMElement::inferredFrom( $element, Table::Row, normalize: false );
-			$type = 'string';
+	/**
+	 * @param string|mixed[]|DOMElement $element
+	 * @return iterable<int,DOMNode|list<array{0:string,1:string,2:string,3:string,4:string}>>
+	 * @throws InvalidSource When given $element is not <tr> or does not have child nodes.
+	 */
+	public static function validate( string|array|DOMElement $element ): iterable {
+		$tr = Table::Row->value;
+
+		if ( is_string( $element ) ) {
+			[$matched, $columns] = Normalize::tableColumnsFrom( $element );
+			$el                  = $matched ? $columns : null;
+			$type                = 'string';
+		} elseif ( $element instanceof DOMElement ) {
+			$el   = AssertDOMElement::isValid( $element, $tr ) ? $element->childNodes->getIterator() : null;
+			$type = "<{$element->tagName}> DOMElement";
 		} else {
-			$el   = AssertDOMElement::isValid( $element, Table::Row ) ? $element : null;
-			$type = "<{$element->tagName}> element";
+			$el   = $element;
+			$type = 'array';
 		}
 
-		return $el ?? throw new InvalidSource( sprintf( self::TR_NOT_FOUND, $type ) );
+		return $el ?? throw new InvalidSource( sprintf( self::TR_NOT_FOUND, $type ) ); // @phpstan-ignore-line
 	}
 
 	/** @param TColumnReturn[] $dataset */

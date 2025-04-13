@@ -15,6 +15,14 @@ parameters:
 			path: Src/Traits/Table/HtmlTableFromNode.php
 			identifier: return.type
 			message: '#^Method .*?::getChildNodesIteratorFrom\(\) should return Iterator\<int, DOMNode\> but returns Traversable\<int, DOMNode\>.$#'
+		-
+			path: Src/Traits/Table/HtmlTableFromString.php
+			identifier: argument.type
+			messages:
+				# Ignore row transformer return. Either returns CollectionSet, ArrayObject, or normalized array.
+				- '#^Parameter \#1 \$elementList of method .*?\:\:inferTableDataFrom\(\) expects iterable\<\(int\|string\), array\{string, string, string, string, string\}\|DOMNode\>, iterable\<int, DOMNode\|string\>\|non\-empty\-list\<array\{string, string, string, string, string\}\> given\.$#'
+				# $element is a valid DOMElement. PHPStan cannot narrow down type from TableExtractor::isTableColumnStructure().
+				- '#^Parameter \#1 \$element of method .*?:\:registerCurrentTableColumn\(\) expects array\{string, string, string, string, string\}\|DOMElement\|string, array\{string, string, string, string, string\}\|DOMNode given\.$#'
 		- # Ignore already checked collection source being nullable.
 			path: Src/SingleTableScraper.php
 			identifier: property.nonObject

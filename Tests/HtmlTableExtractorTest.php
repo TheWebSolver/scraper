@@ -130,7 +130,8 @@ class HtmlTableExtractorTest extends TestCase {
 
 			$tr = new TableRowMarshaller( 'Should Not Throw exception' );
 
-			$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $source ); // @phpstan-ignore-line
+			// @phpstan-ignore-next-line -- Ignore $tr generic type.
+			$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $source );
 
 			$this->assertSame(
 				$expected,
@@ -175,8 +176,10 @@ class HtmlTableExtractorTest extends TestCase {
 		$domScanner   = new DOMNodeScanner();
 		$thMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
 		implements Transformer {
-			public function transform( string|DOMElement $element, int $position, object $tracer ): string {
+			public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
 				$content = $element instanceof DOMElement ? $element->textContent : $element;
+
+				TestCase::assertIsString( $content );
 
 				return explode( '[', strip_tags( html_entity_decode( $content ) ) )[0];
 			}
@@ -184,15 +187,16 @@ class HtmlTableExtractorTest extends TestCase {
 
 		$tdMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
 			implements Transformer {
-			public function transform( string|DOMElement $element, int $position, object $tracer ): string {
+			public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
 				if ( $element instanceof DOMElement ) {
 					TestCase::assertInstanceOf( DOMNodeScanner::class, $tracer );
 
 					$content = $element->textContent;
 				} else {
 					TestCase::assertInstanceOf( DOMStringScanner::class, $tracer );
+					TestCase::assertIsString( $content = $element[3] );
 
-					$content = strip_tags( $element );
+					$content = strip_tags( $content );
 				}
 
 				return trim( $content );
@@ -385,8 +389,10 @@ class HtmlTableExtractorTest extends TestCase {
 		$tdMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
 		implements Transformer {
 			/** @param TableTracer<string> $tracer */
-			public function transform( string|DOMElement $element, int $position, object $tracer ): string {
-				$content = $element instanceof DOMElement ? $element->textContent : $element;
+			public function transform( string|array|DOMElement $element, int $position, object $tracer ): string {
+				$content = $element instanceof DOMElement ? $element->textContent : $element[3];
+
+				TestCase::assertIsString( $content );
 
 				return str_contains( $content, 'Two' ) ? '' : $content;
 			}
@@ -449,13 +455,16 @@ class HtmlTableExtractorTest extends TestCase {
 		implements Transformer {
 			public function __construct( private ?Closure $asserter = null ) {}
 
-			public function transform( string|DOMElement $element, int $position, object $tracer ): mixed {
-				return ( $this->asserter )( $element, $position, $tracer ); // @phpstan-ignore-line
+			public function transform( string|array|DOMElement $element, int $position, object $tracer ): mixed {
+				// @phpstan-ignore-next-line -- Invocable & returns value based on $this->asserter.
+				return ( $this->asserter )( $element, $position, $tracer );
 			}
 		};
 
-		$captionAsserter = static function ( string|DOMElement $el, int $position, TableTracer $tracer ) {
+		$captionAsserter = static function ( string|array|DOMElement $el, int $position, TableTracer $tracer ) {
 			$data = array();
+
+			// @phpstan-ignore-next-line -- Always a string if not DOMElement.
 			$el   = $el instanceof DOMElement ? $el : DOMDocumentFactory::bodyFromHtml( $el, false )->firstChild;
 			$list = $el?->childNodes;
 
@@ -466,11 +475,11 @@ class HtmlTableExtractorTest extends TestCase {
 			return json_encode( $data );
 		};
 
-		$thAsserter = static function ( string|DOMElement $el, int $position, TableTracer $tracer ) {
-			$text = trim( $el instanceof DOMElement ? $el->textContent : $el );
-
+		$thAsserter = static function ( string|array|DOMElement $el, int $position, TableTracer $tracer ) {
 			if ( ! $el instanceof DOMElement ) {
-				$text     = strip_tags( $el );
+				TestCase::assertIsString( $el );
+
+				$text     = trim( strip_tags( $el ) );
 				$expected = (int) substr( $text, -1 );
 
 				match ( true ) {
@@ -482,6 +491,7 @@ class HtmlTableExtractorTest extends TestCase {
 				return $text;
 			}
 
+			$text     = trim( $el->textContent );
 			$expected = (int) substr( $text, -1 );
 
 			match ( true ) {
@@ -495,7 +505,7 @@ class HtmlTableExtractorTest extends TestCase {
 			return $text;
 		};
 
-		$trAsserter = static function ( string|DOMElement $el, int $pos, TableTracer $tracer ) use ( $source ) {
+		$trAsserter = static function ( string|array|DOMElement $el, int $pos, TableTracer $tracer ) use ( $source ) {
 			self::assertNull(
 				$tracer->getCurrentIterationCountOf( Table::Head ),
 				'Head count is not accessible when inferring <tr> content.'
@@ -508,11 +518,11 @@ class HtmlTableExtractorTest extends TestCase {
 					'64-bit hash is set as Table ID when using ' . HtmlTableFromString::class
 				);
 
-				// @phpstan-ignore-next-line
-				$result = $tracer->inferTableDataFrom( AssertDOMElement::inferredFrom( $el, Table::Row )->childNodes );
+				// @phpstan-ignore-next-line -- Always array if not DOMElement.
+				$result = $tracer->inferTableDataFrom( $el );
 
 				self::assertSame(
-					2,
+					3,
 					$tracer->getCurrentIterationCountOf( Table::Column ),
 					'Only discovers <tr> upto nested table. No negative look-head support.'
 				);
@@ -542,7 +552,7 @@ class HtmlTableExtractorTest extends TestCase {
 			return new ArrayObject( $result );
 		};
 
-		$tdAsserter = static function ( string|DOMElement $el, int $pos, TableTracer $tracer ) {
+		$tdAsserter = static function ( string|array|DOMElement $el, int $pos, TableTracer $tracer ) {
 			self::assertNull(
 				$tracer->getCurrentIterationCountOf( Table::Head ),
 				'Head count is not accessible when inferring <td> content.'
@@ -552,10 +562,14 @@ class HtmlTableExtractorTest extends TestCase {
 				match ( true ) {
 					default => throw new LogicException( 'This should never be thrown. All <td>s are covered.' ),
 
-					str_starts_with( $el, '0' ) => self::assertKeyAndPositionInTD( $tracer, 'Top 0', 0, $pos ),
-					str_starts_with( $el, '1' ) => self::assertKeyAndPositionInTD( $tracer, 'Top 1', 1, $pos ),
+					'td' === $el[1] && 'td' === $el[4] // top level table.
+						=> self::assertKeyAndPositionInTD( $tracer, 'Top 0', 0, $pos ),
+					'td' === $el[1] && 'th' === $el[4] // switches to inner table.
+						=> self::assertKeyAndPositionInTD( $tracer, 'Top 1', 1, $pos ),
+					'th' === $el[1] && 'th' === $el[4] // continues with inner table.
+						=> self::assertKeyAndPositionInTD( $tracer, 'Top 2', 2, $pos )
 
-					// NOTE: "Top 2" never gets discovered as DOMStringScanner only matches upto first <tr> of nested table.
+					// NOTE: second closing </tr> stops after this table head. No further tracing.
 				};
 
 				return $el;

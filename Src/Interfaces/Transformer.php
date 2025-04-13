@@ -15,10 +15,15 @@ interface Transformer {
 	/**
 	 * Transforms given element to the generic datatype.
 	 *
+	 * @param TElement        $element Either a scraped string element, a traced DOMElement, or a
+	 *                                 parsed array from string element using Normalize helpers.
 	 * @param TScopedInstance $scope
 	 * @return TTransformedValue
-	 * @throws InvalidSource When $element is string and cannot be inferred to DOMElement.
-	 * @throws ScraperError When cannot validate transformed data.
+	 *
+	 * @throws InvalidSource When given $element type is not supported by the current transformer.
+	 * @throws ScraperError  When cannot validate transformed data.
+	 *
+	 * @template TElement of string|non-empty-list|DOMElement
 	 */
-	public function transform( string|DOMElement $element, int $position, object $scope ): mixed;
+	public function transform( string|array|DOMElement $element, int $position, object $scope ): mixed;
 }

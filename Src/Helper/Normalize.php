@@ -72,4 +72,44 @@ class Normalize {
 
 		return array( $collectList, $skipList, $lastSkipped );
 	}
+
+	/**
+	 * Returns array with first index as matched or not and second index contains extracted list.
+	 *
+	 * @return array{0:int|false,1:list<array{0:string,1:string,2:string}>} List Contains:
+	 * - **0:** The `$string` itself
+	 * - **1:** The attribute part
+	 * - **2:** The content part
+	 */
+	public static function tableRowsFrom( string $string ): array {
+		$matched = preg_match_all(
+			pattern: '/<tr(.*?)>(.*?)<\/tr>/',
+			subject: $string,
+			matches: $tableRows,
+			flags: PREG_SET_ORDER
+		);
+
+		return array( $matched, $tableRows );
+	}
+
+	/**
+	 * Returns array with first index as matched or not and second index contains extracted list.
+	 *
+	 * @return array{0:int|false,1:list<array{0:string,1:string,2:string,3:string,4:string}>} List contains:
+	 * - **0:** The `$string` itself
+	 * - **1:** Opening `td` or `th`
+	 * - **2:** The attribute part
+	 * - **3:** The content part
+	 * - **4:** Closing `td` or `th`
+	 */
+	public static function tableColumnsFrom( string $string ): array {
+		$matched = preg_match_all(
+			pattern: '/<(th|td)(.*?)>(.*?)<\/(th|td)>/',
+			subject: $string,
+			matches: $tableColumns,
+			flags: PREG_SET_ORDER
+		);
+
+		return array( $matched, $tableColumns );
+	}
 }
