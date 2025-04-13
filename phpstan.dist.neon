@@ -30,7 +30,7 @@ parameters:
 			message: '#^Cannot access property $items on .*?CollectFrom|null.$#'
 		- # Ignore default transformers used.
 			path: Src/AccentedSingleTableScraper.php
-			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\} but returns array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableRowMarshaller\<mixed\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableColumnMarshaller\|.*?TableColumnTranslit\}\.$#'
+			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\} but returns array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableRowMarshaller\<mixed\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableColumnMarshaller\|.*?TableColumnTranslit\}\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/TableRowMarshaller.php
 			identifier: return.type

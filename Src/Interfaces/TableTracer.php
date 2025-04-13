@@ -28,7 +28,7 @@ interface TableTracer {
 	/**
 	 * Registers transformers for targeted table structure.
 	 *
-	 * @param Transformer<static,TReturn> $transformer
+	 * @param Transformer<contravariant static,TReturn> $transformer
 	 * @template TReturn
 	 */
 	public function addTransformer( Table $for, Transformer $transformer ): static;

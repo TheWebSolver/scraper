@@ -31,8 +31,8 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	 * If transformers not injected via constructor, then defaults are used.
 	 * They only support collecting transformed `TColumnReturn` as a "string".
 	 *
-	 * @param ?Transformer<static,TColumnReturn> $validateRow    Uses `TableRowMarshaller` if not provided.
-	 * @param ?Transformer<static,TColumnReturn> $translitColumn Uses `TableColumnTranslit` if not provided.
+	 * @param ?Transformer<contravariant static,TColumnReturn> $validateRow    Uses `TableRowMarshaller` if not provided.
+	 * @param ?Transformer<contravariant static,TColumnReturn> $translitColumn Uses `TableColumnTranslit` if not provided.
 	 * @no-named-arguments
 	 */
 	public function __construct(
@@ -55,7 +55,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		return $this->addTransformer( TableEnum::Row, $row )->addTransformer( TableEnum::Column, $column );
 	}
 
-	/** @return array{0:Transformer<static,TColumnReturn>,1:Transformer<static,TColumnReturn>} */
+	/** @return array{0:Transformer<contravariant static,TColumnReturn>,1:Transformer<contravariant static,TColumnReturn>} */
 	protected function getInjectedOrDefaultTransformers(): array {
 		$invalidCount = $this->getScraperSource()->name . ' ' . KeyMapper::INVALID_COUNT;
 
