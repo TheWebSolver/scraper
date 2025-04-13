@@ -17,10 +17,10 @@ use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\AccentedSingleTableScraper;
-use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromString;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
+use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromNode;
+use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
 class TableScraperTest extends TestCase {
 	private HtmlTableScraper $scraper;

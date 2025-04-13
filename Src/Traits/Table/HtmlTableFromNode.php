@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\Scraper\Traits;
+namespace TheWebSolver\Codegarage\Scraper\Traits\Table;
 
 use DOMNode;
 use Iterator;

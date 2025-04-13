@@ -7,21 +7,20 @@ use Closure;
 use DOMNode;
 use DOMElement;
 use ArrayObject;
-use DOMNodeList;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
+use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
-use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromNode;
-use TheWebSolver\Codegarage\Scraper\Traits\HtmlTableFromString;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
+use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromNode;
+use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
 class HtmlTableExtractorTest extends TestCase {
 	final public const TABLE_SOURCE = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR . 'table.html';

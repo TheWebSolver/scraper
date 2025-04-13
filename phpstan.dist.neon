@@ -12,7 +12,7 @@ parameters:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
 				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array\<int, string\>, array\<int, int\>, int\|null, int, .*?Transformer\<.*?, string\>\} but returns array\{array\<int, string\>, array\<int, int\>, int\|null, 0, .*?Transformer\<.*?, string\>\|.*?TableColumnMarshaller\}\.$#'
 		- # Ignore DOMNodeList->getIterator() not being Iterator.
-			path: Src/Traits/HtmlTableFromNode.php
+			path: Src/Traits/Table/HtmlTableFromNode.php
 			identifier: return.type
 			message: '#^Method .*?::getChildNodesIteratorFrom\(\) should return Iterator\<int, DOMNode\> but returns Traversable\<int, DOMNode\>.$#'
 		- # Ignore already checked collection source being nullable.
