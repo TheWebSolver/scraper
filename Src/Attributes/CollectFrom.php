@@ -15,6 +15,7 @@ final readonly class CollectFrom {
 	 * @param class-string<BackedEnum> $enumClass The BackedEnum classname whose cases will be used as mappable keys.
 	 * @param string|BackedEnum        ...$only   If only subset of mappable keys is required and passed as arg to
 	 *                                            this param, only these keys will be used. Passed order matters.
+	 * @no-named-arguments
 	 */
 	public function __construct( public string $enumClass, string|BackedEnum ...$only ) {
 		$this->items = array_map( self::collect( ... ), $only ?: $enumClass::cases() );

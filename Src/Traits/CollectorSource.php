@@ -51,7 +51,10 @@ trait CollectorSource {
 		return $this;
 	}
 
-	/** @param class-string<BackedEnum> $enumClass */
+	/**
+	 * @param class-string<BackedEnum> $enumClass
+	 * @no-named-arguments
+	 */
 	protected function collectFromMappable( string $enumClass, string|BackedEnum ...$only ): CollectFrom {
 		return $this->collectionSource = new CollectFrom( $enumClass, ...$only );
 	}
