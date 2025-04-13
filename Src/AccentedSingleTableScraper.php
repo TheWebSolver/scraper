@@ -58,10 +58,13 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	/** @return array{0:Transformer<static,TColumnReturn>,1:Transformer<static,TColumnReturn>} */
 	protected function getInjectedOrDefaultTransformers(): array {
 		$invalidCount = $this->getScraperSource()->name . ' ' . KeyMapper::INVALID_COUNT;
-		$column       = $this->translitColumn ?? new TableColumnMarshaller( $this->useCollectedKeys() );
 
-		! empty( $this->transliterationColumnNames )
-			&& ( $column = new TableColumnTranslit( $column, $this, $this->transliterationColumnNames ) );
+		if ( ! $column = $this->translitColumn ) {
+			$column = new TableColumnMarshaller( $this->useCollectedKeys() );
+
+			! empty( $this->transliterationColumnNames )
+				&& ( $column = new TableColumnTranslit( $column, $this, $this->transliterationColumnNames ) );
+		}
 
 		return array(
 			$this->validateRow ?? new TableRowMarshaller( $invalidCount, $this->getIndexKey() ),

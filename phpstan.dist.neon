@@ -6,11 +6,11 @@ parameters:
 		- Src/
 		- Tests/
 	ignoreErrors:
-		- # Ignore transformers keyed by value of Table enum.
+		-
 			path: Src/Traits/Table/TableExtractor.php
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
-				- '|::useCurrentTableColumnDetails\(\) should return array|'
+				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array\<int, string\>, array\<int, int\>, int\|null, int, .*?Transformer\<.*?, string\>\} but returns array\{array\<int, string\>, array\<int, int\>, int\|null, 0, .*?Transformer\<.*?, string\>\|.*?TableColumnMarshaller\}\.$#'
 		- # Ignore DOMNodeList->getIterator() not being Iterator.
 			path: Src/Traits/HtmlTableFromNode.php
 			identifier: return.type
@@ -21,6 +21,4 @@ parameters:
 			message: '#^Property .*?CollectFrom::\$items \(list<string>\) does not accept array<int\|string, string>.$#'
 		- # Ignore default transformers used.
 			path: Src/AccentedSingleTableScraper.php
-			messages:
-				- '|TableColumnTranslit constructor expects|'
-				- '|AccentedSingleTableScraper::getInjectedOrDefaultTransformers\(\) should return array|'
+			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\} but returns array\{.*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableRowMarshaller\<mixed\>, .*?Transformer\<static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableColumnMarshaller\|.*?TableColumnTranslit\}\.$#'
