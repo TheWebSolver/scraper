@@ -22,8 +22,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\SingleTableScraperWithAccent;
 abstract class AccentedSingleTableScraper extends SingleTableScraper implements SingleTableScraperWithAccent {
 	use Diacritic;
 
-	/** @var list<string> */
-	protected array $transliterationColumnNames = array();
+	/** @var non-empty-list<string|int> */
+	protected array $transliterationColumnNames;
 
 	/**
 	 * Accepts transformers to validate and translit columns.
@@ -31,23 +31,26 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	 * If transformers not injected via constructor, then defaults are used.
 	 * They only support collecting transformed `TColumnReturn` as a "string".
 	 *
-	 * @param ?Transformer<contravariant static,TColumnReturn> $validateRow    Uses `TableRowMarshaller` if not provided.
-	 * @param ?Transformer<contravariant static,TColumnReturn> $translitColumn Uses `TableColumnTranslit` if not provided.
+	 * @param ?Transformer<contravariant static,TColumnReturn> $rowTransformer    Uses `TableRowMarshaller` if not provided.
+	 * @param ?Transformer<contravariant static,TColumnReturn> $columnTransformer Uses `TableColumnTranslit` if not provided.
 	 * @no-named-arguments
 	 */
 	public function __construct(
-		private ?Transformer $validateRow = null,
-		private ?Transformer $translitColumn = null,
-		string ...$transliterationColumnNames
+		private ?Transformer $rowTransformer = null,
+		private ?Transformer $columnTransformer = null,
+		string|int ...$transliterationColumns
 	) {
-		// Prevents override when transliteration column names are set to property by inheriting class.
-		empty( $transliterationColumnNames ) || $this->transliterationColumnNames = $transliterationColumnNames;
+		empty( $transliterationColumns ) || $this->transliterationColumnNames = $transliterationColumns;
 
 		parent::__construct();
 	}
 
 	public function parse( string $content ): Iterator {
 		yield from $this->withInjectedOrDefaultTransformers()->currentTableIterator( $content );
+	}
+
+	public function columnsWithAccentedCharacters(): array {
+		return $this->transliterationColumnNames ?? array();
 	}
 
 	protected function withInjectedOrDefaultTransformers(): static {
@@ -60,16 +63,18 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	protected function getInjectedOrDefaultTransformers(): array {
 		$invalidCount = $this->getScraperSource()->name . ' ' . KeyMapper::INVALID_COUNT;
 
-		if ( ! $column = $this->translitColumn ) {
-			$column = new TableColumnMarshaller( $this->useCollectedKeys() );
+		if ( ! $columnTransformer = $this->columnTransformer ) {
+			$this->useCollectedKeys();
 
-			! empty( $this->transliterationColumnNames )
-				&& ( $column = new TableColumnTranslit( $column, $this, $this->transliterationColumnNames ) );
+			$columnTransformer = new TableColumnMarshaller();
+
+			$this->columnsWithAccentedCharacters()
+				&& ( $columnTransformer = new TableColumnTranslit( $columnTransformer ) );
 		}
 
 		return array(
-			$this->validateRow ?? new TableRowMarshaller( $invalidCount, $this->getIndexKey() ),
-			$column,
+			$this->rowTransformer ?? new TableRowMarshaller( $invalidCount, $this->getIndexKey() ),
+			$columnTransformer,
 		);
 	}
 }

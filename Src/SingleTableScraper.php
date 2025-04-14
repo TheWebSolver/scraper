@@ -10,15 +10,18 @@ use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
-use TheWebSolver\Codegarage\Scraper\Interfaces\MappableTableScraper;
 
 /**
  * @template TColumnReturn
- * @template-implements MappableTableScraper<TColumnReturn>
+ * @template-implements TableTracer<TColumnReturn>
+ * @template-implements Scrapable<array-key,ArrayObject<array-key,TColumnReturn>>
  */
-abstract class SingleTableScraper implements MappableTableScraper {
+abstract class SingleTableScraper implements TableTracer, KeyMapper, Scrapable {
 	use ScrapeYard, ScraperSource, CollectorSource;
 
 	private Closure $unsubscribeError;
@@ -68,6 +71,6 @@ abstract class SingleTableScraper implements MappableTableScraper {
 	 * By default, it is only invoked if collection source exists. Hence, source is never null.
 	 */
 	protected function tableBodyListener(): void {
-		$this->setColumnNames( $this->getCollectionSource()->items, $this->getTableId( current: true ) );
+		$this->setColumnNames( $this->useCollectedKeys(), $this->getTableId( current: true ) );
 	}
 }

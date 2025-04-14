@@ -11,10 +11,12 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
  * @template-implements Transformer<TScope,string>
  */
 class HtmlEntityDecode implements Transformer {
-	/** @param Transformer<TScope,string> $transformer */
-	public function __construct( private readonly Transformer $transformer ) {}
+	/** @param Transformer<TScope,string> $base */
+	public function __construct( private readonly Transformer $base ) {}
 
 	public function transform( string|array|DOMElement $element, object $scope ): mixed {
-		return html_entity_decode( $this->transformer->transform( $element, $scope ) );
+		$value = $this->base->transform( $element, $scope );
+
+		return $value ? html_entity_decode( $value ) : $value;
 	}
 }

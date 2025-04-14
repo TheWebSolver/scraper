@@ -10,11 +10,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /** @template-implements Transformer<TableTracer<string>,string> */
 class TableColumnMarshaller implements Transformer {
-	/** @param list<string> $collectable Subset of column names to be collected. */
-	public function __construct( private readonly array $collectable = array() ) {}
-
-	public function transform( string|array|DOMElement $element, object $tracer ): string {
-		return ! $this->columnNameExistsInCollectable( $tracer ) ? '' : trim(
+	public function transform( string|array|DOMElement $element, object $scope ): string {
+		return ! $this->mappableColumnNameExists( $scope ) ? '' : trim(
 			match ( true ) {
 				$element instanceof DOMElement => $element->textContent,
 				is_string( $element )          => $element,
@@ -27,10 +24,10 @@ class TableColumnMarshaller implements Transformer {
 		);
 	}
 
-	/** @param TableTracer<string> $tracer */
-	protected function columnNameExistsInCollectable( TableTracer $tracer ): bool {
-		return ! $this->collectable
-			|| ! ( $columnName = $tracer->getCurrentColumnName() )
-			|| in_array( $columnName, $this->collectable, strict: true );
+	/** @param TableTracer<string> $scope */
+	private function mappableColumnNameExists( TableTracer $scope ): bool {
+		return ! ( $columnNames = $scope->getColumnNames() )
+			|| ! ( $columnName = $scope->getCurrentColumnName() )
+			|| in_array( $columnName, $columnNames, strict: true );
 	}
 }

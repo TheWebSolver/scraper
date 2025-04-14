@@ -3,8 +3,11 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
+use ArrayObject;
+
 /**
  * @template TColumnReturn
- * @template-extends MappableTableScraper<TColumnReturn>
+ * @template-extends TableTracerWithAccent<TColumnReturn>
+ * @template-extends Scrapable<array-key,ArrayObject<array-key,TColumnReturn>>
  */
-interface SingleTableScraperWithAccent extends MappableTableScraper, AccentedCharacter {}
+interface SingleTableScraperWithAccent extends TableTracerWithAccent, Scrapable, KeyMapper {}

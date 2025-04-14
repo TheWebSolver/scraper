@@ -16,6 +16,7 @@ use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
@@ -645,9 +646,9 @@ class HtmlTableExtractorTest extends TestCase {
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 /** @template-implements TableTracer<string> */
-class DOMNodeScanner implements TableTracer {
+class DOMNodeScanner implements TableTracer, KeyMapper {
 	/** @use HtmlTableFromNode<string> */
-	use HtmlTableFromNode;
+	use HtmlTableFromNode, KeyMapperStub;
 
 	/** @param Closure(DOMElement, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}
@@ -658,14 +659,28 @@ class DOMNodeScanner implements TableTracer {
 }
 
 /** @template-implements TableTracer<string> */
-class DOMStringScanner implements TableTracer {
+class DOMStringScanner implements TableTracer, KeyMapper {
 	/** @use HtmlTableFromString<string> */
-	use HtmlTableFromString;
+	use HtmlTableFromString, KeyMapperStub;
 
 	/** @param Closure(string, self): bool $validator */
 	public function __construct( private ?Closure $validator = null ) {}
 
 	protected function isTargetedTable( string $node ): bool {
 		return $this->validator ? ( $this->validator )( $node, $this ) : true;
+	}
+}
+
+trait KeyMapperStub {
+	public function useKeys( $keys, $indexKey = null ): static {
+		return $this;
+	}
+
+	public function getIndexKey(): ?string {
+		return null;
+	}
+
+	public function getKeys(): array {
+		return array();
 	}
 }

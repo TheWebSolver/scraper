@@ -7,36 +7,36 @@ use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracerWithAccent;
 
-/** @template-implements Transformer<TableTracer<string>,string> */
+/** @template-implements Transformer<TableTracerWithAccent<string>,string> */
 class TableColumnTranslit implements Transformer {
 	/**
-	 * @param Transformer<TableTracer<string>,string> $transformer       Base transformer which transforms column content.
-	 * @param list<string>                            $targetColumnNames Column names to transit values of. If names not provided,
-	 *                                                                   translit runs for each column (which might not be ideal).
+	 * @param Transformer<TableTracer<string>,string> $base Base transformer which transforms column content.
 	 */
-	public function __construct(
-		private readonly Transformer $transformer,
-		private readonly AccentedCharacter $handler,
-		private readonly ?array $targetColumnNames = null
-	) {}
+	public function __construct( private readonly Transformer $base ) {}
 
-	public function transform( string|array|DOMElement $element, object $tracer ): string {
-		$content     = $this->transformer->transform( $element, $tracer );
-		$targetNames = $this->targetColumnNames ?? $tracer->getColumnNames();
-		$name        = $tracer->getCurrentColumnName();
+	public function transform( string|array|DOMElement $element, object $scope ): string {
+		if ( $this->skipTransliteration( $scope ) ) {
+			return $this->base->transform( $element, $scope );
+		}
 
-		if ( ! $this->shouldTranslit() || ( $name && ! in_array( $name, $targetNames, strict: true ) ) ) {
+		if ( ! $content = $this->base->transform( $element, $scope ) ) {
 			return $content;
 		}
 
-		$characters = $this->handler->getDiacriticsList();
+		$characters = $scope->getDiacriticsList();
 
 		return str_replace( array_keys( $characters ), array_values( $characters ), $content );
 	}
 
-	private function shouldTranslit(): bool {
-		return AccentedCharacter::ACTION_TRANSLIT === $this->handler->getAccentOperationType()
-			&& ! empty( $this->handler->getDiacriticsList() );
+	/** @param TableTracerWithAccent<string> $scope */
+	private function skipTransliteration( TableTracerWithAccent $scope ): bool {
+		$targetNames      = $scope->columnsWithAccentedCharacters() ?: $scope->getColumnNames();
+		$name             = $scope->getCurrentColumnName();
+		$isValidOperation = AccentedCharacter::ACTION_TRANSLIT === $scope->getAccentOperationType()
+			&& ! empty( $scope->getDiacriticsList() );
+
+		return ! $isValidOperation || ( $name && ! in_array( $name, $targetNames, strict: true ) );
 	}
 }
