@@ -6,6 +6,7 @@ namespace TheWebSolver\Codegarage\Scraper\Traits\Table;
 use Closure;
 use DOMNode;
 use Iterator;
+use BackedEnum;
 use DOMElement;
 use ArrayObject;
 use SplFixedArray;
@@ -83,7 +84,7 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function setColumnNames( array $keys, int|string $id, int ...$offset ): void {
+	public function setTracedItemsIndices( array $keys, int|string $id, int ...$offset ): void {
 		( $id && $this->getTableId( current: true ) === $id ) || throw new ScraperError(
 			sprintf( self::USE_EVENT_DISPATCHER, static::class, __FUNCTION__, 'set column names.' )
 		);
@@ -109,20 +110,20 @@ trait TableExtractor {
 	}
 
 	/** @return array<int,string> */
-	public function getColumnNames(): array {
+	public function getTracedItemsIndices(): array {
 		return $this->currentTable__columnInfo[ $this->currentTable__id ][0] ?? array();
 	}
 
-	public function getCurrentColumnName(): ?string {
+	public function getCurrentTracedItemIndex(): ?string {
 		return $this->currentIteration__columnName ?? null;
 	}
 
-	public function getCurrentIterationCountOf( Table $element, bool $offsetInclusive = false ): ?int {
-		if ( Table::Head === $element ) {
+	public function getCurrentIterationCountOf( ?BackedEnum $type = null, bool $offsetInclusive = false ): ?int {
+		if ( Table::Head === $type ) {
 			return isset( $this->currentIteration__headInfo ) ? $this->currentIteration__headInfo + 1 : null;
-		} elseif ( Table::Row === $element ) {
+		} elseif ( Table::Row === $type ) {
 			return $this->currentIteration__rowCount[ $this->currentTable__id ] ?? null;
-		} elseif ( Table::Column === $element ) {
+		} elseif ( Table::Column === $type ) {
 			if ( ! isset( $this->currentTable__id ) ) {
 				return null;
 			}
@@ -249,7 +250,7 @@ trait TableExtractor {
 		$value    = $transformer->transform( $element, $this );
 
 		return ( ! is_null( $value ) && '' !== $value )
-			? ( $data[ $this->getCurrentColumnName() ?? $position ] = $value )
+			? ( $data[ $this->getCurrentTracedItemIndex() ?? $position ] = $value )
 			: null;
 	}
 

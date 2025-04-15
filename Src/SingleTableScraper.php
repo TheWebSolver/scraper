@@ -71,6 +71,6 @@ abstract class SingleTableScraper implements TableTracer, KeyMapper, Scrapable {
 	 * By default, it is only invoked if collection source exists. Hence, source is never null.
 	 */
 	protected function tableBodyListener(): void {
-		$this->setColumnNames( $this->useCollectedKeys(), $this->getTableId( current: true ) );
+		$this->setTracedItemsIndices( $this->useCollectedKeys(), $this->getTableId( current: true ) );
 	}
 }

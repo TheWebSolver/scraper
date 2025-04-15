@@ -3,18 +3,14 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
-/**
- * @template TColumnReturn
- * @template-extends TableTracer<TColumnReturn>
- */
-interface TableTracerWithAccent extends TableTracer, AccentedCharacter {
+interface IndexableTracerWithAccent extends IndexableTracer, AccentedCharacter {
 	/**
-	 * Gets table columns which contains accented characters.
+	 * Gets iterable items' indices which contains accented characters.
 	 *
-	 * This must return all or subset of `TableTracer::getColumnNames()`. If there are no column(s),
-	 * then this must return column's position (starting from **0**) of the targeted column(s).
+	 * This must return all or subset of `IndexableTracer::getTracedItemsIndices()`. If indices not set,
+	 * then this must return an integer position (starting from **0**) value of the targeted item.
 	 *
 	 * @return list<string|int>
 	 */
-	public function columnsWithAccentedCharacters(): array;
+	public function indicesWithAccentedCharacters(): array;
 }

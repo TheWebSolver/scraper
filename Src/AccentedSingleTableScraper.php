@@ -49,7 +49,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		yield from $this->withInjectedOrDefaultTransformers()->currentTableIterator( $content );
 	}
 
-	public function columnsWithAccentedCharacters(): array {
+	public function indicesWithAccentedCharacters(): array {
 		return $this->transliterationColumnNames ?? array();
 	}
 
@@ -68,7 +68,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 
 			$columnTransformer = new TableColumnMarshaller();
 
-			$this->columnsWithAccentedCharacters()
+			$this->indicesWithAccentedCharacters()
 				&& ( $columnTransformer = new TableColumnTranslit( $columnTransformer ) );
 		}
 

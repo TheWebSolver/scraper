@@ -178,7 +178,7 @@ class TableScraperTest extends TestCase {
 			public function transform( mixed $element, object $tracer ): mixed {
 				// @phpstan-ignore-next-line -- $textContent is not null.
 				$content    = trim( is_string( $element ) ? $element : $element->textContent );
-				$columnName = $tracer->getCurrentColumnName() ?? '';
+				$columnName = $tracer->getCurrentTracedItemIndex() ?? '';
 				$value      = in_array( $columnName, $this->requestedKeys, true ) ? $content : '';
 
 				return $value;
@@ -312,9 +312,13 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 		parent::__construct( null, null, ...$translitNames );
 
 		$setColumnNamesWithoutName = static fn( self $s )
-			=> $s->setColumnNames( $s->getKeys(), $s->getTableId( true ), /* offset: DeveloperDetails::Name */ 0 );
+			=> $s->setTracedItemsIndices( $s->getKeys(), $s->getTableId( true ), /* offset: DeveloperDetails::Name */ 0 );
 
 		$this->addEventListener( Table::TBody, $setColumnNamesWithoutName );
+	}
+
+	public function indicesWithAccentedCharacters(): array {
+		return $this->transliterationColumnNames ?? array();
 	}
 
 	public function getDiacriticsList(): array {

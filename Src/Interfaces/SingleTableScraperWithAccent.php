@@ -7,7 +7,6 @@ use ArrayObject;
 
 /**
  * @template TColumnReturn
- * @template-extends TableTracerWithAccent<TColumnReturn>
  * @template-extends Scrapable<array-key,ArrayObject<array-key,TColumnReturn>>
  */
-interface SingleTableScraperWithAccent extends TableTracerWithAccent, Scrapable, KeyMapper {}
+interface SingleTableScraperWithAccent extends IndexableTracerWithAccent, Scrapable, KeyMapper {}

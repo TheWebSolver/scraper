@@ -252,7 +252,8 @@ trait HtmlTableFromNode {
 				continue;
 			}
 
-			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
+			$head && ! $this->getTracedItemsIndices()
+				&& $this->setTracedItemsIndices( $head, $this->getTableId( true ) );
 
 			$content = $transformer?->transform( $node, $this ) ?? $node->childNodes;
 

@@ -8,11 +8,10 @@ use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /** @template TColumnReturn */
-interface TableTracer {
+interface TableTracer extends IndexableTracer {
 	/**
 	 * Sets whether all traced tables should be scanned or not.
 	 */
@@ -60,34 +59,11 @@ interface TableTracer {
 	public function inferTableDataFrom( iterable $elementList ): array;
 
 	/**
-	 * Sets column names mappable to traced table dataset.
-	 *
-	 * @param list<string> $keys      Names to be used as index key for each mapped column. Extra columns after
-	 *                                last mappable key will automatically be omitted from being inferred.
-	 * @param int          $id        Usually, value of `$this->getTableId(current: true)`.
-	 * @param int          ...$offset Skippable index/indices in between provided `$keys`, if any. For example:
-	 *                                only three columns needs to be mapped: `['one','three', 'five']`. But, the
-	 *                                table contains `seven` columns. To properly map each table column name to
-	 *                                its respective value, `$offset` indices must be passed: `0`, `2`, & `4`.
-	 *                                Last/seventh column at the sixth index will automatically gets omitted.
-	 * @throws ScraperError When this method is invoked before any table is traced.
-	 * @no-named-arguments
-	 */
-	public function setColumnNames( array $keys, int|string $id, int ...$offset ): void;
-
-	/**
 	 * Gets traced table IDs or current table being traced.
 	 *
 	 * @return ($current is true ? int|string : array<int|string>)
 	 */
 	public function getTableId( bool $current = false ): int|string|array;
-
-	/**
-	 * Gets column names mappable to traced table dataset.
-	 *
-	 * @return list<string>
-	 */
-	public function getColumnNames(): array;
 
 	/**
 	 * Gets collection of traced table dataset indexed by respective table ID.
@@ -111,23 +87,6 @@ interface TableTracer {
 	 * Traced tables' head contents indexed by respective table ID.
 	 */
 	public function getTableHead(): array;
-
-	/**
-	 * Gets current iteration table data column name, if set.
-	 *
-	 * This must return null after current iteration is completed.
-	 */
-	public function getCurrentColumnName(): ?string;
-
-	/**
-	 * Gets current iteration count of given element.
-	 *
-	 * This may return null after current iteration is completed.
-	 *
-	 * @param bool $offsetInclusive When this is set to true, the total count must include offset values
-	 *                              count even if provided offset indices have been omitted during trace.
-	 */
-	public function getCurrentIterationCountOf( Table $element, bool $offsetInclusive = false ): ?int;
 
 	/**
 	 * Resets traced structures' details.
