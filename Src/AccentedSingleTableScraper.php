@@ -11,14 +11,15 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 use TheWebSolver\Codegarage\Scraper\Enums\Table as TableEnum;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
-use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableTracer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedTableScraper;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TranslitAccentedIndexableItem;
 
 /**
  * @template TColumnReturn
  * @template-extends SingleTableScraper<TColumnReturn>
+ * @template-implements AccentedTableScraper<TColumnReturn>
  */
-abstract class AccentedSingleTableScraper extends SingleTableScraper implements AccentedIndexableTracer {
+abstract class AccentedSingleTableScraper extends SingleTableScraper implements AccentedTableScraper {
 	use Diacritic;
 
 	/** @var non-empty-list<string|int> */
