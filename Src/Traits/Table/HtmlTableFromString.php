@@ -208,31 +208,36 @@ trait HtmlTableFromString {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, array $body ): Iterator {
-		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
-		$headInspected  = false;
-		$position       = 0;
-		$iterator       = ( new ArrayObject( $body ) )->getIterator();
+		$transformer   = $this->discoveredTable__transformers['tr'] ?? null;
+		$headInspected = false;
+		$position      = $this->currentIteration__rowCount[ $this->currentTable__id ] = 0;
 
-		while ( $iterator->valid() ) {
-			[$node, $attribute, $content]  = $iterator->current();
-			[$columnsFound, $tableColumns] = Normalize::tableColumnsFrom( $content );
+		while ( false !== ( $row = current( $body ) ) ) {
+			[$node, $attribute, $content] = $row;
+			[$columnsFound, $columns]     = Normalize::tableColumnsFrom( $content );
 
-			if ( ! $columnsFound || empty( $tableColumns ) ) {
-				$iterator->next();
+			// No columns found! Should never have happened in the first place. I mean,
+			// why would there be no table columns in the middle of the table row?
+			if ( ! $columnsFound || empty( $columns ) ) {
+				next( $body );
 
 				continue;
 			}
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $iterator, $tableColumns );
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $columns );
 			$headInspected = true;
 
+			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
+			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
+				next( $body );
+
 				continue;
 			}
 
 			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
 
-			$content = $rowTransformer?->transform( $tableColumns, $this ) ?? $tableColumns;
+			$content = $transformer?->transform( $columns, $this ) ?? $columns;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,
@@ -240,9 +245,9 @@ trait HtmlTableFromString {
 				default                           => yield new ArrayObject( $this->inferTableDataFrom( $content ) ),
 			};
 
-			++$position;
+			$this->registerCurrentIterationTableRow( ++$position );
 
-			$iterator->next();
+			next( $body );
 		}//end while
 	}
 
@@ -250,16 +255,12 @@ trait HtmlTableFromString {
 	 * @param ?list<string>                                         $head
 	 * @param array{0:string,1:string,2:string,3:string,4:string}[] $row
 	 */
-	private function inspectFirstRowForHeadStructure( ?array &$head, Iterator $iterator, array $row ): bool {
+	private function inspectFirstRowForHeadStructure( ?array &$head, array $row ): bool {
 		$firstRowContent = $this->inferTableHeadFrom( $row );
 		$head          ??= $this->currentIteration__allTableHeads ? $firstRowContent : null;
 
-		// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
-		// Advance iterator to next <tr> if first row is collected as head.
-		( $isHead = $this->currentIteration__allTableHeads ) && $iterator->next();
-
 		$head && $this->registerCurrentTableHead( $head );
 
-		return $isHead;
+		return $this->currentIteration__allTableHeads;
 	}
 }

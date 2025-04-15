@@ -220,37 +220,41 @@ trait HtmlTableFromNode {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, DOMElement $body ): Iterator {
-		$rowIterator    = $this->getChildNodesIteratorFrom( $body );
-		$rowTransformer = $this->discoveredTable__transformers['tr'] ?? null;
-		$headInspected  = false;
-		$position       = 0;
+		$iterator      = $this->getChildNodesIteratorFrom( $body );
+		$transformer   = $this->discoveredTable__transformers['tr'] ?? null;
+		$headInspected = false;
+		$position      = $this->currentIteration__rowCount[ $this->currentTable__id ] = 0;
 
-		while ( $rowIterator->valid() ) {
-			if ( ! $node = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
+		while ( $iterator->valid() ) {
+			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
 				return;
 			}
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $rowIterator, $node );
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $node );
 			$headInspected = true;
 
+			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
+			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
+				$iterator->next();
+
 				continue;
 			}
 
-			if ( ! $node = AssertDOMElement::nextIn( $rowIterator, Table::Row ) ) {
+			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
 				return;
 			}
 
 			// TODO: add support whether to skip yielding empty <tr> or not.
 			if ( ! trim( $node->textContent ) ) {
-				$rowIterator->next();
+				$iterator->next();
 
 				continue;
 			}
 
 			$head && ! $this->getColumnNames() && $this->setColumnNames( $head, $this->getTableId( true ) );
 
-			$content = $rowTransformer?->transform( $node, $this ) ?? $node->childNodes;
+			$content = $transformer?->transform( $node, $this ) ?? $node->childNodes;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,
@@ -258,24 +262,20 @@ trait HtmlTableFromNode {
 				default                           => yield new ArrayObject( $this->inferTableDataFrom( $content ) ),
 			};
 
-			++$position;
+			$this->registerCurrentIterationTableRow( ++$position );
 
-			$rowIterator->next();
+			$iterator->next();
 		}//end while
 	}
 
 	/** @param ?list<string> $head */
-	private function inspectFirstRowForHeadStructure( ?array &$head, Iterator $iterator, DOMNode $row ): bool {
+	private function inspectFirstRowForHeadStructure( ?array &$head, DOMNode $row ): bool {
 		$firstRowContent = $this->inferTableHeadFrom( $row->childNodes );
 		$head          ??= $this->currentIteration__allTableHeads ? $firstRowContent : null;
 
-		// Contents of <tr> as head MUST NOT BE COLLECTED as a Table Data also.
-		// Advance iterator to next <tr> if first row is collected as head.
-		( $isHead = $this->currentIteration__allTableHeads ) && $iterator->next();
-
 		$head && $this->registerCurrentTableHead( $head );
 
-		return $isHead;
+		return $this->currentIteration__allTableHeads;
 	}
 
 	private function discoveredTargetedTable( mixed $node ): bool {

@@ -52,6 +52,8 @@ trait TableExtractor {
 	private array $currentTable__columnInfo;
 
 	/** @var int[] */
+	private array $currentIteration__rowCount = array();
+	/** @var int[] */
 	private array $currentIteration__columnCount  = array();
 	private bool $currentIteration__allTableHeads = true;
 	private string $currentIteration__columnName;
@@ -118,6 +120,8 @@ trait TableExtractor {
 	public function getCurrentIterationCountOf( Table $element, bool $offsetInclusive = false ): ?int {
 		if ( Table::Head === $element ) {
 			return isset( $this->currentIteration__headInfo ) ? $this->currentIteration__headInfo + 1 : null;
+		} elseif ( Table::Row === $element ) {
+			return $this->currentIteration__rowCount[ $this->currentTable__id ] ?? null;
 		} elseif ( Table::Column === $element ) {
 			if ( ! isset( $this->currentTable__id ) ) {
 				return null;
@@ -223,6 +227,10 @@ trait TableExtractor {
 		}
 
 		$this->currentIteration__headInfo = $index;
+	}
+
+	private function registerCurrentIterationTableRow( int $count ): void {
+		$this->currentIteration__rowCount[ $this->currentTable__id ] = $count;
 	}
 
 	/**
