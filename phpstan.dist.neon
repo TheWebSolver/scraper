@@ -2,10 +2,15 @@ parameters:
 	level: max
 	# Intent: ignore errors for narrowing types of a generic type.
 	treatPhpDocTypesAsCertain: false
+	stubFiles:
+		- Stubs/BackedEnum.stub
 	paths:
 		- Src/
 		- Tests/
 	ignoreErrors:
+		-
+			identifier: generics.noParent
+			message: '#^Enum .*? has \@implements tag\, but does not implement any interface\.$#'
 		-
 			path: Src/Traits/Table/TableExtractor.php
 			messages:

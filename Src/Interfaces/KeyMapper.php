@@ -13,8 +13,8 @@ interface KeyMapper {
 	/**
 	 * Sets mappable keys to be used an index key of respective item in collected dataset.
 	 *
-	 * @param class-string<BackedEnum>|list<string> $keys     Keys that are used as index key mapped to collected dataset.
-	 * @param string|BackedEnum|null                $indexKey One of the `$keys` whose value to be used as dataset index.
+	 * @param class-string<BackedEnum<string>>|list<string> $keys     Keys that are used as index key mapped to collected dataset.
+	 * @param string|BackedEnum<string>|null                $indexKey One of the `$keys` whose value to be used as dataset index.
 	 *
 	 * @throws InvalidSource When $keys is passed as a `string` but not a `BackedEnum` classname.
 	 */

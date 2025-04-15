@@ -17,7 +17,7 @@ trait CollectorSource {
 	private array $requestedKeys = array();
 	private ?string $indexKey    = null;
 
-	/** @param class-string<BackedEnum>|list<string> $keys */
+	/** @param class-string<BackedEnum<string>>|list<string> $keys */
 	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): static {
 		$this->requestedKeys = match ( true ) {
 			is_array( $keys )                    => $keys,
@@ -56,14 +56,15 @@ trait CollectorSource {
 	}
 
 	/**
-	 * @param class-string<BackedEnum> $enumClass
+	 * @param class-string<BackedEnum<string>> $enumClass
+	 * @param string|BackedEnum<string>        ...$only
 	 * @no-named-arguments
 	 */
 	protected function collectFromMappable( string $enumClass, string|BackedEnum ...$only ): CollectFrom {
 		return $this->collectionSource = new CollectFrom( $enumClass, ...$only );
 	}
 
-	/** @phpstan-assert-if-true =class-string<BackedEnum> $value */
+	/** @phpstan-assert-if-true =class-string<BackedEnum<string>> $value */
 	private function isBackedEnumMappable( string $value ): bool {
 		return is_a( $value, BackedEnum::class, allow_string: true );
 	}

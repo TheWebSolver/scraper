@@ -16,12 +16,20 @@ class AssertDOMElement {
 		return self::has( $element, $classname, type: 'class' );
 	}
 
-	/** @phpstan-assert-if-true =DOMElement $node */
+	/**
+	 * @param string|BackedEnum<T> $type
+	 * @phpstan-assert-if-true =DOMElement $node
+	 * @template T of string|int
+	 */
 	public static function isValid( mixed $node, string|BackedEnum $type = '' ): bool {
 		return $node instanceof DOMElement
 			&& ( ! $type || ( $type instanceof BackedEnum ? $type->value : $type ) === $node->tagName );
 	}
 
+	/**
+	 * @param BackedEnum<T> $type
+	 * @template T of string|int
+	 */
 	public static function nextIn( Iterator $iterator, string|BackedEnum $type ): ?DOMElement {
 		while ( ! self::isValid( $current = $iterator->current(), $type ) ) {
 			if ( ! $iterator->valid() ) {
@@ -34,6 +42,7 @@ class AssertDOMElement {
 		return $current;
 	}
 
+	/** @param BackedEnum<string> $type */
 	public static function inferredFrom(
 		string $string,
 		string|BackedEnum $type,

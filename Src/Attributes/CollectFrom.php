@@ -12,16 +12,17 @@ final readonly class CollectFrom {
 	public array $items;
 
 	/**
-	 * @param class-string<BackedEnum> $enumClass The BackedEnum classname whose cases will be used as mappable keys.
-	 * @param string|BackedEnum        ...$only   If only subset of mappable keys is required and passed as arg to
-	 *                                            this param, only these keys will be used. Passed order matters.
+	 * @param class-string<BackedEnum<string>> $enumClass The BackedEnum classname whose cases will be used as mappable keys.
+	 * @param string|BackedEnum<string>        ...$only   If only subset of mappable keys is required and passed as arg to
+	 *                                                    this param, only these keys will be used. Passed order matters.
 	 * @no-named-arguments
 	 */
 	public function __construct( public string $enumClass, string|BackedEnum ...$only ) {
 		$this->items = array_map( self::collect( ... ), $only ?: $enumClass::cases() );
 	}
 
+	/** @param BackedEnum<string> $item */
 	private static function collect( string|BackedEnum $item ): string {
-		return $item instanceof BackedEnum ? (string) $item->value : $item;
+		return $item instanceof BackedEnum ? $item->value : $item;
 	}
 }

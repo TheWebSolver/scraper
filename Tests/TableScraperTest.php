@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Iterator;
+use BackedEnum;
 use DOMElement;
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
@@ -293,6 +294,7 @@ class HtmlTableScraper extends SingleTableScraper {
 	}
 }
 
+/** @template-implements BackedEnum<string> */
 enum DeveloperDetails: string {
 	case Name    = 'name';
 	case Title   = 'title';

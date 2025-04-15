@@ -1,0 +1,7 @@
+<?php
+
+/** @template TBackedValue of string|int */
+interface BackedEnum {
+	/** @var TBackedValue */
+	public string|int $value;
+}
