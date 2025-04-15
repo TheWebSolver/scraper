@@ -317,10 +317,6 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 		$this->addEventListener( Table::TBody, $setColumnNamesWithoutName );
 	}
 
-	public function indicesWithAccentedCharacters(): array {
-		return $this->transliterationColumnNames ?? array();
-	}
-
 	public function getDiacriticsList(): array {
 			return array(
 				'ä' => 'ae',
