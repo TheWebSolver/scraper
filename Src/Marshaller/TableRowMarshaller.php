@@ -17,7 +17,10 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /**
  * @template TColumnReturn
- * @template-implements Transformer<TableTracer<TColumnReturn>,CollectionSet<TColumnReturn>>
+ * @template-implements Transformer<
+ *   TableTracer<TColumnReturn>,
+ *   CollectionSet<TColumnReturn>|ArrayObject<array-key,TColumnReturn>
+ * >
  */
 class TableRowMarshaller implements Transformer {
 	private const TABLE_ROW_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
@@ -30,14 +33,15 @@ class TableRowMarshaller implements Transformer {
 	 */
 	public function __construct( private string $invalidCountMsg = '', private ?string $indexKey = null ) {}
 
-	public function transform( string|array|DOMElement $element, object $tracer ): CollectionSet {
-		$set      = $tracer->inferTableDataFrom( self::validate( $element ) );
-		$count    = $tracer->getCurrentIterationCountOf( Table::Column );
-		$position = $count ? $count - 1 : 0;
+	public function transform( string|array|DOMElement $element, object $tracer ): CollectionSet|ArrayObject {
+		$dataset = $tracer->inferTableDataFrom( self::validate( $element ) );
 
-		$this->invalidCountMsg && $this->validateColumnNamesCount( $tracer, defaultCount: count( $set ) );
+		$this->validateColumnNamesCount( $tracer, dataCount: count( $dataset ) );
 
-		return new CollectionSet( $this->discoverIndexKeyFrom( $set ) ?? $position, new ArrayObject( $set ) );
+		$key   = $this->discoverIndexKeyFrom( $dataset ) ?? $tracer->getCurrentIterationCountOf( Table::Row );
+		$value = new ArrayObject( $dataset );
+
+		return null === $key ? $value : new CollectionSet( $key, $value );
 	}
 
 	/**
@@ -74,11 +78,15 @@ class TableRowMarshaller implements Transformer {
 		return is_string( $value ) || is_int( $value ) ? $value : null;
 	}
 
-	/** @param TableTracer<TColumnReturn> $tracer */
-	private function validateColumnNamesCount( TableTracer $tracer, int $defaultCount ): void {
-		$count = count( $names = $tracer->getColumnNames() ) ?: $defaultCount;
+		/** @param TableTracer<TColumnReturn> $tracer */
+	private function validateColumnNamesCount( TableTracer $tracer, int $dataCount ): void {
+		if ( ! $this->invalidCountMsg ) {
+			return;
+		}
 
-		$count === $tracer->getCurrentIterationCountOf( Table::Column )
-			|| ScraperError::withSourceMsg( $this->invalidCountMsg, $count, implode( '", "', $names ) );
+		$actualCount = count( $names = $tracer->getColumnNames() ) ?: $dataCount;
+
+		$tracer->getCurrentIterationCountOf( Table::Column ) === $actualCount
+			|| ScraperError::withSourceMsg( $this->invalidCountMsg, $actualCount, implode( '", "', $names ) );
 	}
 }
