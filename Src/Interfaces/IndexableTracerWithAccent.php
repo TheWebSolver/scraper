@@ -3,7 +3,7 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
-interface IndexableTracerWithAccent extends IndexableTracer, AccentedCharacter {
+interface AccentedIndexableTracer extends IndexableTracer, AccentedCharacter {
 	/**
 	 * Gets iterable items' indices which contains accented characters.
 	 *

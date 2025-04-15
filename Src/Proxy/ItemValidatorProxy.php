@@ -5,12 +5,16 @@ namespace TheWebSolver\Codegarage\Scraper\Proxy;
 
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Error\ValidationFail;
-use TheWebSolver\Codegarage\Scraper\Interfaces\{Transformer, Validatable, SingleTableScraperWithAccent};
-use TheWebSolver\Codegarage\Scraper\Marshaller\{HtmlEntityDecode, TableColumnTranslit, TableColumnMarshaller};
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
+use TheWebSolver\Codegarage\Scraper\Marshaller\HtmlEntityDecode;
+use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableTracer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TranslitAccentedIndexableItem;
 
-/** @template-implements Transformer<Validatable<string>&SingleTableScraperWithAccent<string>,string> */
+/** @template-implements Transformer<Validatable<string>&AccentedIndexableTracer,string> */
 class ItemValidatorProxy implements Transformer {
-	/** @var Transformer<contravariant SingleTableScraperWithAccent<string>,string> */
+	/** @var Transformer<contravariant AccentedIndexableTracer,string> */
 	private Transformer $base;
 
 	/** @throws ValidationFail When transformed data is invalid. */
@@ -29,10 +33,10 @@ class ItemValidatorProxy implements Transformer {
 			return;
 		}
 
-		$base = new TableColumnMarshaller();
+		$base = new MarshallItem();
 
 		$element instanceof DOMElement || $base = new HtmlEntityDecode( $base );
 
-		$this->base = new TableColumnTranslit( $base );
+		$this->base = new TranslitAccentedIndexableItem( $base );
 	}
 }

@@ -6,10 +6,9 @@ namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\Interfaces\IndexableTracer;
 
-/** @template-implements Transformer<IndexableTracer,string> */
-class TableColumnMarshaller implements Transformer {
+/** @template-implements Transformer<object,string> */
+class MarshallItem implements Transformer {
 	public function transform( string|array|DOMElement $element, object $scope ): string {
 		$transformed = match ( true ) {
 			$element instanceof DOMElement => $element->textContent,

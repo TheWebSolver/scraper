@@ -15,7 +15,7 @@ use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 
 /** @template TColumnReturn */
 trait TableExtractor {
@@ -186,7 +186,7 @@ trait TableExtractor {
 
 	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
-		$transformer = $this->discoveredTable__transformers['td'] ?? new TableColumnMarshaller();
+		$transformer = $this->discoveredTable__transformers['td'] ?? new MarshallItem();
 		$columns     = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
 
 		return array(

@@ -8,18 +8,17 @@ use TheWebSolver\Codegarage\Scraper\Traits\Diacritic;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 use TheWebSolver\Codegarage\Scraper\Enums\Table as TableEnum;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnTranslit;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableColumnMarshaller;
-use TheWebSolver\Codegarage\Scraper\Interfaces\SingleTableScraperWithAccent;
+use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableTracer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\TranslitAccentedIndexableItem;
 
 /**
  * @template TColumnReturn
  * @template-extends SingleTableScraper<TColumnReturn>
- * @template-implements SingleTableScraperWithAccent<TColumnReturn>
  */
-abstract class AccentedSingleTableScraper extends SingleTableScraper implements SingleTableScraperWithAccent {
+abstract class AccentedSingleTableScraper extends SingleTableScraper implements AccentedIndexableTracer {
 	use Diacritic;
 
 	/** @var non-empty-list<string|int> */
@@ -32,7 +31,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	 * They only support collecting transformed `TColumnReturn` as a "string".
 	 *
 	 * @param ?Transformer<contravariant static,TColumnReturn> $rowTransformer    Uses `TableRowMarshaller` if not provided.
-	 * @param ?Transformer<contravariant static,TColumnReturn> $columnTransformer Uses `TableColumnTranslit` if not provided.
+	 * @param ?Transformer<contravariant static,TColumnReturn> $columnTransformer Uses `TranslitAccentedIndexableItem` if not provided.
 	 * @no-named-arguments
 	 */
 	public function __construct(
@@ -66,10 +65,10 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		if ( ! $columnTransformer = $this->columnTransformer ) {
 			$this->useCollectedKeys();
 
-			$columnTransformer = new TableColumnMarshaller();
+			$columnTransformer = new MarshallItem();
 
 			$this->indicesWithAccentedCharacters()
-				&& ( $columnTransformer = new TableColumnTranslit( $columnTransformer ) );
+				&& ( $columnTransformer = new TranslitAccentedIndexableItem( $columnTransformer ) );
 		}
 
 		return array(

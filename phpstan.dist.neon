@@ -15,7 +15,7 @@ parameters:
 			path: Src/Traits/Table/TableExtractor.php
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
-				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array\<int, string\>, array\<int, int\>, int\|null, int, .*?Transformer\<.*?, string\>\} but returns array\{array\<int, string\>, array\<int, int\>, int\|null, 0, .*?Transformer\<.*?, string\>\|.*?TableColumnMarshaller\}\.$#'
+				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array\<int, string\>, array\<int, int\>, int\|null, int, .*?Transformer\<.*?, string\>\} but returns array\{array\<int, string\>, array\<int, int\>, int\|null, 0, .*?Transformer\<.*?, string\>\|.*?MarshallItem\}\.$#'
 		- # Ignore DOMNodeList->getIterator() not being Iterator.
 			path: Src/Traits/Table/HtmlTableFromNode.php
 			identifier: return.type
@@ -30,7 +30,7 @@ parameters:
 				- '#^Parameter \#1 \$element of method .*?:\:registerCurrentTableColumn\(\) expects array\{string, string, string, string, string\}\|DOMElement\|string, array\{string, string, string, string, string\}\|DOMNode given\.$#'
 		- # Ignore default transformers used.
 			path: Src/AccentedSingleTableScraper.php
-			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\} but returns array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableRowMarshaller\<mixed\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableColumnMarshaller\|.*?TableColumnTranslit\}\.$#'
+			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\} but returns array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?TableRowMarshaller\<mixed\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?MarshallItem\|.*?TranslitAccentedIndexableItem\}\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/TableRowMarshaller.php
 			identifier: return.type
