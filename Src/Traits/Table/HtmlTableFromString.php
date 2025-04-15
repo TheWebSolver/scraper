@@ -44,8 +44,8 @@ trait HtmlTableFromString {
 			? $this->captionStructureContentFrom( $table )
 			: null;
 
-		$head     = $traceHead ? $this->headStructureContentFrom( $table ) : null;
-		$iterator = $this->bodyStructureIteratorFrom( $head, $body );
+		$headContents = $traceHead ? $this->contentsAfterFiringEventListenerWhenHeadFound( $table ) : null;
+		$iterator     = $this->bodyStructureIteratorFrom( $headContents, $body );
 
 		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 	}
@@ -124,23 +124,26 @@ trait HtmlTableFromString {
 		return $matched && ! empty( $caption[2] ) ? $transformer?->transform( $caption[0], $this ) : null;
 	}
 
-	/** @return ?list<string> */
-	protected function headStructureContentFrom( string $string ): ?array {
-		$matched = preg_match( '/<thead(.*?)>(.*?)<\/thead>/', subject: $string, matches: $thead );
+		/** @return array{0:?string,1:?list<string>} */
+	protected function headStructureContentFrom( string $string ): array {
+		$matched   = preg_match( '/<thead(.*?)>(.*?)<\/thead>/', subject: $string, matches: $thead );
+		$unmatched = array( null, null );
 
 		if ( ! $matched || empty( $thead[2] ) ) {
-			return null;
+			return $unmatched;
 		}
 
 		[$rowsFound, $tableRows] = Normalize::tableRowsFrom( $thead[2] );
 
 		if ( ! $rowsFound || empty( $tableRows ) || ! $firstRow = reset( $tableRows ) ) {
-			return null;
+			return $unmatched;
 		}
 
 		[$columnsFound, $tableColumns] = Normalize::tableColumnsFrom( $firstRow[2] );
 
-		return $columnsFound ? $this->inferTableHeadFrom( $tableColumns ) : null;
+		return $columnsFound
+			? array( $firstRow[0], $this->inferTableHeadFrom( $tableColumns ) )
+			: array( null, null );
 	}
 
 	/** @return ?list<array{0:string,1:string,2:string}> */
@@ -202,19 +205,43 @@ trait HtmlTableFromString {
 		return array( $table, $body, $traceCaption, $traceHead );
 	}
 
+	private function contentAfterFiringEventListenerWhenHeadFoundInBody( string $node ): void {
+		[, $fireFinishEvent] = $this->getEventListenersRegisteredFor( Table::THead );
+
+		$fireFinishEvent && ( $fireFinishEvent )( $this, $node );
+	}
+
+	/** @return ?list<string> */
+	private function contentsAfterFiringEventListenerWhenHeadFound( string $string ): ?array {
+		[$row, $headContents] = $this->headStructureContentFrom( $string );
+
+		if ( ! $row || ! $headContents ) {
+			return null;
+		}
+
+		$this->registerCurrentTableHead( $headContents );
+		$this->contentAfterFiringEventListenerWhenHeadFoundInBody( $row );
+
+		return $headContents;
+	}
+
 	/**
 	 * @param ?list<string>                           $head
 	 * @param list<array{0:string,1:string,2:string}> $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, array $body ): Iterator {
-		$transformer   = $this->discoveredTable__transformers['tr'] ?? null;
-		$headInspected = false;
-		$position      = $this->currentIteration__rowCount[ $this->currentTable__id ] = 0;
+		[$headInspected, $position, $transformer, $eventListeners] = $this->useCurrentTableBodyDetails();
+		[$fireStartEvent, $fireFinishEvent]                        = $eventListeners;
+
+		$bodyStarted = false;
+		$lastRow     = null;
 
 		while ( false !== ( $row = current( $body ) ) ) {
 			[$node, $attribute, $content] = $row;
 			[$columnsFound, $columns]     = Normalize::tableColumnsFrom( $content );
+
+			( array_key_last( $body ) === key( $body ) ) && ( $lastRow = $row );
 
 			// No columns found! Should never have happened in the first place. I mean,
 			// why would there be no table columns in the middle of the table row?
@@ -230,9 +257,17 @@ trait HtmlTableFromString {
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
 			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
+				$this->contentAfterFiringEventListenerWhenHeadFoundInBody( $node );
+
 				next( $body );
 
 				continue;
+			}
+
+			if ( ! $bodyStarted ) {
+				$fireStartEvent && $fireStartEvent( $this, $node );
+
+				$bodyStarted = true;
 			}
 
 			$head && ! $this->getTracedItemsIndices()
@@ -250,6 +285,8 @@ trait HtmlTableFromString {
 
 			next( $body );
 		}//end while
+
+		$lastRow && $fireFinishEvent && $fireFinishEvent( $this, $lastRow[0] );
 	}
 
 	/**

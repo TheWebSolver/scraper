@@ -204,18 +204,27 @@ class HtmlTableExtractorTest extends TestCase {
 			}
 		};
 
+		$firstTableColumNames = array( 'Name', 'Title', 'Address' );
+
 		foreach ( array( new DOMStringScanner(), $domScanner ) as $scanner ) {
+			$scanner->addEventListener(
+				Table::THead,
+				static function ( TableTracer $i ) use ( $firstTableColumNames ) {
+					self::assertSame( $firstTableColumNames, $i->getTableHead()[ $i->getTableId( true ) ]->toArray() );
+				},
+				true
+			);
+
 			$scanner
 				->addTransformer( Table::Head, $thMarshaller )
 				->addTransformer( Table::Column, $tdMarshaller )
 				->withAllTables()
 				->inferTableFrom( $this->getTableFromSource() );
 
-			$ids                  = $scanner->getTableId();
-			$th                   = $scanner->getTableHead()[ $ids[0] ]->toArray();
-			$data                 = $scanner->getTableData();
-			$devTable             = $data[ $ids[0] ];
-			$firstTableColumNames = array( 'Name', 'Title', 'Address' );
+			$ids      = $scanner->getTableId();
+			$th       = $scanner->getTableHead()[ $ids[0] ]->toArray();
+			$data     = $scanner->getTableData();
+			$devTable = $data[ $ids[0] ];
 
 			$this->assertCount( $scanner instanceof DOMNodeScanner ? 2 : 1, $scanner->getTableId() );
 

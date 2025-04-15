@@ -80,8 +80,8 @@ trait HtmlTableFromNode {
 				? $this->captionStructureContentFrom( $captionNode )
 				: null;
 
-			$head     = $headNode ? $this->headStructureContentFrom( $headNode ) : null;
-			$iterator = $this->bodyStructureIteratorFrom( $head, $bodyNode );
+			$headContents = $this->contentsAfterFiringEventListenerWhenHeadFound( $headNode );
+			$iterator     = $this->bodyStructureIteratorFrom( $headContents, $bodyNode );
 
 			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 
@@ -94,16 +94,19 @@ trait HtmlTableFromNode {
 	/**
 	 * Infers table head from given element list.
 	 *
-	 * @param DOMNodeList<DOMNode> $elementList
 	 * @return ?list<string>
 	 * @throws InvalidSource When element list is not DOMNodeList.
 	 */
-	protected function inferTableHeadFrom( DOMNodeList $elementList ): ?array {
-		$thTransformer = $this->discoveredTable__transformers['th'] ?? null;
-		$names         = array();
-		$skippedNodes  = 0;
+	protected function inferTableHeadFrom( DOMNode $element ): ?array {
+		if ( ! AssertDOMElement::isValid( $element, Table::Row ) ) {
+			return null;
+		}
 
-		foreach ( $elementList as $currentIndex => $node ) {
+		[$names, $skippedNodes, $transformer, [$fireStartEvent]] = $this->useCurrentTableHeadDetails();
+
+		$fireStartEvent && $fireStartEvent( $this, $element );
+
+		foreach ( $element->childNodes as $currentIndex => $node ) {
 			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
 				$this->tickCurrentHeadIterationSkippedHeadNode( $node );
 
@@ -116,7 +119,7 @@ trait HtmlTableFromNode {
 
 			$this->registerCurrentIterationTableHead( $position );
 
-			$names[] = $thTransformer?->transform( $node, $this ) ?? trim( $node->textContent );
+			$names[] = $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
 		}
 
 		return $names ?: null;
@@ -181,8 +184,8 @@ trait HtmlTableFromNode {
 		return $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
 	}
 
-	/** @return ?list<string> */
-	private function headStructureContentFrom( DOMElement $node ): ?array {
+	/** @return array{0:?DOMElement,1:?list<string>} */
+	private function headStructureContentFrom( DOMElement $node ): array {
 		$headIterator = $this->getChildNodesIteratorFrom( $node );
 		$row          = null;
 
@@ -192,7 +195,7 @@ trait HtmlTableFromNode {
 			$headIterator->next();
 		}
 
-		return $row ? $this->inferTableHeadFrom( $row->childNodes ) : null;
+		return $row ? array( $row, $this->inferTableHeadFrom( $row ) ) : array( null, null );
 	}
 
 	/** @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement} */
@@ -214,16 +217,52 @@ trait HtmlTableFromNode {
 		return $bodyNode ? array( $bodyNode, $captionNode, $headNode ) : null;
 	}
 
+	/** @return ?list<string> */
+	private function contentsAfterFiringEventListenerWhenHeadFound( ?DOMElement $node ): ?array {
+		if ( ! $node ) {
+			return null;
+		}
+
+		[$row, $headContents] = $this->headStructureContentFrom( $node );
+
+		if ( ! $row || ! $headContents ) {
+			return null;
+		}
+
+		$this->registerCurrentTableHead( $headContents );
+
+		[, $fireFinishEvent] = $this->getEventListenersRegisteredFor( Table::THead );
+
+		isset( $fireFinishEvent ) && ( $fireFinishEvent )( $this, $row );
+
+		return $headContents;
+	}
+
+	private function continueAfterFiringEventListenerWhenHeadFoundInBody( Iterator $iterator ): bool {
+		if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
+			return false;
+		}
+
+		[, $fireFinishEvent] = $this->getEventListenersRegisteredFor( Table::THead );
+
+		isset( $fireFinishEvent ) && ( $fireFinishEvent )( $this, $node );
+
+		$iterator->next();
+
+		return true;
+	}
+
 	/**
 	 * @param ?list<string> $head
 	 * @param DOMElement    $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, DOMElement $body ): Iterator {
-		$iterator      = $this->getChildNodesIteratorFrom( $body );
-		$transformer   = $this->discoveredTable__transformers['tr'] ?? null;
-		$headInspected = false;
-		$position      = $this->currentIteration__rowCount[ $this->currentTable__id ] = 0;
+		[$headInspected, $position, $transformer, $eventListeners] = $this->useCurrentTableBodyDetails();
+		[$fireStartEvent, $fireFinishEvent]                        = $eventListeners;
+
+		$iterator    = $this->getChildNodesIteratorFrom( $body );
+		$bodyStarted = false;
 
 		while ( $iterator->valid() ) {
 			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
@@ -236,9 +275,17 @@ trait HtmlTableFromNode {
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
 			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
-				$iterator->next();
+				if ( ! $this->continueAfterFiringEventListenerWhenHeadFoundInBody( $iterator ) ) {
+					return;
+				}
 
 				continue;
+			}
+
+			if ( ! $bodyStarted ) {
+				$fireStartEvent && $fireStartEvent( $this, $body );
+
+				$bodyStarted = true;
 			}
 
 			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
@@ -267,11 +314,13 @@ trait HtmlTableFromNode {
 
 			$iterator->next();
 		}//end while
+
+		$fireFinishEvent && $fireFinishEvent( $this, $body );
 	}
 
 	/** @param ?list<string> $head */
 	private function inspectFirstRowForHeadStructure( ?array &$head, DOMNode $row ): bool {
-		$firstRowContent = $this->inferTableHeadFrom( $row->childNodes );
+		$firstRowContent = $this->inferTableHeadFrom( $row );
 		$head          ??= $this->currentIteration__allTableHeads ? $firstRowContent : null;
 
 		$head && $this->registerCurrentTableHead( $head );

@@ -33,11 +33,12 @@ interface TableTracer extends IndexableTracer {
 	public function addTransformer( Table $for, Transformer $transformer ): static;
 
 	/**
-	 * Registers event listeners for targeted table structure.
+	 * Registers event listeners for targeted table structure for both start or finish tracing.
 	 *
 	 * @param callable(static, string|DOMElement): void $callback
+	 * @param bool                                      $finish Whether to listen for callback before or after tracing is finished.
 	 */
-	public function addEventListener( Table $for, callable $callback ): static;
+	public function addEventListener( Table $for, callable $callback, bool $finish = false ): static;
 
 	/**
 	 * Infers table(s) from given HTML content source.

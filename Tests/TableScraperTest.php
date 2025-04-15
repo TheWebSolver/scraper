@@ -314,7 +314,7 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 		$setColumnNamesWithoutName = static fn( self $s )
 			=> $s->setTracedItemsIndices( $s->getKeys(), $s->getTableId( true ), /* offset: DeveloperDetails::Name */ 0 );
 
-		$this->addEventListener( Table::TBody, $setColumnNamesWithoutName );
+		$this->addEventListener( Table::Row, $setColumnNamesWithoutName );
 	}
 
 	public function getDiacriticsList(): array {

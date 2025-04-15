@@ -34,7 +34,8 @@ abstract class SingleTableScraper implements TableTracer, KeyMapper, Scrapable {
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename )
 			->useCollectedKeys();
 
-		$this->getCollectionSource() && $this->addEventListener( Table::TBody, $this->tableBodyListener( ... ) );
+		$this->getCollectionSource()
+			&& $this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
 
 		$this->unsubscribeError = ScraperError::for( $this->getScraperSource() );
 	}
@@ -68,9 +69,9 @@ abstract class SingleTableScraper implements TableTracer, KeyMapper, Scrapable {
 
 	/**
 	 * Inheriting class may override this method to provide column names with offset position(s).
-	 * By default, it is only invoked if collection source exists. Hence, source is never null.
+	 * Use `$this->useCollectedKeys()` as indices and in-between offset position(s) as required.
 	 */
-	protected function tableBodyListener(): void {
+	protected function useCollectedKeysAsTableColumnIndices(): void {
 		$this->setTracedItemsIndices( $this->useCollectedKeys(), $this->getTableId( current: true ) );
 	}
 }

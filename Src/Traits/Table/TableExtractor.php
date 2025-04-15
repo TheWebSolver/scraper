@@ -33,7 +33,12 @@ trait TableExtractor {
 	 * }
 	 */
 	private array $discoveredTable__transformers;
-	/** @var array<string,Closure( static, string|DOMElement ): mixed> */
+	/**
+	 * @var array<string,array{
+	 *   0 ?: Closure( static, string|DOMElement ): mixed,
+	 *   1 ?: Closure( static, string|DOMElement ): mixed
+	 * }>
+	 */
 	private array $discoveredTable__eventListeners;
 
 	/** @var (int|string)[] */
@@ -78,8 +83,8 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function addEventListener( Table $for, callable $callback ): static {
-		$this->discoveredTable__eventListeners[ $for->value ] = $callback( ... );
+	public function addEventListener( Table $for, callable $callback, bool $finish = false ): static {
+		$this->discoveredTable__eventListeners[ $for->value ][ $finish ? 1 : 0 ] = $callback( ... );
 
 		return $this;
 	}
@@ -159,10 +164,10 @@ trait TableExtractor {
 			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
 		}
 
-		isset( $this->discoveredTable__eventListeners[ Table::TBody->value ] )
-			&& ( $this->discoveredTable__eventListeners[ Table::TBody->value ] )( $this, $body );
+		// TODO: implement finish event listener.
+		[$fireStartEvent] = $this->getEventListenersRegisteredFor( Table::TBody );
 
-		unset( $this->discoveredTable__eventListeners[ Table::TBody->value ] );
+		$fireStartEvent && ( $fireStartEvent )( $this, $body );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -184,9 +189,16 @@ trait TableExtractor {
 			$this->discoveredTable__rows               = array();
 	}
 
+	/** @return array{0:?Closure(static, string|DOMElement): mixed,1:?Closure(static, string|DOMElement): mixed} */
+	private function getEventListenersRegisteredFor( Table $table ): array {
+		$listeners = $this->discoveredTable__eventListeners[ $table->value ] ?? null;
+
+		return array( $listeners[0] ?? null, $listeners[1] ?? null );
+	}
+
 	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
-		$transformer = $this->discoveredTable__transformers['td'] ?? new MarshallItem();
+		$transformer = $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem();
 		$columns     = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
 
 		return array(
@@ -195,6 +207,40 @@ trait TableExtractor {
 			$lastPosition = $columns[2] ?? null,
 			$skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
 			$transformer,
+		);
+	}
+
+	/**
+	 * @return array{
+	 *   0 :  list<string>,
+	 *   1 :  int,
+	 *   2 :? Transformer<static,string>,
+	 *   3 :  array{0:?Closure(static, string|DOMElement): mixed,1:?Closure(static, string|DOMElement): mixed}
+	 * }
+	 */
+	private function useCurrentTableHeadDetails(): array {
+		return array(
+			$names         = array(),
+			$skippedNodes  = 0,
+			$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null,
+			$eventListener = $this->getEventListenersRegisteredFor( Table::THead ),
+		);
+	}
+
+	/**
+	 * @return array{
+	 *   0 :  bool,
+	 *   1 :  int,
+	 *   2 :? Transformer<static, CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>,
+	 *   3 :  array{0:?Closure(static, string|DOMElement): mixed,1:?Closure(static, string|DOMElement): mixed}
+	 * }
+	 */
+	private function useCurrentTableBodyDetails(): array {
+		return array(
+			$headInspected  = false,
+			$position       = $this->currentIteration__rowCount[ $this->currentTable__id ] = 0,
+			$transformer    = $this->discoveredTable__transformers[ Table::Row->value ] ?? null,
+			$eventListeners = $this->getEventListenersRegisteredFor( Table::Row ),
 		);
 	}
 
