@@ -8,18 +8,18 @@ use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\Error\ValidationFail;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Proxy\ItemValidatorProxy;
-use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableTracer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 
 class TransformerTest extends TestCase {
 	#[Test]
 	public function itUsesProxyTransformerToValidateTransitAndDecodeGivenString(): void {
 		$validator = $this->createMockForIntersectionOfInterfaces(
-			array( Validatable::class, AccentedIndexableTracer::class )
+			array( Validatable::class, AccentedIndexableItem::class )
 		);
 
 		$validator->expects( $this->once() )
 			->method( 'getAccentOperationType' )
-			->willReturn( AccentedIndexableTracer::ACTION_TRANSLIT );
+			->willReturn( AccentedIndexableItem::ACTION_TRANSLIT );
 
 		$validator->expects( $this->exactly( 2 ) )
 			->method( 'getDiacriticsList' )

@@ -9,12 +9,12 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 use TheWebSolver\Codegarage\Scraper\Marshaller\HtmlEntityDecode;
-use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableTracer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 use TheWebSolver\Codegarage\Scraper\Marshaller\TranslitAccentedIndexableItem;
 
-/** @template-implements Transformer<Validatable<string>&AccentedIndexableTracer,string> */
+/** @template-implements Transformer<Validatable<string>&AccentedIndexableItem,string> */
 class ItemValidatorProxy implements Transformer {
-	/** @var Transformer<contravariant AccentedIndexableTracer,string> */
+	/** @var Transformer<contravariant AccentedIndexableItem,string> */
 	private Transformer $base;
 
 	/** @throws ValidationFail When transformed data is invalid. */
