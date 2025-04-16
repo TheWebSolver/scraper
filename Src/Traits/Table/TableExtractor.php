@@ -93,7 +93,7 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function setTracedItemsIndices( array $keys, int ...$offset ): void {
+	public function setItemsIndices( array $keys, int ...$offset ): void {
 		if ( ! $this->isFiringEventListenerFor( Table::Row, finish: false ) ) {
 			$placeholders = array( static::class, __FUNCTION__, Table::class, Table::Row->name );
 
@@ -124,11 +124,11 @@ trait TableExtractor {
 	}
 
 	/** @return array<int,string> */
-	public function getTracedItemsIndices(): array {
+	public function getItemsIndices(): array {
 		return $this->currentTable__columnInfo[ $this->currentTable__id ][0] ?? array();
 	}
 
-	public function getCurrentTracedItemIndex(): ?string {
+	public function getCurrentItemIndex(): ?string {
 		return $this->currentIteration__columnName ?? null;
 	}
 
@@ -336,7 +336,7 @@ trait TableExtractor {
 		$value    = $transformer->transform( $element, $this );
 
 		return ( ! is_null( $value ) && '' !== $value )
-			? ( $data[ $this->getCurrentTracedItemIndex() ?? $position ] = $value )
+			? ( $data[ $this->getCurrentItemIndex() ?? $position ] = $value )
 			: null;
 	}
 

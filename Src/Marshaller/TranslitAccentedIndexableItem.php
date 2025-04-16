@@ -27,8 +27,8 @@ class TranslitAccentedIndexableItem implements Transformer {
 	}
 
 	private function skipTransliteration( AccentedIndexableTracer $scope ): bool {
-		$targetNames    = $scope->indicesWithAccentedCharacters() ?: $scope->getTracedItemsIndices();
-		$name           = $scope->getCurrentTracedItemIndex();
+		$targetNames    = $scope->indicesWithAccentedCharacters() ?: $scope->getItemsIndices();
+		$name           = $scope->getCurrentItemIndex();
 		$shouldTranslit = $scope::ACTION_TRANSLIT === $scope->getAccentOperationType()
 			&& ! empty( $scope->getDiacriticsList() );
 

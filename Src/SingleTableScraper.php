@@ -64,6 +64,6 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 	 * Use `$this->collectSourceItems()` as indices and offset position(s) as required.
 	 */
 	protected function useCollectedKeysAsTableColumnIndices(): void {
-		$this->setTracedItemsIndices( $this->collectSourceItems() );
+		$this->setItemsIndices( $this->collectSourceItems() );
 	}
 }

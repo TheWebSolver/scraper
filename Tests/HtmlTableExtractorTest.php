@@ -49,7 +49,7 @@ class HtmlTableExtractorTest extends TestCase {
 		$stringScanner
 			->addEventListener(
 				Table::Row,
-				static fn ( $s ) => $s->setTracedItemsIndices( $s->getTableHead()[ $s->getTableId( true ) ]->toArray() )
+				static fn ( $s ) => $s->setItemsIndices( $s->getTableHead()[ $s->getTableId( true ) ]->toArray() )
 			)
 			->inferTableFrom( $source );
 
@@ -71,7 +71,7 @@ class HtmlTableExtractorTest extends TestCase {
 		foreach ( array( $nodeScanner, $stringScanner ) as $scanner ) {
 			$scanner->addEventListener(
 				Table::Row,
-				static fn( TableTracer $s ) => $s->setTracedItemsIndices( array( 'name', 'title' ) )
+				static fn( TableTracer $s ) => $s->setItemsIndices( array( 'name', 'title' ) )
 			);
 
 			$scanner->inferTableFrom( $source = $this->getTableFromSource() );
@@ -104,7 +104,7 @@ class HtmlTableExtractorTest extends TestCase {
 		foreach ( array( $nodeScanner, $stringScanner ) as $scanner ) {
 			$scanner->addEventListener(
 				Table::Row,
-				static fn( TableTracer $t ) => $t->setTracedItemsIndices( array( 'name', 'address' ) )
+				static fn( TableTracer $t ) => $t->setItemsIndices( array( 'name', 'address' ) )
 			);
 
 			$scanner->inferTableFrom( $source );
@@ -131,7 +131,7 @@ class HtmlTableExtractorTest extends TestCase {
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
 			$scanner->addEventListener(
 				Table::Row,
-				static fn( TableTracer $t ) => $t->setTracedItemsIndices( $columnNames, ...$offset )
+				static fn( TableTracer $t ) => $t->setItemsIndices( $columnNames, ...$offset )
 			);
 
 			$tr = new TableRowMarshaller( 'Should Not Throw exception' );
@@ -174,8 +174,8 @@ class HtmlTableExtractorTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideMethodsThatThrowsException(): array {
 		return array(
-			array( 'setTracedItemsIndices', array( array() ), new DOMNodeScanner() ),
-			array( 'setTracedItemsIndices', array( array() ), new DOMStringScanner() ),
+			array( 'setItemsIndices', array( array() ), new DOMNodeScanner() ),
+			array( 'setItemsIndices', array( array() ), new DOMStringScanner() ),
 		);
 	}
 
@@ -216,7 +216,7 @@ class HtmlTableExtractorTest extends TestCase {
 			$id    = $t->getTableId( true );
 			$heads = $t->getTableHead()[ $id ] ?? false; // Not all tables in table.html have head.
 
-			$heads && $t->setTracedItemsIndices( $heads->toArray() );
+			$heads && $t->setItemsIndices( $heads->toArray() );
 		};
 
 		foreach ( array( new DOMStringScanner(), $domScanner ) as $scanner ) {
@@ -244,7 +244,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 			$scanner->addEventListener(
 				Table::Row,
-				static fn( TableTracer $t ) => $t->setTracedItemsIndices( array( 'finalAddress' ) )
+				static fn( TableTracer $t ) => $t->setItemsIndices( array( 'finalAddress' ) )
 			);
 
 			$devTable->next();
@@ -256,7 +256,7 @@ class HtmlTableExtractorTest extends TestCase {
 			);
 			$this->assertSame(
 				$scanner instanceof DOMNodeScanner ? array( 'finalAddress' ) : $firstTableColumNames,
-				$scanner->getTracedItemsIndices(),
+				$scanner->getItemsIndices(),
 				$scanner::class . ' -> Column name of nested table inside third <tr> of first table has one column discoverable by DOMNodeScanner'
 			);
 
@@ -316,7 +316,7 @@ class HtmlTableExtractorTest extends TestCase {
 		';
 
 		$listener = static fn ( TableTracer $t )
-			=> $t->setTracedItemsIndices( $t->getTableHead()[ $t->getTableId( true ) ]->toArray() );
+			=> $t->setItemsIndices( $t->getTableHead()[ $t->getTableId( true ) ]->toArray() );
 
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
 			$scanner->addEventListener( Table::Row, $listener )->inferTableFrom( $source );
@@ -418,7 +418,7 @@ class HtmlTableExtractorTest extends TestCase {
 		};
 
 		$listener = static fn ( TableTracer $t )
-			=> $t->setTracedItemsIndices( $t->getTableHead()[ $t->getTableId( true ) ]->toArray() );
+			=> $t->setItemsIndices( $t->getTableHead()[ $t->getTableId( true ) ]->toArray() );
 
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
 			$scanner->addTransformer( Table::Column, $tdMarshaller )
@@ -620,7 +620,7 @@ class HtmlTableExtractorTest extends TestCase {
 		};
 
 		$listener = static fn ( TableTracer $t )
-			=> $t->setTracedItemsIndices( $t->getTableHead()[ $t->getTableId( true ) ]->toArray() );
+			=> $t->setItemsIndices( $t->getTableHead()[ $t->getTableId( true ) ]->toArray() );
 
 		foreach ( array( new DOMNodeScanner(), new DOMStringScanner() ) as $scanner ) {
 			$scanner->withAllTables()
@@ -654,7 +654,7 @@ class HtmlTableExtractorTest extends TestCase {
 		string $key,
 		int $expectedPosition,
 	): void {
-		self::assertSame( $key, $tracer->getCurrentTracedItemIndex() );
+		self::assertSame( $key, $tracer->getCurrentItemIndex() );
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Column ) );
 	}
 

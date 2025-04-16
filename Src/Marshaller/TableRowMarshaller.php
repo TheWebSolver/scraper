@@ -84,7 +84,7 @@ class TableRowMarshaller implements Transformer {
 			return;
 		}
 
-		$actualCount = count( $names = $tracer->getTracedItemsIndices() ) ?: $dataCount;
+		$actualCount = count( $names = $tracer->getItemsIndices() ) ?: $dataCount;
 
 		$tracer->getCurrentIterationCountOf( Table::Column ) === $actualCount
 			|| ScraperError::withSourceMsg( $this->invalidCountMsg, $actualCount, implode( '", "', $names ) );

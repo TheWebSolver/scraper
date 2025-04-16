@@ -11,7 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /** @template TColumnReturn */
-interface TableTracer extends IndexableTracer {
+interface TableTracer extends Indexable {
 	/**
 	 * Sets whether all traced tables should be scanned or not.
 	 */

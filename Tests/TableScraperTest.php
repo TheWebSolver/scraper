@@ -177,7 +177,7 @@ class TableScraperTest extends TestCase {
 			public function transform( mixed $element, object $tracer ): mixed {
 				// @phpstan-ignore-next-line -- $textContent is not null.
 				$content    = trim( is_string( $element ) ? $element : $element->textContent );
-				$columnName = $tracer->getCurrentTracedItemIndex() ?? '';
+				$columnName = $tracer->getCurrentItemIndex() ?? '';
 				$value      = in_array( $columnName, $this->requestedKeys, true ) ? $content : '';
 
 				return $value;
@@ -267,7 +267,7 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 		parent::__construct( null, null, ...$translitNames );
 
 		$setColumnNamesWithoutName = fn()
-			=> $this->setTracedItemsIndices( $this->collectSourceItems(), /* offset: DeveloperDetails::Name */ 0 );
+			=> $this->setItemsIndices( $this->collectSourceItems(), /* offset: DeveloperDetails::Name */ 0 );
 
 		$this->addEventListener( Table::Row, $setColumnNamesWithoutName );
 	}
