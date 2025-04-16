@@ -5,7 +5,6 @@ namespace TheWebSolver\Codegarage\Scraper\Marshaller;
 
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableTracer;
 
 /** @template-implements Transformer<AccentedIndexableTracer,string> */
@@ -28,11 +27,11 @@ class TranslitAccentedIndexableItem implements Transformer {
 	}
 
 	private function skipTransliteration( AccentedIndexableTracer $scope ): bool {
-		$targetNames      = $scope->indicesWithAccentedCharacters() ?: $scope->getTracedItemsIndices();
-		$name             = $scope->getCurrentTracedItemIndex();
-		$isValidOperation = AccentedCharacter::ACTION_TRANSLIT === $scope->getAccentOperationType()
+		$targetNames    = $scope->indicesWithAccentedCharacters() ?: $scope->getTracedItemsIndices();
+		$name           = $scope->getCurrentTracedItemIndex();
+		$shouldTranslit = $scope::ACTION_TRANSLIT === $scope->getAccentOperationType()
 			&& ! empty( $scope->getDiacriticsList() );
 
-		return ! $isValidOperation || ( $name && ! in_array( $name, $targetNames, strict: true ) );
+		return ! $shouldTranslit || ( $name && ! in_array( $name, $targetNames, strict: true ) );
 	}
 }
