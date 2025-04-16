@@ -10,4 +10,4 @@ use ArrayObject;
  * @template-extends TableTracer<TColumnReturn>
  * @template-extends Scrapable<array-key,ArrayObject<array-key,TColumnReturn>>
  */
-interface AccentedTableScraper extends TableTracer, KeyMapper, Scrapable, AccentedIndexableTracer {}
+interface AccentedTableScraper extends TableTracer, Scrapable, AccentedIndexableTracer {}

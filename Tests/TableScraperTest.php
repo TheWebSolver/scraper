@@ -13,7 +13,6 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
-use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
@@ -73,7 +72,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
-		$tr = new TableRowMarshaller( KeyMapper::INVALID_COUNT );
+		$tr = new TableRowMarshaller( SingleTableScraper::INVALID_COUNT );
 
 		$table = '
 		<table>
@@ -97,7 +96,7 @@ class TableScraperTest extends TestCase {
 
 		$this->expectException( ScraperError::class );
 		$this->expectExceptionMessage(
-			sprintf( KeyMapper::INVALID_COUNT, 3, 'name", "title", "address' )
+			sprintf( SingleTableScraper::INVALID_COUNT, 3, 'name", "title", "address' )
 		);
 
 		// @phpstan-ignore-next-line -- Ignore $tr generic type.
@@ -226,50 +225,6 @@ class TableScraperTest extends TestCase {
 			$iterator->current()->getArrayCopy()
 		);
 	}
-
-	#[Test]
-	public function itRegistersCollectableSourceUsingEnumName(): void {
-		$iterator = $this->createStub( Iterator::class );
-		$scraper  = new /** @template-extends SingleTableScraper<string> */ class( $iterator ) extends SingleTableScraper {
-			/** @use HTMLTableFromString<string> */
-			use HtmlTableFromString;
-
-			public function __construct( private readonly Iterator $iterator ) {
-				$this->useKeys( $this->collectFromMappable( DeveloperDetails::class )->items );
-			}
-
-			public function parse( string $content ): Iterator {
-				return $this->iterator;
-			}
-
-			protected function defaultCachePath(): string {
-				return '';
-			}
-		};
-
-		$this->assertCount( 3, $scraper->getKeys() );
-
-		$scraper = new /** @template-extends SingleTableScraper<string> */ class( $iterator ) extends SingleTableScraper {
-			/** @use HTMLTableFromString<string> */
-			use HtmlTableFromString;
-
-			public function __construct( private readonly Iterator $iterator ) {
-				$this->useKeys(
-					$this->collectFromMappable( DeveloperDetails::class, DeveloperDetails::Name, 'address' )->items
-				);
-			}
-
-			public function parse( string $content ): Iterator {
-				return $this->iterator;
-			}
-
-			protected function defaultCachePath(): string {
-				return '';
-			}
-		};
-
-		$this->assertSame( array( 'name', 'address' ), $scraper->getKeys() );
-	}
 }
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
@@ -311,8 +266,8 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 	public function __construct( string ...$translitNames ) {
 		parent::__construct( null, null, ...$translitNames );
 
-		$setColumnNamesWithoutName = static fn( self $s )
-			=> $s->setTracedItemsIndices( $s->getKeys(), /* offset: DeveloperDetails::Name */ 0 );
+		$setColumnNamesWithoutName = fn()
+			=> $this->setTracedItemsIndices( $this->collectSourceItems(), /* offset: DeveloperDetails::Name */ 0 );
 
 		$this->addEventListener( Table::Row, $setColumnNamesWithoutName );
 	}

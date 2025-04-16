@@ -7,6 +7,9 @@ use BackedEnum;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 
 interface IndexableTracer {
+	/** @placeholder: **1:** minimum expected items count, **2:** possible mappable keys. */
+	public const INVALID_COUNT = 'Dataset count invalid. It must have atleast "%2$s" items mappable with keys: "%2$s".';
+
 	/**
 	 * Sets indices keyed to traced iterable items' value.
 	 *

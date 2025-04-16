@@ -13,34 +13,10 @@ trait CollectorSource {
 	private const INVALID_COLLECTION_SOURCE = 'Collection keys can either be an array of strings or a BackedEnum classname. "%s" given.';
 
 	private CollectFrom $collectionSource;
-	/** @var list<string> */
-	private array $requestedKeys = array();
-	private ?string $indexKey    = null;
 
-	/** @param class-string<BackedEnum<string>>|list<string> $keys */
-	public function useKeys( string|array $keys, string|BackedEnum|null $indexKey = null ): static {
-		$this->requestedKeys = match ( true ) {
-			is_array( $keys )                    => $keys,
-			$this->isBackedEnumMappable( $keys ) => $this->collectFromMappable( $keys )->items,
-			default                              => $this->throwInvalidCollectable( $keys ),
-		};
-
-		! is_null( $indexKey )
-			&& ( $this->indexKey = $indexKey instanceof BackedEnum ? (string) $indexKey->value : $indexKey );
-
-		return $this;
-	}
-
-	public function getKeys(): array {
-		return $this->requestedKeys;
-	}
-
-	public function getIndexKey(): ?string {
-		return $this->indexKey;
-	}
-
-	final protected function isRequestedKey( string $collectable ): bool {
-		return in_array( $collectable, $this->getKeys(), strict: true );
+	/** @return list<string> */
+	final protected function collectSourceItems(): array {
+		return $this->getCollectionSource()->items ?? array();
 	}
 
 	final protected function getCollectionSource(): ?CollectFrom {

@@ -6,7 +6,6 @@ namespace TheWebSolver\Codegarage\Scraper;
 use Iterator;
 use TheWebSolver\Codegarage\Scraper\Traits\Diacritic;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
-use TheWebSolver\Codegarage\Scraper\Interfaces\KeyMapper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 use TheWebSolver\Codegarage\Scraper\Enums\Table as TableEnum;
@@ -61,10 +60,10 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 
 	/** @return array{0:Transformer<contravariant static,TColumnReturn>,1:Transformer<contravariant static,TColumnReturn>} */
 	protected function getInjectedOrDefaultTransformers(): array {
-		$invalidCount = $this->getScraperSource()->name . ' ' . KeyMapper::INVALID_COUNT;
+		$invalidCount = $this->getScraperSource()->name . ' ' . self::INVALID_COUNT;
 
 		if ( ! $columnTransformer = $this->columnTransformer ) {
-			$this->useCollectedKeys();
+			$this->collectSourceItems();
 
 			$columnTransformer = new MarshallItem();
 
@@ -73,7 +72,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		}
 
 		return array(
-			$this->rowTransformer ?? new TableRowMarshaller( $invalidCount, $this->getIndexKey() ),
+			$this->rowTransformer ?? new TableRowMarshaller( $invalidCount ),
 			$columnTransformer,
 		);
 	}
