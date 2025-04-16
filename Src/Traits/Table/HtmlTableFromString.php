@@ -36,7 +36,7 @@ trait HtmlTableFromString {
 			return;
 		}
 
-		[[$table], $body, $traceCaption, $traceHead] = $tableStructure;
+		[[$table], $rows, $traceCaption, $traceHead] = $tableStructure;
 
 		$this->dispatchEventListenerForDiscoveredTable( $id = $this->get64bitHash( $table ), $table );
 
@@ -45,7 +45,7 @@ trait HtmlTableFromString {
 			: null;
 
 		$headContents = $traceHead ? $this->contentsAfterFiringEventListenerWhenHeadFound( $table ) : null;
-		$iterator     = $this->bodyStructureIteratorFrom( $headContents, $body );
+		$iterator     = $this->bodyStructureIteratorFrom( $headContents, $rows );
 
 		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 	}
@@ -93,7 +93,9 @@ trait HtmlTableFromString {
 	 * @param iterable<array-key,array{0:string,1:string,2:string,3:string,4:string}> $elementList
 	 * @return ?list<string>
 	 */
-	protected function inferTableHeadFrom( iterable $elementList ): ?array {
+	protected function inferTableHeadFrom( iterable $elementList, string $node ): ?array {
+		$this->fireEventListenerRegisteredFor( Table::THead, finish: false, node: $node );
+
 		$thTransformer = $this->discoveredTable__transformers['th'] ?? null;
 		$names         = array();
 		$skippedNodes  = 0;
@@ -142,7 +144,7 @@ trait HtmlTableFromString {
 		[$columnsFound, $tableColumns] = Normalize::tableColumnsFrom( $firstRow[2] );
 
 		return $columnsFound
-			? array( $firstRow[0], $this->inferTableHeadFrom( $tableColumns ) )
+			? array( $firstRow[0], $this->inferTableHeadFrom( $tableColumns, $firstRow[0] ) )
 			: array( null, null );
 	}
 
@@ -205,12 +207,6 @@ trait HtmlTableFromString {
 		return array( $table, $body, $traceCaption, $traceHead );
 	}
 
-	private function contentAfterFiringEventListenerWhenHeadFoundInBody( string $node ): void {
-		[, $fireFinishEvent] = $this->getEventListenersRegisteredFor( Table::THead );
-
-		$fireFinishEvent && ( $fireFinishEvent )( $this, $node );
-	}
-
 	/** @return ?list<string> */
 	private function contentsAfterFiringEventListenerWhenHeadFound( string $string ): ?array {
 		[$row, $headContents] = $this->headStructureContentFrom( $string );
@@ -220,7 +216,7 @@ trait HtmlTableFromString {
 		}
 
 		$this->registerCurrentTableHead( $headContents );
-		$this->contentAfterFiringEventListenerWhenHeadFoundInBody( $row );
+		$this->fireEventListenerRegisteredFor( Table::THead, finish: true, node: $row );
 
 		return $headContents;
 	}
@@ -231,11 +227,9 @@ trait HtmlTableFromString {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, array $body ): Iterator {
-		[$headInspected, $position, $transformer, $eventListeners] = $this->useCurrentTableBodyDetails();
-		[$fireStartEvent, $fireFinishEvent]                        = $eventListeners;
-
-		$bodyStarted = false;
-		$lastRow     = null;
+		[$headInspected, $position, $transformer] = $this->useCurrentTableBodyDetails();
+		$bodyStarted                              = false;
+		$lastRow                                  = null;
 
 		while ( false !== ( $row = current( $body ) ) ) {
 			[$node, $attribute, $content] = $row;
@@ -251,13 +245,13 @@ trait HtmlTableFromString {
 				continue;
 			}
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $columns );
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $columns, $node );
 			$headInspected = true;
 
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
 			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
-				$this->contentAfterFiringEventListenerWhenHeadFoundInBody( $node );
+				$this->fireEventListenerRegisteredFor( Table::THead, finish: true, node: $node );
 
 				next( $body );
 
@@ -265,13 +259,10 @@ trait HtmlTableFromString {
 			}
 
 			if ( ! $bodyStarted ) {
-				$fireStartEvent && $fireStartEvent( $this, $node );
+				$this->fireEventListenerRegisteredFor( Table::Row, finish: false, node: $node );
 
 				$bodyStarted = true;
 			}
-
-			$head && ! $this->getTracedItemsIndices()
-				&& $this->setTracedItemsIndices( $head, $this->getTableId( true ) );
 
 			$content = $transformer?->transform( $columns, $this ) ?? $columns;
 
@@ -286,15 +277,15 @@ trait HtmlTableFromString {
 			next( $body );
 		}//end while
 
-		$lastRow && $fireFinishEvent && $fireFinishEvent( $this, $lastRow[0] );
+		$lastRow && $this->fireEventListenerRegisteredFor( Table::Row, finish: true, node: $lastRow[0] );
 	}
 
 	/**
 	 * @param ?list<string>                                         $head
 	 * @param array{0:string,1:string,2:string,3:string,4:string}[] $row
 	 */
-	private function inspectFirstRowForHeadStructure( ?array &$head, array $row ): bool {
-		$firstRowContent = $this->inferTableHeadFrom( $row );
+	private function inspectFirstRowForHeadStructure( ?array &$head, array $row, string $node ): bool {
+		$firstRowContent = $this->inferTableHeadFrom( $row, $node );
 		$head          ??= $this->currentIteration__allTableHeads ? $firstRowContent : null;
 
 		$head && $this->registerCurrentTableHead( $head );

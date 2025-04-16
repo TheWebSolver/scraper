@@ -13,8 +13,6 @@ interface IndexableTracer {
 	 * If this method is used, items after last mappable key must be omitted from being traced.
 	 *
 	 * @param list<string> $indices   Strings used as keys for iterated items' value.
-	 * @param int          $id        The identifier used to collect iterated items. For eg: if multiple **<ul>**
-	 *                                elements are being collected, then provide id of target **<ul>** collected.
 	 * @param int          ...$offset Skippable index/indices in between provided `$indices`, if any. For example:
 	 *                                only three items needs to be mapped: `['one','three', 'five']`. But, there
 	 *                                are `seven` traceable items. To properly map each index provided to its
@@ -23,7 +21,7 @@ interface IndexableTracer {
 	 * @throws ScraperError When `$id` not found or provided before the target item is traced.
 	 * @no-named-arguments
 	 */
-	public function setTracedItemsIndices( array $indices, int|string $id, int ...$offset ): void;
+	public function setTracedItemsIndices( array $indices, int ...$offset ): void;
 
 	/**
 	 * Sets indices keyed to traced iterable items' value.

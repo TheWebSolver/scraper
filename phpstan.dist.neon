@@ -8,6 +8,9 @@ parameters:
 		- Src/
 		- Tests/
 	ignoreErrors:
+		- # SplFixedArray is created with a list, so this shouldn't be a problem.
+			identifier: argument.type
+			message: '#^Parameter \#1 .*? of method .*?setTracedItemsIndices\(\) expects list\<string\>\, array\<int\, string\|null\> given\.$#'
 		-
 			identifier: generics.noParent
 			message: '#^Enum .*? has \@implements tag\, but does not implement any interface\.$#'

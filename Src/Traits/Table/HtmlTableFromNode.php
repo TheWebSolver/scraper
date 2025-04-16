@@ -43,7 +43,7 @@ trait HtmlTableFromNode {
 
 			$currentPosition = $currentIndex - $skippedNodes;
 
-			if ( false !== ( $offset[ $currentPosition ] ?? false ) ) {
+			if ( isset( $offset[ $currentPosition ] ) ) {
 				continue;
 			}
 
@@ -102,9 +102,9 @@ trait HtmlTableFromNode {
 			return null;
 		}
 
-		[$names, $skippedNodes, $transformer, [$fireStartEvent]] = $this->useCurrentTableHeadDetails();
+		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
-		$fireStartEvent && $fireStartEvent( $this, $element );
+		$this->fireEventListenerRegisteredFor( Table::THead, finish: false, node: $element );
 
 		foreach ( $element->childNodes as $currentIndex => $node ) {
 			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
@@ -230,10 +230,7 @@ trait HtmlTableFromNode {
 		}
 
 		$this->registerCurrentTableHead( $headContents );
-
-		[, $fireFinishEvent] = $this->getEventListenersRegisteredFor( Table::THead );
-
-		isset( $fireFinishEvent ) && ( $fireFinishEvent )( $this, $row );
+		$this->fireEventListenerRegisteredFor( Table::THead, finish: true, node: $node );
 
 		return $headContents;
 	}
@@ -243,9 +240,7 @@ trait HtmlTableFromNode {
 			return false;
 		}
 
-		[, $fireFinishEvent] = $this->getEventListenersRegisteredFor( Table::THead );
-
-		isset( $fireFinishEvent ) && ( $fireFinishEvent )( $this, $node );
+		$this->fireEventListenerRegisteredFor( Table::THead, finish: true, node: $node );
 
 		$iterator->next();
 
@@ -258,11 +253,9 @@ trait HtmlTableFromNode {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( ?array $head, DOMElement $body ): Iterator {
-		[$headInspected, $position, $transformer, $eventListeners] = $this->useCurrentTableBodyDetails();
-		[$fireStartEvent, $fireFinishEvent]                        = $eventListeners;
-
-		$iterator    = $this->getChildNodesIteratorFrom( $body );
-		$bodyStarted = false;
+		[$headInspected, $position, $transformer] = $this->useCurrentTableBodyDetails();
+		$iterator                                 = $this->getChildNodesIteratorFrom( $body );
+		$bodyStarted                              = false;
 
 		while ( $iterator->valid() ) {
 			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
@@ -282,14 +275,14 @@ trait HtmlTableFromNode {
 				continue;
 			}
 
-			if ( ! $bodyStarted ) {
-				$fireStartEvent && $fireStartEvent( $this, $body );
-
-				$bodyStarted = true;
-			}
-
 			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
 				return;
+			}
+
+			if ( ! $bodyStarted ) {
+				$this->fireEventListenerRegisteredFor( Table::Row, finish: false, node: $body );
+
+				$bodyStarted = true;
 			}
 
 			// TODO: add support whether to skip yielding empty <tr> or not.
@@ -298,9 +291,6 @@ trait HtmlTableFromNode {
 
 				continue;
 			}
-
-			$head && ! $this->getTracedItemsIndices()
-				&& $this->setTracedItemsIndices( $head, $this->getTableId( true ) );
 
 			$content = $transformer?->transform( $node, $this ) ?? $node->childNodes;
 
@@ -315,7 +305,7 @@ trait HtmlTableFromNode {
 			$iterator->next();
 		}//end while
 
-		$fireFinishEvent && $fireFinishEvent( $this, $body );
+		$this->fireEventListenerRegisteredFor( Table::Row, finish: true, node: $body );
 	}
 
 	/** @param ?list<string> $head */

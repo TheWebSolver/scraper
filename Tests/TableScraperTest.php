@@ -312,7 +312,7 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 		parent::__construct( null, null, ...$translitNames );
 
 		$setColumnNamesWithoutName = static fn( self $s )
-			=> $s->setTracedItemsIndices( $s->getKeys(), $s->getTableId( true ), /* offset: DeveloperDetails::Name */ 0 );
+			=> $s->setTracedItemsIndices( $s->getKeys(), /* offset: DeveloperDetails::Name */ 0 );
 
 		$this->addEventListener( Table::Row, $setColumnNamesWithoutName );
 	}

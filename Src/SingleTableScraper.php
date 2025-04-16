@@ -72,6 +72,6 @@ abstract class SingleTableScraper implements TableTracer, KeyMapper, Scrapable {
 	 * Use `$this->useCollectedKeys()` as indices and in-between offset position(s) as required.
 	 */
 	protected function useCollectedKeysAsTableColumnIndices(): void {
-		$this->setTracedItemsIndices( $this->useCollectedKeys(), $this->getTableId( current: true ) );
+		$this->setTracedItemsIndices( $this->useCollectedKeys() );
 	}
 }
