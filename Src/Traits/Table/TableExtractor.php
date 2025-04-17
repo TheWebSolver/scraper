@@ -6,11 +6,13 @@ namespace TheWebSolver\Codegarage\Scraper\Traits\Table;
 use Closure;
 use DOMNode;
 use Iterator;
+use Throwable;
 use BackedEnum;
 use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
@@ -40,9 +42,9 @@ trait TableExtractor {
 	 * }>
 	 */
 	private array $discoveredTable__eventListeners;
-	/** @var array<string,array{start:bool,finish:bool}> */
+	/** @var array<value-of<Table>,array<string,bool>> */
 	private array $discoveredTable__eventListenersFired = array();
-	/** @var array{0:Table,1:bool} */
+	/** @var array{0:Table,1:EventAt} */
 	private array $discoveredTable__eventListenerFiring;
 
 	/** @var (int|string)[] */
@@ -67,7 +69,7 @@ trait TableExtractor {
 	private array $currentIteration__columnCount  = array();
 	private bool $currentIteration__allTableHeads = true;
 	private string $currentIteration__columnName;
-	private int $currentIteration__headInfo;
+	private int $currentIteration__headCount;
 
 	public function withAllTables( bool $trace = true ): static {
 		$this->shouldPerform__allTableDiscovery = $trace;
@@ -87,14 +89,14 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function addEventListener( Table $for, callable $callback, bool $finish = false ): static {
-		$this->discoveredTable__eventListeners[ $for->value ][ $finish ? 1 : 0 ] = $callback( ... );
+	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static {
+		$this->discoveredTable__eventListeners[ $for->value ][ $eventAt->name ] = $callback( ... );
 
 		return $this;
 	}
 
 	public function setItemsIndices( array $keys, int ...$offset ): void {
-		if ( ! $this->isFiringEventListenerFor( Table::Row, finish: false ) ) {
+		if ( ! $this->isEventFiringListener( EventAt::Start, for: Table::Row ) ) {
 			$placeholders = array( static::class, __FUNCTION__, Table::class, Table::Row->name );
 
 			throw new ScraperError(
@@ -133,27 +135,16 @@ trait TableExtractor {
 	}
 
 	public function getCurrentIterationCountOf( ?BackedEnum $type = null, bool $offsetInclusive = false ): ?int {
-		if ( Table::Head === $type ) {
-			return isset( $this->currentIteration__headInfo ) ? $this->currentIteration__headInfo + 1 : null;
-		} elseif ( Table::Row === $type ) {
-			return $this->currentIteration__rowCount[ $this->currentTable__id ] ?? null;
-		} elseif ( Table::Column === $type ) {
-			if ( ! isset( $this->currentTable__id ) ) {
-				return null;
-			}
-
-			$count = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
-
-			if ( null === $count ) {
-				return null;
-			}
-
-			$column = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? null;
-
-			return ! $offsetInclusive && $column ? $count - count( $column[1] ) : $count;
+		if ( ! isset( $this->currentTable__id ) ) {
+			return null;
 		}
 
-		return null;
+		return match ( $type ) {
+			Table::Head   => $this->currentIteration__headCount ?? null,
+			Table::Row    => $this->currentIteration__rowCount[ $this->currentTable__id ] ?? null,
+			Table::Column => $this->getCurrentIterationColumnCount( $offsetInclusive ),
+			default       => null,
+		};
 	}
 
 	/** Accepts either text content, extracted array or converted DOMElement from default Table Row Marshaller. */
@@ -173,7 +164,7 @@ trait TableExtractor {
 			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
 		}
 
-		$this->fireEventListenerRegisteredFor( Table::TBody, finish: false, node: $body );
+		$this->fireEventListenerDispatchedFor( Table::TBody, EventAt::Start, $body );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -198,74 +189,97 @@ trait TableExtractor {
 			$this->discoveredTable__rows               = array();
 	}
 
-	/** @return ?Closure(static, string|DOMElement): mixed */
-	private function getEventListenersRegisteredFor( Table $table, bool $finish = false ): ?Closure {
-		$listeners = $this->discoveredTable__eventListeners[ $table->value ] ?? null;
+	private function getCurrentIterationColumnCount( bool $withOffset ): ?int {
+		$countUptoCurrent = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
 
-		return $finish ? $listeners[1] ?? null : $listeners[0] ?? null;
+		if ( null === $countUptoCurrent ) {
+			return null;
+		}
+
+		$column = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? null;
+
+		return ! $withOffset && $column ? $countUptoCurrent - count( $column[1] ) : $countUptoCurrent;
 	}
 
-	private function fireEventListenerRegisteredFor( Table $table, bool $finish, string|DOMElement $node ): void {
-		$fireEvent      = $this->getEventListenersRegisteredFor( $table, $finish );
-		$firedPositions = array(
-			'start'  => false,
-			'finish' => false,
+	/** @return ?Closure(static, string|DOMElement): mixed */
+	private function getEventListenersDispatchedFor( Table $table, EventAt $eventAt ): ?Closure {
+		$listeners = $this->discoveredTable__eventListeners[ $table->value ] ?? null;
+
+		return $listeners[ $eventAt->name ] ?? null;
+	}
+
+	/**
+	 * @param Closure(static, string|DOMElement): mixed $callback
+	 * @throws Throwable When user throws exception within callback.
+	 */
+	private function tryFiringEventListenerWith( Closure $callback, string|DOMElement $node ): void {
+		try {
+			$callback( $this, $node );
+		} catch ( Throwable $e ) {
+			unset( $this->discoveredTable__eventListenerFiring );
+
+			throw $e;
+		}
+	}
+
+	private function fireEventListenerDispatchedFor( Table $table, EventAt $eventAt, string|DOMElement $node ): void {
+		$callback       = $this->getEventListenersDispatchedFor( $table, $eventAt );
+		$firedPositions = $this->discoveredTable__eventListenersFired[ $table->value ] ?? array(
+			EventAt::Start->name => false,
+			EventAt::End->name   => false,
 		);
 
-		if ( ! $fireEvent ) {
+		if ( ! $callback ) {
 			$this->discoveredTable__eventListenersFired[ $table->value ] = $firedPositions;
 
 			return;
 		}
 
-		$firedPositions[ $finish ? 'finish' : 'start' ] = true;
-		$this->discoveredTable__eventListenerFiring     = array( $table, $finish );
+		$firedPositions[ $eventAt->name ]           = true;
+		$this->discoveredTable__eventListenerFiring = array( $table, $eventAt );
 
-		$fireEvent( $this, $node );
+		$this->tryFiringEventListenerWith( $callback, $node );
 
 		unset( $this->discoveredTable__eventListenerFiring );
 
 		$this->discoveredTable__eventListenersFired[ $table->value ] = $firedPositions;
 	}
 
-	private function isFiringEventListenerFor( Table $table, bool $finish ): bool {
+	private function isEventFiringListener( EventAt $eventAt, Table $for ): bool {
 		if ( ! isset( $this->discoveredTable__eventListenerFiring ) ) {
 			return false;
 		}
 
-		[$currentTable, $firedAt] = $this->discoveredTable__eventListenerFiring;
+		[$firingTable, $firingAt] = $this->discoveredTable__eventListenerFiring;
 
-		return $currentTable === $table && $firedAt === $finish;
+		return $firingTable === $for && $firingAt === $eventAt;
 	}
 
-	private function hasFiredEventListenerFor( Table $table, bool $finish ): bool {
+	private function hasFiredEventListenerFor( Table $table, EventAt $eventAt ): bool {
 		$firedAt = $this->discoveredTable__eventListenersFired[ $table->value ] ?? array();
 
-		return $finish ? $firedAt['finish'] ?? false : $firedAt['start'] ?? false;
+		return $firedAt[ $eventAt->name ] ?? false;
 	}
 
 	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
-		$transformer = $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem();
-		$columns     = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
+		$columns = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
 
 		return array(
-			$columnNames  = $columns[0] ?? array(),
-			$offset       = $columns[1] ?? array(),
-			$lastPosition = $columns[2] ?? null,
-			$skippedNodes = $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
-			$transformer,
+			/* columnNames  */ $columns[0] ?? array(),
+			/* offset       */ $columns[1] ?? array(),
+			/* lastPosition */ $columns[2] ?? null,
+			/* skippedNodes */ $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
+			/* transformer  */ $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem(),
 		);
 	}
 
-	/**
-	 * @return array{0 :  list<string>,1 :  int,2 :? Transformer<static,string>}
-	 */
+	/** @return array{0:list<string>,1:int,2:?Transformer<static,string>} */
 	private function useCurrentTableHeadDetails(): array {
 		return array(
-			$names         = array(),
-			$skippedNodes  = 0,
-			$thTransformer = $this->discoveredTable__transformers[ Table::Head->value ] ?? null,
+			/* names        */ array(),
+			/* skippedNodes */ 0,
+			/* transformer  */ $this->discoveredTable__transformers[ Table::Head->value ] ?? null,
 		);
 	}
 
@@ -278,9 +292,9 @@ trait TableExtractor {
 	 */
 	private function useCurrentTableBodyDetails(): array {
 		return array(
-			$headInspected = false,
-			$position      = $this->currentIteration__rowCount[ $this->currentTable__id ] = 0,
-			$transformer   = $this->discoveredTable__transformers[ Table::Row->value ] ?? null,
+			/* headInspected */ false,
+			/* position      */ $this->currentIteration__rowCount[ $this->currentTable__id ] = 0,
+			/* transformer   */ $this->discoveredTable__transformers[ Table::Row->value ] ?? null,
 		);
 	}
 
@@ -306,14 +320,14 @@ trait TableExtractor {
 		$this->registerCurrentIterationTableHead( false );
 	}
 
-	private function registerCurrentIterationTableHead( int|false $index = 0 ): void {
-		if ( false === $index ) {
-			unset( $this->currentIteration__headInfo );
+	private function registerCurrentIterationTableHead( int|false $position ): void {
+		if ( false === $position ) {
+			unset( $this->currentIteration__headCount );
 
 			return;
 		}
 
-		$this->currentIteration__headInfo = $index;
+		$this->currentIteration__headCount = $position + 1;
 	}
 
 	private function registerCurrentIterationTableRow( int $count ): void {

@@ -8,6 +8,7 @@ use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /** @template TColumnReturn */
@@ -36,9 +37,8 @@ interface TableTracer extends Indexable {
 	 * Registers event listeners for targeted table structure for both start or finish tracing.
 	 *
 	 * @param callable(static, string|DOMElement): void $callback
-	 * @param bool                                      $finish Whether to listen for callback before or after tracing is finished.
 	 */
-	public function addEventListener( Table $for, callable $callback, bool $finish = false ): static;
+	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static;
 
 	/**
 	 * Infers table(s) from given HTML content source.

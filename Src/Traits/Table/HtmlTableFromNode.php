@@ -9,6 +9,7 @@ use DOMElement;
 use ArrayObject;
 use DOMNodeList;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
@@ -80,8 +81,9 @@ trait HtmlTableFromNode {
 				? $this->captionStructureContentFrom( $captionNode )
 				: null;
 
-			$headContents = $this->contentsAfterFiringEventListenerWhenHeadFound( $headNode );
-			$iterator     = $this->bodyStructureIteratorFrom( $headContents, $bodyNode );
+			$this->dispatchEventListenerForDiscoveredTableHead( $headNode );
+
+			$iterator = $this->bodyStructureIteratorFrom( $bodyNode );
 
 			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 
@@ -104,7 +106,7 @@ trait HtmlTableFromNode {
 
 		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
-		$this->fireEventListenerRegisteredFor( Table::THead, finish: false, node: $element );
+		$this->fireEventListenerDispatchedFor( Table::THead, EventAt::Start, $element );
 
 		foreach ( $element->childNodes as $currentIndex => $node ) {
 			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
@@ -218,7 +220,7 @@ trait HtmlTableFromNode {
 	}
 
 	/** @return ?list<string> */
-	private function contentsAfterFiringEventListenerWhenHeadFound( ?DOMElement $node ): ?array {
+	private function dispatchEventListenerForDiscoveredTableHead( ?DOMElement $node ): ?array {
 		if ( ! $node ) {
 			return null;
 		}
@@ -230,7 +232,7 @@ trait HtmlTableFromNode {
 		}
 
 		$this->registerCurrentTableHead( $headContents );
-		$this->fireEventListenerRegisteredFor( Table::THead, finish: true, node: $node );
+		$this->fireEventListenerDispatchedFor( Table::THead, EventAt::End, $node );
 
 		return $headContents;
 	}
@@ -240,7 +242,7 @@ trait HtmlTableFromNode {
 			return false;
 		}
 
-		$this->fireEventListenerRegisteredFor( Table::THead, finish: true, node: $node );
+		$this->fireEventListenerDispatchedFor( Table::THead, EventAt::End, $node );
 
 		$iterator->next();
 
@@ -248,11 +250,10 @@ trait HtmlTableFromNode {
 	}
 
 	/**
-	 * @param ?list<string> $head
-	 * @param DOMElement    $body
+	 * @param DOMElement $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
-	private function bodyStructureIteratorFrom( ?array $head, DOMElement $body ): Iterator {
+	private function bodyStructureIteratorFrom( DOMElement $body ): Iterator {
 		[$headInspected, $position, $transformer] = $this->useCurrentTableBodyDetails();
 		$iterator                                 = $this->getChildNodesIteratorFrom( $body );
 		$bodyStarted                              = false;
@@ -262,7 +263,7 @@ trait HtmlTableFromNode {
 				return;
 			}
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $head, $node );
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $node );
 			$headInspected = true;
 
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
@@ -280,7 +281,7 @@ trait HtmlTableFromNode {
 			}
 
 			if ( ! $bodyStarted ) {
-				$this->fireEventListenerRegisteredFor( Table::Row, finish: false, node: $body );
+				$this->fireEventListenerDispatchedFor( Table::Row, EventAt::Start, $body );
 
 				$bodyStarted = true;
 			}
@@ -305,15 +306,13 @@ trait HtmlTableFromNode {
 			$iterator->next();
 		}//end while
 
-		$this->fireEventListenerRegisteredFor( Table::Row, finish: true, node: $body );
+		$this->fireEventListenerDispatchedFor( Table::Row, EventAt::End, $body );
 	}
 
-	/** @param ?list<string> $head */
-	private function inspectFirstRowForHeadStructure( ?array &$head, DOMNode $row ): bool {
-		$firstRowContent = $this->inferTableHeadFrom( $row );
-		$head          ??= $this->currentIteration__allTableHeads ? $firstRowContent : null;
-
-		$head && $this->registerCurrentTableHead( $head );
+	private function inspectFirstRowForHeadStructure( DOMNode $row ): bool {
+		( $firstRowContent = $this->inferTableHeadFrom( $row ) )
+			&& $this->currentIteration__allTableHeads
+			&& $this->registerCurrentTableHead( $firstRowContent );
 
 		return $this->currentIteration__allTableHeads;
 	}

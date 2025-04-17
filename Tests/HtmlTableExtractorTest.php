@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
@@ -162,20 +163,39 @@ class HtmlTableExtractorTest extends TestCase {
 	 */
 	#[Test]
 	#[DataProvider( 'provideMethodsThatThrowsException' )]
-	public function itThrowsExceptionWhenInvokedBeforeTableFound( string $methodName, array $args, TableTracer $scanner ): void {
+	public function itThrowsExceptionWhenInvokedBeforeTableFound(
+		string $methodName,
+		array $args,
+		TableTracer $scanner,
+		?string $throwing = null,
+	): void {
+		$placeholders = array( $scanner::class, $throwing ?? $methodName, Table::class, Table::Row->name, '' );
+
 		$this->expectException( ScraperError::class );
-		$this->expectExceptionMessage(
-			sprintf( DOMNodeScanner::USE_EVENT_LISTENER, $scanner::class, $methodName, Table::class, Table::Row->name, '' )
-		);
+		$this->expectExceptionMessage( sprintf( DOMNodeScanner::USE_EVENT_LISTENER, ...$placeholders ) );
 
 		$scanner->{$methodName}( ...$args );
 	}
 
 	/** @return mixed[] */
 	public static function provideMethodsThatThrowsException(): array {
+		$listener = static fn( TableTracer $t ) => $t->setItemsIndices( array() );
+
 		return array(
 			array( 'setItemsIndices', array( array() ), new DOMNodeScanner() ),
 			array( 'setItemsIndices', array( array() ), new DOMStringScanner() ),
+			array(
+				'inferTableFrom',
+				array( self::TABLE_SOURCE ),
+				( new DOMNodeScanner() )->addEventListener( Table::TBody, $listener ),
+				'setItemsIndices',
+			),
+			array(
+				'inferTableFrom',
+				array( self::TABLE_SOURCE ),
+				( new DOMNodeScanner() )->addEventListener( Table::THead, $listener, EventAt::End ),
+				'setItemsIndices',
+			),
 		);
 	}
 
@@ -185,7 +205,7 @@ class HtmlTableExtractorTest extends TestCase {
 		$thMarshaller = new /** @template-implements Transformer<DOMNodeScanner|DOMStringScanner,string> */ class()
 		implements Transformer {
 			public function transform( string|array|DOMElement $element, object $tracer ): string {
-				$content = $element instanceof DOMElement ? $element->textContent : $element;
+				$content = $element instanceof DOMElement ? $element->textContent : $element[3];
 
 				TestCase::assertIsString( $content );
 
@@ -486,11 +506,10 @@ class HtmlTableExtractorTest extends TestCase {
 		};
 
 		$captionAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) {
-			$data = array();
-
-			// @phpstan-ignore-next-line -- Always a string if not DOMElement.
-			$el   = $el instanceof DOMElement ? $el : DOMDocumentFactory::bodyFromHtml( $el, false )->firstChild;
+			// @phpstan-ignore-next-line -- Always an array if not DOMElement.
+			$el   = $el instanceof DOMElement ? $el : DOMDocumentFactory::bodyFromHtml( $el[0], false )->firstChild;
 			$list = $el?->childNodes;
+			$data = array();
 
 			$data['text1'] = trim( $list?->item( 0 )->textContent ?? '' );
 			$data['bold1'] = trim( $list?->item( 1 )->textContent ?? '' );
@@ -501,9 +520,8 @@ class HtmlTableExtractorTest extends TestCase {
 
 		$thAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) {
 			if ( ! $el instanceof DOMElement ) {
-				TestCase::assertIsString( $el );
-
-				$text     = trim( strip_tags( $el ) );
+				// @phpstan-ignore-next-line -- Always an array if not DOMElement.
+				$text     = trim( strip_tags( $el[3] ) );
 				$expected = (int) substr( $text, -1 );
 
 				match ( true ) {
