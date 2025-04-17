@@ -8,7 +8,7 @@ use TheWebSolver\Codegarage\Scraper\Error\ValidationFail;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
-use TheWebSolver\Codegarage\Scraper\Marshaller\HtmlEntityDecode;
+use TheWebSolver\Codegarage\Scraper\Decorator\HtmlEntityDecode;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 

@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\Scraper\Marshaller;
+namespace TheWebSolver\Codegarage\Scraper\Decorator;
 
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
