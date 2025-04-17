@@ -38,4 +38,4 @@ parameters:
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/TableRowMarshaller.php
 			identifier: return.type
-			message: '#^Method .*?TableRowMarshaller\:\:validate\(\) should return iterable\<int, DOMNode\|list\<array\{string, string, string, string, string\}\>\> but returns array\<mixed\>\|Traversable\<int, DOMNode\>\.$#'
+			message: '#^Method .*?MarshallTableRow\:\:validate\(\) should return iterable\<int, DOMNode\|list\<array\{string, string, string, string, string\}\>\> but returns array\<mixed\>\|Traversable\<int, DOMNode\>\.$#'

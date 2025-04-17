@@ -22,7 +22,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
  *   CollectionSet<TColumnReturn>|ArrayObject<array-key,TColumnReturn>
  * >
  */
-class TableRowMarshaller implements Transformer {
+class MarshallTableRow implements Transformer {
 	private const TABLE_ROW_NOT_FOUND = 'Impossible to find <tr> DOM Element in given %s.';
 
 	/**

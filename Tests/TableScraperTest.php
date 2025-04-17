@@ -18,7 +18,7 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\AccentedSingleTableScraper;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallTableRow;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
@@ -72,7 +72,7 @@ class TableScraperTest extends TestCase {
 
 	#[Test]
 	public function itThrowsExceptionWhenScrapedDataDoesNotMatchCollectionLength(): void {
-		$tr = new TableRowMarshaller( SingleTableScraper::INVALID_COUNT );
+		$tr = new MarshallTableRow( SingleTableScraper::INVALID_COUNT );
 
 		$table = '
 		<table>

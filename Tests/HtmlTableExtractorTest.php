@@ -19,7 +19,7 @@ use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallTableRow;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
@@ -135,7 +135,7 @@ class HtmlTableExtractorTest extends TestCase {
 				static fn( TableTracer $t ) => $t->setItemsIndices( $columnNames, ...$offset )
 			);
 
-			$tr = new TableRowMarshaller( 'Should Not Throw exception' );
+			$tr = new MarshallTableRow( 'Should Not Throw exception' );
 
 			// @phpstan-ignore-next-line -- Ignore $tr generic type.
 			$scanner->addTransformer( Table::Row, $tr )->inferTableFrom( $source );
