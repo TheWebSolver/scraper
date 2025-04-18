@@ -34,7 +34,7 @@ parameters:
 		- # Ignore default transformers used.
 			path: Src/AccentedSingleTableScraper.php
 			identifier: return.type
-			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?\} but returns array\{.*?\}\.$#'
+			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn>} but returns array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?MarshallTableRow\<mixed\>, .*?TranslitAccentedIndexableItem\|.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn>\|.*?MarshallItem\}\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/MarshallTableRow.php
 			identifier: return.type
