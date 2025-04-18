@@ -45,10 +45,8 @@ interface Indexable {
 	 *
 	 * This may return null after current iteration is completed.
 	 *
-	 * @param BackedEnum<T> $type            The item type being iterated if collection includes multiple item types.
-	 * @param bool          $offsetInclusive When this is set to true, the total count must include offset values
-	 *                                       count even if provided offset indices have been omitted.
+	 * @param BackedEnum<T> $type The item type being iterated if collection includes multiple item types.
 	 * @template T of string|int
 	 */
-	public function getCurrentIterationCountOf( ?BackedEnum $type = null, bool $offsetInclusive = false ): ?int;
+	public function getCurrentIterationCount( ?BackedEnum $type = null ): ?int;
 }

@@ -134,7 +134,7 @@ trait TableExtractor {
 		return $this->currentIteration__columnName ?? null;
 	}
 
-	public function getCurrentIterationCountOf( ?BackedEnum $type = null, bool $offsetInclusive = false ): ?int {
+	public function getCurrentIterationCount( ?BackedEnum $type = null ): ?int {
 		if ( ! isset( $this->currentTable__id ) ) {
 			return null;
 		}
@@ -142,7 +142,7 @@ trait TableExtractor {
 		return match ( $type ) {
 			Table::Head   => $this->currentIteration__headCount ?? null,
 			Table::Row    => $this->currentIteration__rowCount[ $this->currentTable__id ] ?? null,
-			Table::Column => $this->getCurrentIterationColumnCount( $offsetInclusive ),
+			Table::Column => $this->getCurrentIterationColumnCount(),
 			default       => null,
 		};
 	}
@@ -189,16 +189,20 @@ trait TableExtractor {
 			$this->discoveredTable__rows               = array();
 	}
 
-	private function getCurrentIterationColumnCount( bool $withOffset ): ?int {
+	private function getCurrentIterationColumnCount(): ?int {
 		$countUptoCurrent = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
 
 		if ( null === $countUptoCurrent ) {
 			return null;
 		}
 
-		$column = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? null;
+		if ( ! $column = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? null ) {
+			return $countUptoCurrent;
+		}
 
-		return ! $withOffset && $column ? $countUptoCurrent - count( $column[1] ) : $countUptoCurrent;
+		$offsetCount = count( $column[1] );
+
+		return $countUptoCurrent > $offsetCount ? $countUptoCurrent - $offsetCount : $countUptoCurrent;
 	}
 
 	/** @return ?Closure(static, string|DOMElement): mixed */
@@ -345,7 +349,7 @@ trait TableExtractor {
 		Transformer $transformer,
 		array &$data
 	): mixed {
-		$count    = $this->getCurrentIterationCountOf( Table::Column );
+		$count    = $this->getCurrentIterationCount( Table::Column );
 		$position = $count ? $count - 1 : 0;
 		$value    = $transformer->transform( $element, $this );
 

@@ -38,7 +38,7 @@ class MarshallTableRow implements Transformer {
 
 		$this->validateColumnNamesCount( $tracer, dataCount: count( $dataset ) );
 
-		$key   = $this->discoverIndexKeyFrom( $dataset ) ?? $tracer->getCurrentIterationCountOf( Table::Row );
+		$key   = $this->discoverIndexKeyFrom( $dataset ) ?? $tracer->getCurrentIterationCount( Table::Row );
 		$value = new ArrayObject( $dataset );
 
 		return null === $key ? $value : new CollectionSet( $key, $value );
@@ -86,7 +86,7 @@ class MarshallTableRow implements Transformer {
 
 		$actualCount = count( $names = $tracer->getItemsIndices() ) ?: $dataCount;
 
-		$tracer->getCurrentIterationCountOf( Table::Column ) === $actualCount
+		$tracer->getCurrentIterationCount( Table::Column ) === $actualCount
 			|| ScraperError::withSourceMsg( $this->invalidCountMsg, $actualCount, implode( '", "', $names ) );
 	}
 }

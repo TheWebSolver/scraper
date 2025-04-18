@@ -446,7 +446,7 @@ class HtmlTableExtractorTest extends TestCase {
 				->inferTableFrom( $source );
 
 			$this->assertNotEmpty( $data = $scanner->getTableData()[ $scanner->getTableId()[0] ]->current()->getArrayCopy() );
-			$this->assertSame( 2, $scanner->getCurrentIterationCountOf( Table::Column ) );
+			$this->assertSame( 2, $scanner->getCurrentIterationCount( Table::Column ) );
 			$this->assertArrayHasKey( 'First', $data );
 			$this->assertArrayNotHasKey( 'Last', $data, 'Skips falsy (empty string) transformed value.' );
 		}
@@ -549,7 +549,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 		$trAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) use ( $source ) {
 			self::assertNull(
-				$tracer->getCurrentIterationCountOf( Table::Head ),
+				$tracer->getCurrentIterationCount( Table::Head ),
 				'Head count is not accessible when inferring <tr> content.'
 			);
 
@@ -565,7 +565,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 				self::assertSame(
 					3,
-					$tracer->getCurrentIterationCountOf( Table::Column ),
+					$tracer->getCurrentIterationCount( Table::Column ),
 					'Only discovers <tr> upto nested table. No negative look-head support.'
 				);
 
@@ -587,7 +587,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 			self::assertSame(
 				'last-table' === $id ? 2 : 3,
-				$tracer->getCurrentIterationCountOf( Table::Column ),
+				$tracer->getCurrentIterationCount( Table::Column ),
 				'Column count is accessible when <td> is inferred within <tr> Transformer.'
 			);
 
@@ -596,7 +596,7 @@ class HtmlTableExtractorTest extends TestCase {
 
 		$tdAsserter = static function ( string|array|DOMElement $el, TableTracer $tracer ) {
 			self::assertNull(
-				$tracer->getCurrentIterationCountOf( Table::Head ),
+				$tracer->getCurrentIterationCount( Table::Head ),
 				'Head count is not accessible when inferring <td> content.'
 			);
 
@@ -663,7 +663,7 @@ class HtmlTableExtractorTest extends TestCase {
 		int $expectedPosition,
 	): void {
 		self::assertTrue( str_ends_with( $headContent, (string) $expectedPosition ) );
-		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Head ) );
+		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCount( Table::Head ) );
 	}
 
 	/** @param TableTracer<string> $tracer */
@@ -673,7 +673,7 @@ class HtmlTableExtractorTest extends TestCase {
 		int $expectedPosition,
 	): void {
 		self::assertSame( $key, $tracer->getCurrentItemIndex() );
-		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCountOf( Table::Column ) );
+		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCount( Table::Column ) );
 	}
 
 	#[Test]
