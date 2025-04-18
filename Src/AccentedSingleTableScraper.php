@@ -9,9 +9,9 @@ use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 use TheWebSolver\Codegarage\Scraper\Enums\Table as TableEnum;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TableRowMarshaller;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallTableRow;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedTableScraper;
-use TheWebSolver\Codegarage\Scraper\Marshaller\TranslitAccentedIndexableItem;
+use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 
 /**
  * @template TColumnReturn
@@ -30,7 +30,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	 * If transformers not injected via constructor, then defaults are used.
 	 * They only support collecting transformed `TColumnReturn` as a "string".
 	 *
-	 * @param ?Transformer<contravariant static,TColumnReturn> $rowTransformer    Uses `TableRowMarshaller` if not provided.
+	 * @param ?Transformer<contravariant static,TColumnReturn> $rowTransformer    Uses `MarshallTableRow` if not provided.
 	 * @param ?Transformer<contravariant static,TColumnReturn> $columnTransformer Uses `TranslitAccentedIndexableItem` if not provided.
 	 * @no-named-arguments
 	 */
@@ -72,7 +72,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		}
 
 		return array(
-			$this->rowTransformer ?? new TableRowMarshaller( $invalidCount ),
+			$this->rowTransformer ?? new MarshallTableRow( $invalidCount ),
 			$columnTransformer,
 		);
 	}
