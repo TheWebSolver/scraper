@@ -44,8 +44,6 @@ class Normalize {
 	 * - **1:** Flipped offset -> `[0=>0, 2=>1, 4=>2]`
 	 * - **2:** Last index key -> `5` of the resulted array
 	 *
-	 * @throws InvalidSource When last offset index not found even if non-empty $offset given.
-	 *
 	 * @template TValue
 	 */
 	public static function listWithOffset( array $array, array $offset ): array {
@@ -54,12 +52,12 @@ class Normalize {
 		}
 
 		$skipList    = array_flip( $offset );
-		$lastSkipped = array_key_last( $skipList ) ?? throw new InvalidSource( 'Last offset index not found' );
+		$lastSkipped = (int) array_key_last( $skipList );
 		$collectList = array();
 		$current     = 0;
 
 		for ( $i = 0; $i <= $lastSkipped; $i++ ) {
-			if ( ! isset( $skipList[ $i ] ) ) {
+			if ( ! isset( $skipList[ $i ] ) && isset( $array[ $current ] ) ) {
 				$collectList[ $i ] = $array[ $current ];
 
 				unset( $array[ $current++ ] );
@@ -70,7 +68,10 @@ class Normalize {
 			$collectList[ ++$lastSkipped ] = $value;
 		}
 
-		return array( $collectList, $skipList, $lastSkipped );
+		$lastKey  = (int) array_key_last( $collectList );
+		$skipList = array_filter( $skipList, static fn( int $skip ) => $skip < $lastKey, ARRAY_FILTER_USE_KEY );
+
+		return array( $collectList, $skipList, $lastKey );
 	}
 
 	/**

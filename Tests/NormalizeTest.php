@@ -42,15 +42,21 @@ class NormalizeTest extends TestCase {
 	 * @param list<mixed>      $array
 	 * @param list<int>        $offset
 	 * @param array<int,mixed> $expected
+	 * @param list<int>        $expectedOffsets
 	 */
 	#[Test]
 	#[DataProvider( 'provideArrayWithOffsetKeys' )]
-	public function itReIndexesGivenArrayWithOffset( array $array, array $offset, array $expected ): void {
+	public function itReIndexesGivenArrayWithOffset(
+		array $array,
+		array $offset,
+		array $expected,
+		?array $expectedOffsets = null
+	): void {
 		[$reindexed, $offsetFlipped, $lastIndex] = Normalize::listWithOffset( $array, $offset );
 
 		$this->assertSame( $expected, $reindexed );
 		$this->assertSame( array_key_last( $expected ), $lastIndex );
-		$this->assertSame( array_flip( $offset ), $offsetFlipped );
+		$this->assertSame( array_flip( $expectedOffsets ?? $offset ), $offsetFlipped );
 	}
 
 	/** @return mixed[] */
@@ -65,6 +71,7 @@ class NormalizeTest extends TestCase {
 			array( array( '2', '4', '6' ), array( 0, 1, 3, 5 ), array( 2 => '2', 4 => '4', 6 => '6' ) ),
 			array( array( '3', '4', '7' ), array( 0, 1, 2, 5, 6 ), array( 3 => '3', 4 => '4', 7 => '7' ) ),
 			array( array( Table::Row, Table::Column ), array( 0, 1, 2 ), array( 3 => Table::Row, 4 => Table::Column ) ),
+			array( array( 'one', 'three' ), array( 0, 2, 4, 5, 7 ), array( 1 => 'one', 3 => 'three' ), array( 0, 2 ) ),
 		);
 	}
 }
