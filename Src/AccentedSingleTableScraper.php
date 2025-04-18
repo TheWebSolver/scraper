@@ -75,4 +75,12 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 			$columnTransformer,
 		);
 	}
+
+	protected function hasDefaultTransformerProvided( TableEnum $for ): bool {
+		return match ( $for ) {
+			TableEnum::Row    => isset( $this->rowTransformer ),
+			TableEnum::Column => isset( $this->columnTransformer ),
+			default           => false,
+		};
+	}
 }
