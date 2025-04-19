@@ -48,7 +48,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	}
 
 	public function indicesWithAccentedCharacters(): array {
-		return $this->transliterationColumnNames ?? array();
+		return $this->transliterationColumnNames ?? [];
 	}
 
 	protected function withInjectedOrDefaultTransformers(): static {
@@ -70,10 +70,10 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 				&& ( $columnTransformer = new TranslitAccentedIndexableItem( $columnTransformer ) );
 		}
 
-		return array(
+		return [
 			$this->rowTransformer ?? new MarshallTableRow( $invalidCount ),
 			$columnTransformer,
-		);
+		];
 	}
 
 	protected function hasDefaultTransformerProvided( TableEnum $for ): bool {

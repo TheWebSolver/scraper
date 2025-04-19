@@ -58,7 +58,7 @@ trait HtmlTableFromString {
 	 * @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList
 	 */
 	public function inferTableDataFrom( iterable $elementList ): array {
-		$data = array();
+		$data = [];
 
 		[$keys, $offset, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
 
@@ -131,7 +131,7 @@ trait HtmlTableFromString {
 		/** @return array{0:?string,1:?list<string>} */
 	protected function headStructureContentFrom( string $string ): array {
 		$matched   = preg_match( '/<thead(.*?)>(.*?)<\/thead>/', subject: $string, matches: $thead );
-		$unmatched = array( null, null );
+		$unmatched = [ null, null ];
 
 		if ( ! $matched || empty( $thead[2] ) ) {
 			return $unmatched;
@@ -146,8 +146,8 @@ trait HtmlTableFromString {
 		[$columnsFound, $tableColumns] = Normalize::tableColumnsFrom( $firstRow[2] );
 
 		return $columnsFound
-			? array( $firstRow[0], $this->inferTableHeadFrom( $tableColumns, $firstRow[0] ) )
-			: array( null, null );
+			? [ $firstRow[0], $this->inferTableHeadFrom( $tableColumns, $firstRow[0] ) ]
+			: [ null, null ];
 	}
 
 	/** @return ?array{0:string,1:list<array{0:string,1:string,2:string}>} */
@@ -165,7 +165,7 @@ trait HtmlTableFromString {
 			return null;
 		}
 
-		return array( $tbody[0], $tableRows );
+		return [ $tbody[0], $tableRows ];
 	}
 
 	private function get64bitHash( string $string ): string {
@@ -206,7 +206,7 @@ trait HtmlTableFromString {
 		$traceCaption = $this->isValidStructureIfTraceable( Table::Caption, $table[0] );
 		$traceHead    = $this->isValidStructureIfTraceable( Table::THead, $table[0] );
 
-		return array( $table, $body, $traceCaption, $traceHead );
+		return [ $table, $body, $traceCaption, $traceHead ];
 	}
 
 	/** @return ?list<string> */

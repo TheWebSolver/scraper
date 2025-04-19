@@ -23,9 +23,9 @@ class NormalizeTest extends TestCase {
 
 	/** @return string[][] */
 	public static function provideStringWithControlAndWhitespace(): array {
-		return array(
-			array( 'it passes', 'it   		  &nbsp;  passes' ),
-			array(
+		return [
+			[ 'it passes', 'it   		  &nbsp;  passes' ],
+			[
 				'<b> This also <br> passes! </b>',
 				'
 				<b> 		        This&nbsp;
@@ -34,8 +34,8 @@ class NormalizeTest extends TestCase {
 																!
 										  </b>
 				',
-			),
-		);
+			],
+		];
 	}
 
 	/**
@@ -62,16 +62,16 @@ class NormalizeTest extends TestCase {
 	/** @return mixed[] */
 	// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
 	public static function provideArrayWithOffsetKeys(): array {
-		return array(
-			array( array( 'without', 'offset' ), array(), array( 0 => 'without', 1 => 'offset' ) ),
-			array( array( '2', '5', '6' ), array( 0, 1, 3, 4 ), array( 2 => '2', 5 => '5', 6 => '6' ) ),
-			array( array( '0', '1', '5' ), array( 2, 3, 4 ), array( 0 => '0', 1 => '1', 5 => '5' ) ),
-			array( array( '0', '3', '4' ), array( 1, 2 ), array( 0 => '0', 3 => '3', 4 => '4' ) ),
-			array( array( '3', '6' ), array( 0, 1, 2, 4, 5 ), array( 3 => '3', 6 => '6' ) ),
-			array( array( '2', '4', '6' ), array( 0, 1, 3, 5 ), array( 2 => '2', 4 => '4', 6 => '6' ) ),
-			array( array( '3', '4', '7' ), array( 0, 1, 2, 5, 6 ), array( 3 => '3', 4 => '4', 7 => '7' ) ),
-			array( array( Table::Row, Table::Column ), array( 0, 1, 2 ), array( 3 => Table::Row, 4 => Table::Column ) ),
-			array( array( 'one', 'three' ), array( 0, 2, 4, 5, 7 ), array( 1 => 'one', 3 => 'three' ), array( 0, 2 ) ),
-		);
+		return [
+			[ [ 'without', 'offset' ], [], [ 0 => 'without', 1 => 'offset' ] ],
+			[ [ '2', '5', '6' ], [ 0, 1, 3, 4 ], [ 2 => '2', 5 => '5', 6 => '6' ] ],
+			[ [ '0', '1', '5' ], [ 2, 3, 4 ], [ 0 => '0', 1 => '1', 5 => '5' ] ],
+			[ [ '0', '3', '4' ], [ 1, 2 ], [ 0 => '0', 3 => '3', 4 => '4' ] ],
+			[ [ '3', '6' ], [ 0, 1, 2, 4, 5 ], [ 3 => '3', 6 => '6' ] ],
+			[ [ '2', '4', '6' ], [ 0, 1, 3, 5 ], [ 2 => '2', 4 => '4', 6 => '6' ] ],
+			[ [ '3', '4', '7' ], [ 0, 1, 2, 5, 6 ], [ 3 => '3', 4 => '4', 7 => '7' ] ],
+			[ [ Table::Row, Table::Column ], [ 0, 1, 2 ], [ 3 => Table::Row, 4 => Table::Column ] ],
+			[ [ 'one', 'three' ], [ 0, 2, 4, 5, 7 ], [ 1 => 'one', 3 => 'three' ], [ 0, 2 ] ],
+		];
 	}
 }

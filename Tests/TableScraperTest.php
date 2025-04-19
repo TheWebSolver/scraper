@@ -46,22 +46,22 @@ class TableScraperTest extends TestCase {
 		$iterator = $this->scraper->parse( $this->scraper->fromCache() );
 
 		$this->assertSame(
-			array(
+			[
 				'name'    => 'John Doe',
 				'title'   => 'PHP Developer',
 				'address' => 'Ktm',
-			),
+			],
 			$iterator->current()->getArrayCopy()
 		);
 
 		$iterator->next();
 
 		$this->assertSame(
-			array(
+			[
 				'name'    => 'Lorem Ipsum',
 				'title'   => 'JS Developer',
 				'address' => 'Bkt',
-			),
+			],
 			$iterator->current()->getArrayCopy()
 		);
 
@@ -116,10 +116,10 @@ class TableScraperTest extends TestCase {
 		';
 
 		$this->assertSame(
-			array(
+			[
 				'title'   => 'Develôper',
 				'address' => 'Curaçao',
-			),
+			],
 			$scraper->parse( $table )->current()->getArrayCopy()
 		);
 
@@ -128,47 +128,47 @@ class TableScraperTest extends TestCase {
 		$scraper->setAccentOperationType( AccentedCharScraper::ACTION_TRANSLIT );
 
 		$this->assertSame(
-			array(
+			[
 				'title'   => 'Developer',
 				'address' => 'Curaçao',
-			),
+			],
 			$scraper->parse( $table )->current()->getArrayCopy()
 		);
 	}
 
 	/** @return mixed[] */
 	public static function providesValidAndInvalidTableData(): array {
-		return array(
-			array(
+		return [
+			[
 				'<tr><td>FirstName-LastName</td><td>Title</td><td>Address</td></tr>',
 				DeveloperDetails::Name,
-			),
-			array(
+			],
+			[
 				'<tr><td>FirstName LastName</td><td>This is a very long developer title</td><td>Address</td></tr>',
 				DeveloperDetails::Title,
-			),
-			array(
+			],
+			[
 				'<tr><td>FirstName LastName</td><td>Title</td><td>Addr3ss</td></tr>',
 				DeveloperDetails::Address,
-			),
-			array(
+			],
+			[
 				'<tr><td>Valid Name</td><td>Valid Title</td><td>Located</td></tr>',
 				DeveloperDetails::Address,
-				array(
+				[
 					'Located',
-					array(
+					[
 						'name'    => 'Valid Name',
 						'title'   => 'Valid Title',
 						'address' => 'Located',
-					),
-				),
-			),
-		);
+					],
+				],
+			],
+		];
 	}
 
 	#[Test]
 	public function itOnlyCollectsDataWithRequestedKeys(): void {
-		$requestedKeys = array( 'name', 'address' );
+		$requestedKeys = [ 'name', 'address' ];
 		$validateKeys  = new /** @template-implements Transformer<HtmlTableScraper,string> */ class( $requestedKeys )
 		implements Transformer {
 			/** @param string[] $requestedKeys */
@@ -217,11 +217,11 @@ class TableScraperTest extends TestCase {
 
 		$this->assertSame( 'John Doe', $iterator->key() );
 		$this->assertSame(
-			array(
+			[
 				'name'    => 'John Doe',
 				'title'   => 'PHP Developer',
 				'address' => 'Ktm',
-			),
+			],
 			$iterator->current()->getArrayCopy()
 		);
 	}
@@ -273,12 +273,12 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 	}
 
 	public function getDiacriticsList(): array {
-			return array(
+			return [
 				'ä' => 'ae',
 				'ç' => 'c',
 				'ė' => 'e',
 				'ô' => 'o',
-			);
+			];
 	}
 
 	protected function defaultCachePath(): string {

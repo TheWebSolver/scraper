@@ -39,7 +39,7 @@ class AssertDOMElementTest extends TestCase {
 	public function itEnsuresElementHasClass( DOMElement $element ): void {
 		$element->setAttribute( 'class', 'one two three' );
 
-		foreach ( array( 'one', 'two', 'three' ) as $class ) {
+		foreach ( [ 'one', 'two', 'three' ] as $class ) {
 			$this->assertTrue( AssertDOMElement::hasClass( $element, $class ) );
 		}
 	}
@@ -57,12 +57,12 @@ class AssertDOMElementTest extends TestCase {
 
 	/** @return mixed[] */
 	public static function provideHtmlString(): array {
-		return array(
-			array( null, '<div></div>', 'ul' ),
-			array( 'div', '<section></section><div></div><ul></ul>', 'div' ),
-			array( null, '<div><!-- only comment --></div>', 'ul' ),
-			array( 'ul', '<!-- comment --><div></div><ul></ul>', 'ul' ),
-		);
+		return [
+			[ null, '<div></div>', 'ul' ],
+			[ 'div', '<section></section><div></div><ul></ul>', 'div' ],
+			[ null, '<div><!-- only comment --></div>', 'ul' ],
+			[ 'ul', '<!-- comment --><div></div><ul></ul>', 'ul' ],
+		];
 	}
 
 	#[Test]
@@ -75,9 +75,9 @@ class AssertDOMElementTest extends TestCase {
 
 	/** @return mixed[] */
 	public static function provideStringToInferElementByType(): array {
-		return array(
-			array( 'content <span>skip</span><!--skip--><div>div value</div>', 'div', 'div value' ),
-			array( '<span>skip</span><!-- NO <pre> TAG HERE --><div></div>', 'pre', null ),
-		);
+		return [
+			[ 'content <span>skip</span><!--skip--><div>div value</div>', 'div', 'div value' ],
+			[ '<span>skip</span><!-- NO <pre> TAG HERE --><div></div>', 'pre', null ],
+		];
 	}
 }

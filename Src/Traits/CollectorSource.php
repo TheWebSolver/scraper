@@ -16,7 +16,7 @@ trait CollectorSource {
 
 	/** @return list<string> */
 	final protected function collectSourceItems(): array {
-		return $this->getCollectionSource()->items ?? array();
+		return $this->getCollectionSource()->items ?? [];
 	}
 
 	final protected function getCollectionSource(): ?CollectFrom {

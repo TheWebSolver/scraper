@@ -43,30 +43,30 @@ trait TableExtractor {
 	 */
 	private array $discoveredTable__eventListeners;
 	/** @var array<array-key,array<value-of<Table>,array<string,bool>>> */
-	private array $discoveredTable__eventListenersFired = array();
+	private array $discoveredTable__eventListenersFired = [];
 	/** @var array{0:Table,1:EventAt} */
 	private array $discoveredTable__eventListenerFiring;
 
 	/** @var (int|string)[] */
-	private array $discoveredTable__ids = array();
+	private array $discoveredTable__ids = [];
 
 	/** @var list<Table> */
-	private array $discoveredTable__excludedStructures = array();
+	private array $discoveredTable__excludedStructures = [];
 	/** @var (string|null)[] */
-	private array $discoveredTable__captions = array();
+	private array $discoveredTable__captions = [];
 	/** @var SplFixedArray<string>[] */
-	private array $discoveredTable__headNames = array();
+	private array $discoveredTable__headNames = [];
 	/** @var Iterator<array-key,ArrayObject<array-key,TColumnReturn>>[] */
-	private array $discoveredTable__rows = array();
+	private array $discoveredTable__rows = [];
 
 	private int|string $currentTable__id;
 	/** @var array{0:array<int,string>,1:array<int,int>,2:int}[] Names, offsets, & last index */
 	private array $currentTable__columnInfo;
 
 	/** @var int[] */
-	private array $currentIteration__rowCount = array();
+	private array $currentIteration__rowCount = [];
 	/** @var int[] */
-	private array $currentIteration__columnCount  = array();
+	private array $currentIteration__columnCount  = [];
 	private bool $currentIteration__allTableHeads = true;
 	private string $currentIteration__columnName;
 	private int $currentIteration__headCount;
@@ -97,10 +97,10 @@ trait TableExtractor {
 
 	public function setItemsIndices( array $keys, int ...$offset ): void {
 		if ( ! $this->isCurrentlyListening( EventAt::Start, for: Table::Row ) ) {
-			$placeholders = array( static::class, __FUNCTION__, Table::class, Table::Row->name );
+			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name ];
 
 			throw new ScraperError(
-				sprintf( self::USE_EVENT_LISTENER, ...array( ...$placeholders, 'set column names.' ) )
+				sprintf( self::USE_EVENT_LISTENER, ...[ ...$placeholders, 'set column names.' ] )
 			);
 		}
 
@@ -127,7 +127,7 @@ trait TableExtractor {
 
 	/** @return array<int,string> */
 	public function getItemsIndices(): array {
-		return $this->currentTable__columnInfo[ $this->currentTable__id ][0] ?? array();
+		return $this->currentTable__columnInfo[ $this->currentTable__id ][0] ?? [];
 	}
 
 	public function getCurrentItemIndex(): ?string {
@@ -179,14 +179,14 @@ trait TableExtractor {
 			$this->discoveredTable__eventListenerFiring,
 		);
 
-		$this->discoveredTable__eventListenersFired = array();
+		$this->discoveredTable__eventListenersFired = [];
 	}
 
 	public function resetTableTraced(): void {
-			$this->discoveredTable__excludedStructures = array();
-			$this->discoveredTable__captions           = array();
-			$this->discoveredTable__headNames          = array();
-			$this->discoveredTable__rows               = array();
+			$this->discoveredTable__excludedStructures = [];
+			$this->discoveredTable__captions           = [];
+			$this->discoveredTable__headNames          = [];
+			$this->discoveredTable__rows               = [];
 	}
 
 	private function getCurrentIterationColumnCount(): ?int {
@@ -229,10 +229,10 @@ trait TableExtractor {
 	private function fireEventListenerOf( Table $table, EventAt $eventAt, string|DOMElement $node ): void {
 		$callback       = $this->getEventListenersOf( $table, $eventAt );
 		$id             = $this->currentTable__id;
-		$firedPositions = $this->discoveredTable__eventListenersFired[ $id ][ $table->value ] ?? array(
+		$firedPositions = $this->discoveredTable__eventListenersFired[ $id ][ $table->value ] ?? [
 			EventAt::Start->name => false,
 			EventAt::End->name   => false,
-		);
+		];
 
 		if ( ! $callback ) {
 			$this->discoveredTable__eventListenersFired[ $id ][ $table->value ] = $firedPositions;
@@ -241,7 +241,7 @@ trait TableExtractor {
 		}
 
 		$firedPositions[ $eventAt->name ]           = true;
-		$this->discoveredTable__eventListenerFiring = array( $table, $eventAt );
+		$this->discoveredTable__eventListenerFiring = [ $table, $eventAt ];
 
 		$this->tryFiringEventListenerWith( $callback, $node );
 
@@ -262,31 +262,31 @@ trait TableExtractor {
 
 	private function hasFiredEventListenerFor( Table $table, EventAt $eventAt ): bool {
 		$listeners = $this->discoveredTable__eventListenersFired;
-		$firedAt   = $listeners[ $this->currentTable__id ][ $table->value ] ?? array();
+		$firedAt   = $listeners[ $this->currentTable__id ][ $table->value ] ?? [];
 
 		return $firedAt[ $eventAt->name ] ?? false;
 	}
 
 	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
-		$columns = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? array();
+		$columns = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? [];
 
-		return array(
-			/* columnNames  */ $columns[0] ?? array(),
-			/* offset       */ $columns[1] ?? array(),
+		return [
+			/* columnNames  */ $columns[0] ?? [],
+			/* offset       */ $columns[1] ?? [],
 			/* lastPosition */ $columns[2] ?? null,
 			/* skippedNodes */ $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
 			/* transformer  */ $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem(),
-		);
+		];
 	}
 
 	/** @return array{0:list<string>,1:int,2:?Transformer<static,string>} */
 	private function useCurrentTableHeadDetails(): array {
-		return array(
-			/* names        */ array(),
+		return [
+			/* names        */ [],
 			/* skippedNodes */ 0,
 			/* transformer  */ $this->discoveredTable__transformers[ Table::Head->value ] ?? null,
-		);
+		];
 	}
 
 	/**
@@ -297,11 +297,11 @@ trait TableExtractor {
 	 * }
 	 */
 	private function useCurrentTableBodyDetails(): array {
-		return array(
+		return [
 			/* headInspected */ false,
 			/* position      */ $this->currentIteration__rowCount[ $this->currentTable__id ] = 0,
 			/* transformer   */ $this->discoveredTable__transformers[ Table::Row->value ] ?? null,
-		);
+		];
 	}
 
 	private function shouldTraceTableStructure( Table $target ): bool {

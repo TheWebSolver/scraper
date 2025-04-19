@@ -51,12 +51,12 @@ class TransformerTest extends TestCase {
 
 	/** @return mixed[] */
 	public static function provideItemMarshallerValues(): array {
-		return array(
-			array( 'value', 'value' ),
-			array( new DOMElement( 'div', 'div value' ), 'div value' ),
-			array( array( 'full-node', 'nodeName', 'attributes', 'content', 'nodeNameClose' ), 'content' ),
-			array( array(), 'throws exception coz not a normalized node', true ),
-		);
+		return [
+			[ 'value', 'value' ],
+			[ new DOMElement( 'div', 'div value' ), 'div value' ],
+			[ [ 'full-node', 'nodeName', 'attributes', 'content', 'nodeNameClose' ], 'content' ],
+			[ [], 'throws exception coz not a normalized node', true ],
+		];
 	}
 
 	/**
@@ -87,7 +87,7 @@ class TransformerTest extends TestCase {
 
 		$scope->expects( $this->once() )
 			->method( 'getDiacriticsList' )
-			->willReturn( array( 'ô' => 'o' ) );
+			->willReturn( [ 'ô' => 'o' ] );
 
 		if ( $indices ) {
 			[$keys, $key] = $indices;
@@ -110,26 +110,26 @@ class TransformerTest extends TestCase {
 
 	/** @return mixed[] */
 	public static function provideTranslitSupportedScopes(): array {
-		return array(
-			array( TranslitAccentedItem::class, AccentedCharacter::class ),
-			array(
+		return [
+			[ TranslitAccentedItem::class, AccentedCharacter::class ],
+			[
 				TranslitAccentedIndexableItem::class,
 				AccentedIndexableItem::class,
-				array( array( 'first', 'second' ), 'first' ),
-			),
-			array(
+				[ [ 'first', 'second' ], 'first' ],
+			],
+			[
 				TranslitAccentedIndexableItem::class,
 				AccentedIndexableItem::class,
-				array( array( 'first', 'second' ), null ),
+				[ [ 'first', 'second' ], null ],
 				true,
-			),
-		);
+			],
+		];
 	}
 
 	#[Test]
 	public function itUsesProxyTransformerToValidateTransitAndDecodeGivenString(): void {
 		$validator = $this->createMockForIntersectionOfInterfaces(
-			array( Validatable::class, AccentedIndexableItem::class )
+			[ Validatable::class, AccentedIndexableItem::class ]
 		);
 
 		$validator->expects( $this->once() )
@@ -138,7 +138,7 @@ class TransformerTest extends TestCase {
 
 		$validator->expects( $this->once() )
 			->method( 'getDiacriticsList' )
-			->willReturn( array( 'ô' => 'o' ) );
+			->willReturn( [ 'ô' => 'o' ] );
 
 		$validator->expects( $this->once() )
 			->method( 'validate' )
@@ -149,7 +149,7 @@ class TransformerTest extends TestCase {
 
 		$validator->expects( $this->once() )
 			->method( 'getItemsIndices' )
-			->willReturn( array( 'firstIndex', 'secondIndex' ) );
+			->willReturn( [ 'firstIndex', 'secondIndex' ] );
 
 		$validator->expects( $this->once() )
 			->method( 'getCurrentItemIndex' )

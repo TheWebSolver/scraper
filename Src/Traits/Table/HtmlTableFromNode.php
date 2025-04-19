@@ -29,7 +29,7 @@ trait HtmlTableFromNode {
 
 	/** @param iterable<array-key,string|DOMNode> $elementList */
 	public function inferTableDataFrom( iterable $elementList ): array {
-		$data = array();
+		$data = [];
 
 		[$keys, $offset, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
 
@@ -197,7 +197,7 @@ trait HtmlTableFromNode {
 			$headIterator->next();
 		}
 
-		return $row ? array( $row, $this->inferTableHeadFrom( $row ) ) : array( null, null );
+		return $row ? [ $row, $this->inferTableHeadFrom( $row ) ] : [ null, null ];
 	}
 
 	/** @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement} */
@@ -216,7 +216,7 @@ trait HtmlTableFromNode {
 			$tableIterator->next();
 		}
 
-		return $bodyNode ? array( $bodyNode, $captionNode, $headNode ) : null;
+		return $bodyNode ? [ $bodyNode, $captionNode, $headNode ] : null;
 	}
 
 	/** @return ?list<string> */

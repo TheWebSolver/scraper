@@ -3,11 +3,9 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Helper;
 
-use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
-
 class Normalize {
-	final public const NON_BREAKING_SPACES = array( '&nbsp;', /* "&" entity is "&amp;" + "nbsp;" */ '&amp;nbsp;' );
-	final public const CONTROLS            = array( "\n", "\r", "\t", "\v" );
+	final public const NON_BREAKING_SPACES = [ '&nbsp;', /* "&" entity is "&amp;" + "nbsp;" */ '&amp;nbsp;' ];
+	final public const CONTROLS            = [ "\n", "\r", "\t", "\v" ];
 
 	public static function nonBreakingSpaceToWhitespace( string $value ): string {
 		return html_entity_decode( str_replace( self::NON_BREAKING_SPACES, ' ', htmlspecialchars( $value ) ) );
@@ -48,12 +46,12 @@ class Normalize {
 	 */
 	public static function listWithOffset( array $array, array $offset ): array {
 		if ( empty( $offset ) ) {
-			return array( $array, array(), array_key_last( $array ) ?? 0 );
+			return [ $array, [], array_key_last( $array ) ?? 0 ];
 		}
 
 		$skipList    = array_flip( $offset );
 		$lastSkipped = (int) array_key_last( $skipList );
-		$collectList = array();
+		$collectList = [];
 		$current     = 0;
 
 		for ( $i = 0; $i <= $lastSkipped; $i++ ) {
@@ -71,7 +69,7 @@ class Normalize {
 		$lastKey  = (int) array_key_last( $collectList );
 		$skipList = array_filter( $skipList, static fn( int $skip ) => $skip < $lastKey, ARRAY_FILTER_USE_KEY );
 
-		return array( $collectList, $skipList, $lastKey );
+		return [ $collectList, $skipList, $lastKey ];
 	}
 
 	/**
@@ -90,7 +88,7 @@ class Normalize {
 			flags: PREG_SET_ORDER
 		);
 
-		return array( $matched, $tableRows );
+		return [ $matched, $tableRows ];
 	}
 
 	/**
@@ -111,6 +109,6 @@ class Normalize {
 			flags: PREG_SET_ORDER
 		);
 
-		return array( $matched, $tableColumns );
+		return [ $matched, $tableColumns ];
 	}
 }

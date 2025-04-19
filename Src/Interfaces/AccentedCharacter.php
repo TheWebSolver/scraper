@@ -32,7 +32,7 @@ interface AccentedCharacter {
 	 * @link https://stackoverflow.com/questions/3371697/replacing-accented-characters-php
 	 * @var array<string,string>
 	 */
-	public const DIACRITIC_MAP = array(
+	public const DIACRITIC_MAP = [
 		'ъ' => '-',
 		'Ь' => '-',
 		'Ъ' => '-',
@@ -358,5 +358,5 @@ interface AccentedCharacter {
 		'ſ' => 'z',
 		'Ж' => 'zh',
 		'ж' => 'zh',
-	);
+	];
 }

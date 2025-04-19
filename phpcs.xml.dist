@@ -29,10 +29,10 @@
 
 	<!-- Check all files in this directory and the directories below it. -->
 	<file>.</file>
-	<!-- Exclude node modules -->
+	<!-- Exclude node modules. -->
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
-	<!-- Exclude vendors except first-party libraries. -->
-	<exclude-pattern>*/vendor(?!\/thewebsolver\/).*</exclude-pattern>
+	<!-- Exclude composer vendors. -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<!-- Ignore PHP files on asset directory. -->
 	<exclude-pattern>*/assets/css*.php</exclude-pattern>
 	<exclude-pattern>*/assets/js*.php</exclude-pattern>
@@ -61,21 +61,17 @@
 	</rule>
 
 	<!-- Allow setting param names: "$for", "$object", etc. -->
-	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.fnFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.forFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.classFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.stringFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.abstractFound"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames.namespaceFound"/>
+	<rule ref="Universal.NamingConventions">
+		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
 	</rule>
 
 	<!-- Allow using double negation "!!". -->
 	<rule ref="Universal.CodeAnalysis">
 		<exclude name="Universal.CodeAnalysis.NoDoubleNegative.FoundDouble"/>
+	</rule>
+
+	<rule ref="Universal.Arrays">
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found" />
 	</rule>
 
 	<!--
@@ -99,6 +95,8 @@
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed"/>
 	</rule>
+
+	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
 
 	<!--
 	#############################################################################
