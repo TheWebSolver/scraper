@@ -75,13 +75,13 @@ trait HtmlTableFromNode {
 			$splId = spl_object_id( $node );
 			$id    = $splId * spl_object_id( $bodyNode );
 
-			$this->dispatchEventListenerForDiscoveredTable( $id, $bodyNode );
+			$this->dispatchEventListenerForTable( $id, $bodyNode );
 
 			$this->discoveredTable__captions[ $id ] = $captionNode
 				? $this->captionStructureContentFrom( $captionNode )
 				: null;
 
-			$this->dispatchEventListenerForDiscoveredTableHead( $headNode );
+			$this->dispatchEventListenerForTableHead( $headNode );
 
 			$iterator = $this->bodyStructureIteratorFrom( $bodyNode );
 
@@ -106,7 +106,7 @@ trait HtmlTableFromNode {
 
 		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
-		$this->fireEventListenerDispatchedFor( Table::THead, EventAt::Start, $element );
+		$this->fireEventListenerOf( Table::THead, EventAt::Start, $element );
 
 		foreach ( $element->childNodes as $currentIndex => $node ) {
 			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
@@ -220,7 +220,7 @@ trait HtmlTableFromNode {
 	}
 
 	/** @return ?list<string> */
-	private function dispatchEventListenerForDiscoveredTableHead( ?DOMElement $node ): ?array {
+	private function dispatchEventListenerForTableHead( ?DOMElement $node ): ?array {
 		if ( ! $node ) {
 			return null;
 		}
@@ -232,7 +232,7 @@ trait HtmlTableFromNode {
 		}
 
 		$this->registerCurrentTableHead( $headContents );
-		$this->fireEventListenerDispatchedFor( Table::THead, EventAt::End, $node );
+		$this->fireEventListenerOf( Table::THead, EventAt::End, $node );
 
 		return $headContents;
 	}
@@ -242,7 +242,7 @@ trait HtmlTableFromNode {
 			return false;
 		}
 
-		$this->fireEventListenerDispatchedFor( Table::THead, EventAt::End, $node );
+		$this->fireEventListenerOf( Table::THead, EventAt::End, $node );
 
 		$iterator->next();
 
@@ -281,7 +281,7 @@ trait HtmlTableFromNode {
 			}
 
 			if ( ! $bodyStarted ) {
-				$this->fireEventListenerDispatchedFor( Table::Row, EventAt::Start, $body );
+				$this->fireEventListenerOf( Table::Row, EventAt::Start, $body );
 
 				$bodyStarted = true;
 			}
@@ -306,7 +306,7 @@ trait HtmlTableFromNode {
 			$iterator->next();
 		}//end while
 
-		$this->fireEventListenerDispatchedFor( Table::Row, EventAt::End, $body );
+		$this->fireEventListenerOf( Table::Row, EventAt::End, $body );
 	}
 
 	private function inspectFirstRowForHeadStructure( DOMNode $row ): bool {

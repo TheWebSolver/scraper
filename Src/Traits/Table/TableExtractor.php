@@ -42,7 +42,7 @@ trait TableExtractor {
 	 * }>
 	 */
 	private array $discoveredTable__eventListeners;
-	/** @var array<value-of<Table>,array<string,bool>> */
+	/** @var array<array-key,array<value-of<Table>,array<string,bool>>> */
 	private array $discoveredTable__eventListenersFired = array();
 	/** @var array{0:Table,1:EventAt} */
 	private array $discoveredTable__eventListenerFiring;
@@ -96,7 +96,7 @@ trait TableExtractor {
 	}
 
 	public function setItemsIndices( array $keys, int ...$offset ): void {
-		if ( ! $this->isEventFiringListener( EventAt::Start, for: Table::Row ) ) {
+		if ( ! $this->isCurrentlyListening( EventAt::Start, for: Table::Row ) ) {
 			$placeholders = array( static::class, __FUNCTION__, Table::class, Table::Row->name );
 
 			throw new ScraperError(
@@ -159,12 +159,12 @@ trait TableExtractor {
 		return ( $nodeName && ( Table::Head->value === $nodeName || Table::Column->value === $nodeName ) );
 	}
 
-	protected function dispatchEventListenerForDiscoveredTable( int|string $id, string|DOMElement $body ): void {
+	protected function dispatchEventListenerForTable( int|string $id, string|DOMElement $body ): void {
 		if ( ! in_array( $id, $this->discoveredTable__ids, true ) ) {
 			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
 		}
 
-		$this->fireEventListenerDispatchedFor( Table::TBody, EventAt::Start, $body );
+		$this->fireEventListenerOf( Table::TBody, EventAt::Start, $body );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -206,7 +206,7 @@ trait TableExtractor {
 	}
 
 	/** @return ?Closure(static, string|DOMElement): mixed */
-	private function getEventListenersDispatchedFor( Table $table, EventAt $eventAt ): ?Closure {
+	private function getEventListenersOf( Table $table, EventAt $eventAt ): ?Closure {
 		$listeners = $this->discoveredTable__eventListeners[ $table->value ] ?? null;
 
 		return $listeners[ $eventAt->name ] ?? null;
@@ -226,15 +226,16 @@ trait TableExtractor {
 		}
 	}
 
-	private function fireEventListenerDispatchedFor( Table $table, EventAt $eventAt, string|DOMElement $node ): void {
-		$callback       = $this->getEventListenersDispatchedFor( $table, $eventAt );
-		$firedPositions = $this->discoveredTable__eventListenersFired[ $table->value ] ?? array(
+	private function fireEventListenerOf( Table $table, EventAt $eventAt, string|DOMElement $node ): void {
+		$callback       = $this->getEventListenersOf( $table, $eventAt );
+		$id             = $this->currentTable__id;
+		$firedPositions = $this->discoveredTable__eventListenersFired[ $id ][ $table->value ] ?? array(
 			EventAt::Start->name => false,
 			EventAt::End->name   => false,
 		);
 
 		if ( ! $callback ) {
-			$this->discoveredTable__eventListenersFired[ $table->value ] = $firedPositions;
+			$this->discoveredTable__eventListenersFired[ $id ][ $table->value ] = $firedPositions;
 
 			return;
 		}
@@ -246,10 +247,10 @@ trait TableExtractor {
 
 		unset( $this->discoveredTable__eventListenerFiring );
 
-		$this->discoveredTable__eventListenersFired[ $table->value ] = $firedPositions;
+		$this->discoveredTable__eventListenersFired[ $id ][ $table->value ] = $firedPositions;
 	}
 
-	private function isEventFiringListener( EventAt $eventAt, Table $for ): bool {
+	private function isCurrentlyListening( EventAt $eventAt, Table $for ): bool {
 		if ( ! isset( $this->discoveredTable__eventListenerFiring ) ) {
 			return false;
 		}
@@ -260,7 +261,8 @@ trait TableExtractor {
 	}
 
 	private function hasFiredEventListenerFor( Table $table, EventAt $eventAt ): bool {
-		$firedAt = $this->discoveredTable__eventListenersFired[ $table->value ] ?? array();
+		$listeners = $this->discoveredTable__eventListenersFired;
+		$firedAt   = $listeners[ $this->currentTable__id ][ $table->value ] ?? array();
 
 		return $firedAt[ $eventAt->name ] ?? false;
 	}
