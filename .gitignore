@@ -2,6 +2,7 @@
 !Src
 !Tests
 !Stubs
+!LICENSE
 !.editorconfig
 !composer.json
 !phpcs.xml.dist
