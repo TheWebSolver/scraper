@@ -4,11 +4,11 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use Iterator;
-use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /** @template TColumnReturn */
@@ -36,7 +36,7 @@ interface TableTracer extends Indexable {
 	/**
 	 * Registers event listener for targeted table structure.
 	 *
-	 * @param callable(static, string|DOMElement): void $callback
+	 * @param callable(TableTraced): void $callback
 	 */
 	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static;
 

@@ -11,6 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
 /** @template TColumnReturn */
@@ -45,7 +46,7 @@ trait HtmlTableFromString {
 			? $this->captionStructureContentFrom( $table )
 			: null;
 
-		$traceHead && $this->contentsAfterFiringEventListenerWhenHeadFound( $table );
+		$traceHead && $this->contentsAfterDispatchingEventWhenHeadFound( $table );
 
 		$iterator = $this->bodyStructureIteratorFrom( $body );
 
@@ -92,7 +93,11 @@ trait HtmlTableFromString {
 	 * @return ?list<string>
 	 */
 	protected function inferTableHeadFrom( iterable $elementList, string $node ): ?array {
-		$this->fireEventListenerOf( Table::THead, EventAt::Start, $node );
+		$this->dispatchEventListener( $event = new TableTraced( Table::THead, EventAt::Start, $node ) );
+
+		if ( $event->shouldStopTrace() ) {
+			return null;
+		}
 
 		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
@@ -121,7 +126,21 @@ trait HtmlTableFromString {
 		[$matched, $caption] = Normalize::nodeToMatchedArray( $content, Table::Caption );
 		$transformer         = $this->discoveredTable__transformers['caption'] ?? null;
 
-		return $matched && ! empty( $caption[2] ) ? $transformer?->transform( $caption, $this ) : null;
+		if ( ! $matched || ! $caption ) {
+			return null;
+		}
+
+		$this->dispatchEventListener( $event = new TableTraced( Table::Caption, EventAt::Start, $content ) );
+
+		if ( $event->shouldStopTrace() ) {
+			return null;
+		}
+
+		$caption = $transformer?->transform( $caption, $this );
+
+		$this->dispatchEventListener( new TableTraced( Table::Caption, EventAt::End, $content ) );
+
+		return $caption;
 	}
 
 		/** @return array{0:?string,1:?list<string>} */
@@ -206,7 +225,7 @@ trait HtmlTableFromString {
 	}
 
 	/** @return ?list<string> */
-	private function contentsAfterFiringEventListenerWhenHeadFound( string $table ): ?array {
+	private function contentsAfterDispatchingEventWhenHeadFound( string $table ): ?array {
 		[$row, $headContents] = $this->headStructureContentFrom( $table );
 
 		if ( ! $row || ! $headContents ) {
@@ -214,7 +233,7 @@ trait HtmlTableFromString {
 		}
 
 		$this->registerCurrentTableHead( $headContents );
-		$this->fireEventListenerOf( Table::THead, EventAt::End, $row );
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $row ) );
 
 		return $headContents;
 	}
@@ -246,7 +265,7 @@ trait HtmlTableFromString {
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
 			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
-				$this->fireEventListenerOf( Table::THead, EventAt::End, $node );
+				$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node ) );
 
 				next( $rows );
 
@@ -254,7 +273,11 @@ trait HtmlTableFromString {
 			}
 
 			if ( ! $bodyStarted ) {
-				$this->fireEventListenerOf( Table::Row, EventAt::Start, $tbodyNode );
+				$this->dispatchEventListener( $event = new TableTraced( Table::Row, EventAt::Start, $tbodyNode ) );
+
+				if ( $event->shouldStopTrace() ) {
+					break;
+				}
 
 				$bodyStarted = true;
 			}
@@ -272,7 +295,7 @@ trait HtmlTableFromString {
 			next( $rows );
 		}//end while
 
-		$this->fireEventListenerOf( Table::Row, EventAt::End, $tbodyNode );
+		$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::End, $tbodyNode ) );
 	}
 
 	/** @param array{0:string,1:string,2:string,3:string,4:string}[] $row */

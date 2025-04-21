@@ -10,6 +10,7 @@ use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
@@ -61,7 +62,7 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 	 * Inheriting class may override this method to provide column names with offset position(s).
 	 * Use `$this->collectSourceItems()` as indices and offset position(s) as required.
 	 */
-	protected function useCollectedKeysAsTableColumnIndices(): void {
-		$this->setItemsIndices( $this->collectSourceItems() );
+	protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
+		$event->handle( fn() => $this->setItemsIndices( $this->collectSourceItems() ) );
 	}
 }

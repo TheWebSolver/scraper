@@ -11,6 +11,7 @@ use DOMNodeList;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
@@ -104,7 +105,7 @@ trait HtmlTableFromNode {
 
 		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
-		$this->fireEventListenerOf( Table::THead, EventAt::Start, $element );
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::Start, $element ) );
 
 		foreach ( $element->childNodes as $currentIndex => $node ) {
 			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
@@ -230,7 +231,7 @@ trait HtmlTableFromNode {
 		}
 
 		$this->registerCurrentTableHead( $headContents );
-		$this->fireEventListenerOf( Table::THead, EventAt::End, $node );
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node ) );
 
 		return $headContents;
 	}
@@ -240,7 +241,7 @@ trait HtmlTableFromNode {
 			return false;
 		}
 
-		$this->fireEventListenerOf( Table::THead, EventAt::End, $node );
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node ) );
 
 		$iterator->next();
 
@@ -279,7 +280,7 @@ trait HtmlTableFromNode {
 			}
 
 			if ( ! $bodyStarted ) {
-				$this->fireEventListenerOf( Table::Row, EventAt::Start, $body );
+				$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::Start, $body ) );
 
 				$bodyStarted = true;
 			}
@@ -304,7 +305,7 @@ trait HtmlTableFromNode {
 			$iterator->next();
 		}//end while
 
-		$this->fireEventListenerOf( Table::Row, EventAt::End, $body );
+		$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::End, $body ) );
 	}
 
 	private function inspectFirstRowForHeadStructure( DOMNode $row ): bool {

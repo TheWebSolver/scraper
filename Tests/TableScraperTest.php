@@ -10,6 +10,7 @@ use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\SingleTableScraper;
@@ -266,8 +267,9 @@ class AccentedCharScraper extends AccentedSingleTableScraper {
 	public function __construct( string ...$translitNames ) {
 		parent::__construct( null, null, ...$translitNames );
 
-		$setColumnNamesWithoutName = fn()
-			=> $this->setItemsIndices( $this->collectSourceItems(), /* offset: DeveloperDetails::Name */ 0 );
+		$setColumnNamesWithoutName = fn( TableTraced $e ) => $e->handle(
+			fn() => $this->setItemsIndices( $this->collectSourceItems(), /* offset: DeveloperDetails::Name */ 0 )
+		);
 
 		$this->addEventListener( Table::Row, $setColumnNamesWithoutName );
 	}

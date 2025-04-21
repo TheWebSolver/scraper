@@ -14,6 +14,7 @@ use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -35,17 +36,11 @@ trait TableExtractor {
 	 * }
 	 */
 	private array $discoveredTable__transformers;
-	/**
-	 * @var array<string,array{
-	 *   0 ?: Closure( static, string|DOMElement ): mixed,
-	 *   1 ?: Closure( static, string|DOMElement ): mixed
-	 * }>
-	 */
+	/** @var array<string,array{0?:Closure(TableTraced): void, 1?:Closure(TableTraced): void}> */
 	private array $discoveredTable__eventListeners;
+	private ?TableTraced $discoveredTable__eventBeingDispatched = null;
 	/** @var array<array-key,array<value-of<Table>,array<string,bool>>> */
-	private array $discoveredTable__eventListenersFired = [];
-	/** @var array{0:Table,1:EventAt} */
-	private array $discoveredTable__eventListenerFiring;
+	private array $discoveredTable__eventListenersDispatched = [];
 
 	/** @var (int|string)[] */
 	private array $discoveredTable__ids = [];
@@ -96,7 +91,7 @@ trait TableExtractor {
 	}
 
 	public function setItemsIndices( array $keys, int ...$offset ): void {
-		if ( ! $this->isCurrentlyListening( EventAt::Start, for: Table::Row ) ) {
+		if ( ! $this->isDispatchingEventFor( Table::Row, EventAt::Start ) ) {
 			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name ];
 
 			throw new ScraperError(
@@ -164,7 +159,7 @@ trait TableExtractor {
 			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
 		}
 
-		$this->fireEventListenerOf( Table::TBody, EventAt::Start, $body );
+		$this->dispatchEventListener( new TableTraced( Table::TBody, EventAt::Start, $body ) );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -176,10 +171,10 @@ trait TableExtractor {
 		unset(
 			$this->discoveredTable__transformers,
 			$this->discoveredTable__eventListeners,
-			$this->discoveredTable__eventListenerFiring,
+			$this->discoveredTable__eventBeingDispatched,
 		);
 
-		$this->discoveredTable__eventListenersFired = [];
+		$this->discoveredTable__eventListenersDispatched = [];
 	}
 
 	public function resetTableTraced(): void {
@@ -205,62 +200,58 @@ trait TableExtractor {
 		return $countUptoCurrent > $offsetCount ? $countUptoCurrent - $offsetCount : $countUptoCurrent;
 	}
 
-	/** @return ?Closure(static, string|DOMElement): mixed */
-	private function getEventListenerOf( Table $table, EventAt $eventAt ): ?Closure {
-		$listeners = $this->discoveredTable__eventListeners[ $table->value ] ?? null;
+	/** @return ?Closure(TableTraced): void */
+	private function getEventListener( TableTraced $event ): ?Closure {
+		[$nodeName, $when] = $event->scope();
 
-		return $listeners[ $eventAt->name ] ?? null;
+		return $this->discoveredTable__eventListeners[ $nodeName ][ $when ] ?? null;
 	}
 
 	/**
-	 * @param Closure(static, string|DOMElement): mixed $callback
+	 * @param Closure(TableTraced): void $callback
 	 * @throws Throwable When user throws exception within callback.
 	 */
-	private function tryFiringEventListenerWith( Closure $callback, string|DOMElement $node ): void {
+	private function tryHandlingTaskOfDispatched( TableTraced $event, Closure $callback ): void {
 		try {
-			$callback( $this, $node );
+			$this->discoveredTable__eventBeingDispatched = $event;
+
+			$callback( $event );
+
+			$event->handleTask( $this );
 		} finally {
-			unset( $this->discoveredTable__eventListenerFiring );
+			unset( $this->discoveredTable__eventBeingDispatched );
 		}
 	}
 
-	private function fireEventListenerOf( Table $table, EventAt $eventAt, string|DOMElement $node ): void {
-		$callback       = $this->getEventListenerOf( $table, $eventAt );
-		$id             = $this->currentTable__id;
-		$firedPositions = $this->discoveredTable__eventListenersFired[ $id ][ $table->value ] ?? [
+	private function dispatchEventListener( TableTraced $event ): void {
+		$callback            = $this->getEventListener( $event );
+		$id                  = $this->currentTable__id;
+		[$tagName, $eventAt] = $event->scope();
+		$whenDispatched      = $this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] ?? [
 			EventAt::Start->name => false,
 			EventAt::End->name   => false,
 		];
 
 		if ( ! $callback ) {
-			$this->discoveredTable__eventListenersFired[ $id ][ $table->value ] = $firedPositions;
+			$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
 			return;
 		}
 
-		$firedPositions[ $eventAt->name ]           = true;
-		$this->discoveredTable__eventListenerFiring = [ $table, $eventAt ];
+		$whenDispatched[ $eventAt ] = true;
+		$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
-		$this->tryFiringEventListenerWith( $callback, $node );
-
-		$this->discoveredTable__eventListenersFired[ $id ][ $table->value ] = $firedPositions;
+		$this->tryHandlingTaskOfDispatched( $event, $callback );
 	}
 
-	private function isCurrentlyListening( EventAt $eventAt, Table $for ): bool {
-		if ( ! isset( $this->discoveredTable__eventListenerFiring ) ) {
-			return false;
-		}
-
-		[$firingTable, $firingAt] = $this->discoveredTable__eventListenerFiring;
-
-		return $firingTable === $for && $firingAt === $eventAt;
+	private function isDispatchingEventFor( Table $structure, EventAt $when ): bool {
+		return $this->discoveredTable__eventBeingDispatched?->isTargeted( $when, $structure ) ?? false;
 	}
 
-	private function hasFiredEventListenerFor( Table $table, EventAt $eventAt ): bool {
-		$listeners = $this->discoveredTable__eventListenersFired;
-		$firedAt   = $listeners[ $this->currentTable__id ][ $table->value ] ?? [];
+	private function hasDispatchedEventListenerFor( Table $structure, EventAt $when ): bool {
+		$listeners = $this->discoveredTable__eventListenersDispatched;
 
-		return $firedAt[ $eventAt->name ] ?? false;
+		return $listeners[ $this->currentTable__id ][ $structure->value ][ $when->name ] ?? false;
 	}
 
 	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
