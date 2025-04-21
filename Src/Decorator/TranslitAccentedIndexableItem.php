@@ -13,8 +13,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
  * @template-implements Transformer<AccentedIndexableItem,string>
  */
 class TranslitAccentedIndexableItem extends TranslitAccentedItem implements Transformer {
-	protected function shouldTranslit( object $scope, array $diacriticList ): bool {
-		if ( ! parent::shouldTranslit( $scope, $diacriticList ) ) {
+	protected function shouldTranslit( object $scope, array $characters ): bool {
+		if ( ! parent::shouldTranslit( $scope, $characters ) ) {
 			return false;
 		}
 

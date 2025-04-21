@@ -5,13 +5,9 @@ namespace TheWebSolver\Codegarage\Scraper\Traits;
 
 use BackedEnum;
 use ReflectionClass;
-use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 
 trait CollectorSource {
-	/** @placeholder `1:` the given source's string value. */
-	private const INVALID_COLLECTION_SOURCE = 'Collection keys can either be an array of strings or a BackedEnum classname. "%s" given.';
-
 	private CollectFrom $collectionSource;
 
 	/** @return list<string> */
@@ -43,9 +39,5 @@ trait CollectorSource {
 	/** @phpstan-assert-if-true =class-string<BackedEnum<string>> $value */
 	private function isBackedEnumMappable( string $value ): bool {
 		return is_a( $value, BackedEnum::class, allow_string: true );
-	}
-
-	private function throwInvalidCollectable( string $value ): never {
-		throw new InvalidSource( sprintf( self::INVALID_COLLECTION_SOURCE, $value ) );
 	}
 }

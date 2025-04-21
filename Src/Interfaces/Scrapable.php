@@ -13,14 +13,14 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
  */
 interface Scrapable {
 	/**
-	 * Scrapes content for the source.
+	 * Scrapes content from the source.
 	 *
 	 * @throws ScraperError When cannot scrape the content.
 	 */
 	public function scrape(): string;
 
 	/**
-	 * Parses the scraped content.
+	 * Parses scraped content.
 	 *
 	 * @param string $content The scraped content.
 	 * @return Iterator<TKey,TValue>
@@ -30,7 +30,7 @@ interface Scrapable {
 	public function parse( string $content ): Iterator;
 
 	/**
-	 * Caches the scraped content to a cache file.
+	 * Caches scraped content to the cache file.
 	 *
 	 * @return int Number of bytes written to the cache file.
 	 * @throws ScraperError When caching fails.
@@ -38,30 +38,30 @@ interface Scrapable {
 	public function toCache( string $content ): int;
 
 	/**
-	 * Ensures whether scraped content has been cached to a file or not.
+	 * Ensures whether scraped content has been cached to the file or not.
 	 */
 	public function hasCache(): bool;
 
 	/**
 	 * Gets scraped content from the cached file.
 	 *
-	 * @throws InvalidSource When cannot get content from cache file.
+	 * @throws InvalidSource When cannot get content from the cache file.
 	 */
 	public function fromCache(): string;
 
 	/**
-	 * Removes scraped content cache file, if any.
+	 * Deletes the cache file, if exists.
 	 *
-	 * @return bool `true` if cache is cleared, `false` otherwise.
+	 * @return bool `true` if the cache file is deleted, else `false`.
 	 */
 	public function invalidateCache(): bool;
 
 	/**
-	 * Sets the cache path.
+	 * Sets the cache file path.
 	 *
 	 * @param string $dirPath  Absolute path to directory.
-	 * @param string $filename The filename (with extension) to write data to.
-	 * @throws InvalidSource When cannot find the directory path.
+	 * @param string $filename The filename (with extension) to write content to.
+	 * @throws InvalidSource When directory path could not be located.
 	 */
 	public function withCachePath( string $dirPath, string $filename ): static;
 
@@ -71,7 +71,7 @@ interface Scrapable {
 	public function getSourceUrl(): string;
 
 	/**
-	 * Gets the cache file path.
+	 * Gets absolute path to the cache filename (with extension).
 	 */
 	public function getCachePath(): string;
 

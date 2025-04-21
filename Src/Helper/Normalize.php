@@ -76,7 +76,7 @@ class Normalize {
 	 * Returns array with first index as matched or not and second index contains extracted list.
 	 *
 	 * @return array{0:int|false,1:list<array{0:string,1:string,2:string}>} List Contains:
-	 * - **0:** The `$string` itself
+	 * - **0:** Whole table row's opening tag to closing tag.
 	 * - **1:** The attribute part
 	 * - **2:** The content part
 	 */
@@ -95,7 +95,7 @@ class Normalize {
 	 * Returns array with first index as matched or not and second index contains extracted list.
 	 *
 	 * @return array{0:int|false,1:list<array{0:string,1:string,2:string,3:string,4:string}>} List contains:
-	 * - **0:** The `$string` itself
+	 * - **0:** Whole table head/column's opening tag to closing tag.
 	 * - **1:** Opening `td` or `th`
 	 * - **2:** The attribute part
 	 * - **3:** The content part

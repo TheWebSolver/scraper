@@ -94,13 +94,11 @@ trait HtmlTableFromNode {
 	}
 
 	/**
-	 * Infers table head from given element list.
-	 *
 	 * @return ?list<string>
 	 * @throws InvalidSource When element list is not DOMNodeList.
 	 */
 	protected function inferTableHeadFrom( DOMNode $element ): ?array {
-		if ( ! AssertDOMElement::isValid( $element, Table::Row ) ) {
+		if ( ! AssertDOMElement::isValid( $element, Table::Row ) || ! $element->childNodes->length ) {
 			return null;
 		}
 

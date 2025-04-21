@@ -12,7 +12,7 @@ final readonly class CollectFrom {
 	public array $items;
 
 	/**
-	 * @param class-string<BackedEnum<string>> $enumClass The BackedEnum classname whose cases will be used as mappable keys.
+	 * @param class-string<BackedEnum<string>> $enumClass The BackedEnum classname whose case values will be used as mappable keys.
 	 * @param string|BackedEnum<string>        ...$only   If only subset of mappable keys is required and passed as arg to
 	 *                                                    this param, only these keys will be used. Passed order matters.
 	 * @no-named-arguments

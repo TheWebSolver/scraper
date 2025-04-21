@@ -11,7 +11,7 @@ interface Validatable {
 	 * Validates given data.
 	 *
 	 * @param TValue $data
-	 * @throws ValidationFail When given data is not valid after validation is applied.
+	 * @throws ValidationFail When given $data could not be validated.
 	 */
 	public function validate( mixed $data ): void;
 }

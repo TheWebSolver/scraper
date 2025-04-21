@@ -47,12 +47,10 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 
 	/** @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>> */
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
-		$this->withAllTables( false );
-		$this->collectSourceItems();
-		$this->inferTableFrom( $content, $normalize );
+		$this->withAllTables( false )->inferTableFrom( $content, $normalize );
 
 		$iterator = $this->getTableData()[ $this->getTableId( current: true ) ]
-			?? ScraperError::withSourceMsg( 'Could not find Iterator that generates Table Dataset.' );
+			?? ScraperError::withSourceMsg( 'Table Dataset Iterator not found in class: ', static::class );
 
 		$this->resetTableTraced();
 

@@ -27,8 +27,8 @@ class MarshallTableRow implements Transformer {
 
 	/**
 	 * @param string  $invalidCountMsg The exception msg when table column names count does not match with inferred data
-	 *                                 count. If this is not provided, column names count verification will be skipped.
-	 * @param ?string $indexKey        The column to use as the index/keys for the inferred dataset. This works
+	 *                                 count. If this is not provided, columns count verification will be skipped.
+	 * @param ?string $indexKey        Collected dataset index key whose value will be dataset key. This works
 	 *                                 the same way as using `array_column` function's [#3] param $index_key.
 	 */
 	public function __construct( private string $invalidCountMsg = '', private ?string $indexKey = null ) {}
@@ -68,7 +68,7 @@ class MarshallTableRow implements Transformer {
 	}
 
 	/** @param TColumnReturn[] $dataset */
-	protected function discoverIndexKeyFrom( array $dataset ): string|int|null {
+	private function discoverIndexKeyFrom( array $dataset ): string|int|null {
 		if ( ! $this->indexKey ) {
 			return null;
 		}

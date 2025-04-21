@@ -17,7 +17,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 trait HtmlTableFromString {
 	/** @use TableExtractor<TColumnReturn> */
 	use TableExtractor {
-		TableExtractor::withAllTables as protected extractWithAllTables;
+		TableExtractor::withAllTables as private extractWithAllTables;
 	}
 
 	/** @throws ScraperError When this method is used for multiple table discovery. */
@@ -52,11 +52,7 @@ trait HtmlTableFromString {
 		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 	}
 
-	/**
-	 * Accepts either internally extracted row as array, or from transformer as DOMNode (or string expected).
-	 *
-	 * @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList
-	 */
+	/** @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList */
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data = [];
 

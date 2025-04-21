@@ -206,7 +206,7 @@ trait TableExtractor {
 	}
 
 	/** @return ?Closure(static, string|DOMElement): mixed */
-	private function getEventListenersOf( Table $table, EventAt $eventAt ): ?Closure {
+	private function getEventListenerOf( Table $table, EventAt $eventAt ): ?Closure {
 		$listeners = $this->discoveredTable__eventListeners[ $table->value ] ?? null;
 
 		return $listeners[ $eventAt->name ] ?? null;
@@ -219,15 +219,13 @@ trait TableExtractor {
 	private function tryFiringEventListenerWith( Closure $callback, string|DOMElement $node ): void {
 		try {
 			$callback( $this, $node );
-		} catch ( Throwable $e ) {
+		} finally {
 			unset( $this->discoveredTable__eventListenerFiring );
-
-			throw $e;
 		}
 	}
 
 	private function fireEventListenerOf( Table $table, EventAt $eventAt, string|DOMElement $node ): void {
-		$callback       = $this->getEventListenersOf( $table, $eventAt );
+		$callback       = $this->getEventListenerOf( $table, $eventAt );
 		$id             = $this->currentTable__id;
 		$firedPositions = $this->discoveredTable__eventListenersFired[ $id ][ $table->value ] ?? [
 			EventAt::Start->name => false,
@@ -244,8 +242,6 @@ trait TableExtractor {
 		$this->discoveredTable__eventListenerFiring = [ $table, $eventAt ];
 
 		$this->tryFiringEventListenerWith( $callback, $node );
-
-		unset( $this->discoveredTable__eventListenerFiring );
 
 		$this->discoveredTable__eventListenersFired[ $id ][ $table->value ] = $firedPositions;
 	}

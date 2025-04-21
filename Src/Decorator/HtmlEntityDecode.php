@@ -11,7 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
  * @template-implements Transformer<TScope,string>
  */
 class HtmlEntityDecode implements Transformer {
-	/** @param Transformer<TScope,string> $base */
+	/** @param Transformer<contravariant TScope,string> $base */
 	public function __construct( private readonly Transformer $base ) {}
 
 	public function transform( string|array|DOMElement $element, object $scope ): mixed {

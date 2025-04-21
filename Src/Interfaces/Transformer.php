@@ -13,15 +13,15 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
  */
 interface Transformer {
 	/**
-	 * Transforms given element to the generic datatype.
+	 * Transforms given element.
 	 *
 	 * @param TElement $element Either a scraped string element, a traced DOMElement, or a
 	 *                          parsed array from string element using Normalize helpers.
 	 * @param TScope   $scope   The scoped class instance where transformer is being used.
 	 * @return TTransformedValue
 	 *
-	 * @throws InvalidSource When given $element type is not supported by the current transformer.
-	 * @throws ScraperError  When cannot validate transformed data.
+	 * @throws InvalidSource When given $element type is not supported by the transformer.
+	 * @throws ScraperError  When data could not be transformed.
 	 *
 	 * @template TElement of string|non-empty-list|DOMElement
 	 */

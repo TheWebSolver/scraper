@@ -26,7 +26,7 @@ interface TableTracer extends Indexable {
 	public function traceWithout( Table ...$targets ): static;
 
 	/**
-	 * Registers transformers for targeted table structure.
+	 * Registers transformer for targeted table structure.
 	 *
 	 * @param Transformer<contravariant static,TReturn> $transformer
 	 * @template TReturn
@@ -34,7 +34,7 @@ interface TableTracer extends Indexable {
 	public function addTransformer( Table $for, Transformer $transformer ): static;
 
 	/**
-	 * Registers event listeners for targeted table structure for both start or finish tracing.
+	 * Registers event listener for targeted table structure.
 	 *
 	 * @param callable(static, string|DOMElement): void $callback
 	 */
@@ -49,43 +49,41 @@ interface TableTracer extends Indexable {
 	public function inferTableFrom( string $source, bool $normalize ): void;
 
 	/**
-	 * Infers table data from given element list.
+	 * Infers table column data from given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList
 	 * @return array<TColumnReturn>
-	 * @throws InvalidSource When TElement is an unsupported item.
+	 * @throws InvalidSource When TElement is not a valid type.
 	 *
 	 * @template TElement
 	 */
 	public function inferTableDataFrom( iterable $elementList ): array;
 
 	/**
-	 * Gets traced table IDs or current table being traced.
+	 * Gets traced table ID(s).
 	 *
-	 * @return ($current is true ? int|string : array<int|string>)
+	 * @return ($current is true ? int|string : array<int,int|string>)
 	 */
 	public function getTableId( bool $current = false ): int|string|array;
 
 	/**
-	 * Gets collection of traced table dataset indexed by respective table ID.
+	 * Gets collection of traced table columns's data indexed by respective table ID.
 	 *
 	 * @return array<Iterator<int,ArrayObject<array-key,TColumnReturn>>>
-	 * traced tables' iterable column set indexed by respective table ID.
 	 */
 	public function getTableData(): array;
 
 	/**
-	 * Gets table caption if not omitted from being traced.
+	 * Gets traced table caption data indexed by respective table ID.
 	 *
-	 * @return array<string|null> Traced tables' caption contents indexed by respective table ID.
+	 * @return array<string|null>
 	 */
 	public function getTableCaption(): array;
 
 	/**
-	 * Gets table head if not omitted from being traced.
+	 * Gets traced table head data indexed by respective table ID.
 	 *
 	 * @return array<SplFixedArray<string>>
-	 * Traced tables' head contents indexed by respective table ID.
 	 */
 	public function getTableHead(): array;
 
@@ -97,7 +95,7 @@ interface TableTracer extends Indexable {
 	public function resetTableTraced(): void;
 
 	/**
-	 * Resets registered hooks such as event listeners and transformers after trace completion.
+	 * Resets registered hooks such as event listeners and transformers.
 	 *
 	 * This may only be invoked after any iteration is complete to prevent side-effects
 	 * of hooks not being applied to remaining items of an Iterator being iterated.

@@ -20,7 +20,7 @@ use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 abstract class AccentedSingleTableScraper extends SingleTableScraper implements AccentedIndexableItem {
 	use Diacritic;
 
-	/** @var non-empty-list<string|int> */
+	/** @var non-empty-list<string> */
 	protected array $transliterationColumnNames;
 
 	/**
@@ -36,7 +36,7 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 	public function __construct(
 		private ?Transformer $rowTransformer = null,
 		private ?Transformer $columnTransformer = null,
-		string|int ...$transliterationColumns
+		string ...$transliterationColumns
 	) {
 		empty( $transliterationColumns ) || $this->transliterationColumnNames = $transliterationColumns;
 
