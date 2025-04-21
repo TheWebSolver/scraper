@@ -118,22 +118,22 @@ trait HtmlTableFromString {
 	}
 
 	protected function captionStructureContentFrom( string $content ): ?string {
-		$matched     = preg_match( '/<caption(.*?)>(.*?)<\/caption>/', subject: $content, matches: $caption );
-		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
+		[$matched, $caption] = Normalize::nodeToMatchedArray( $content, Table::Caption );
+		$transformer         = $this->discoveredTable__transformers['caption'] ?? null;
 
 		return $matched && ! empty( $caption[2] ) ? $transformer?->transform( $caption, $this ) : null;
 	}
 
 		/** @return array{0:?string,1:?list<string>} */
 	protected function headStructureContentFrom( string $string ): array {
-		$matched   = preg_match( '/<thead(.*?)>(.*?)<\/thead>/', subject: $string, matches: $thead );
-		$unmatched = [ null, null ];
+		[$matched, $thead] = Normalize::nodeToMatchedArray( $string, Table::THead );
+		$unmatched         = [ null, null ];
 
 		if ( ! $matched || empty( $thead[2] ) ) {
 			return $unmatched;
 		}
 
-		[$rowsFound, $tableRows] = Normalize::tableRowsFrom( $thead[2] );
+		[$rowsFound, $tableRows] = Normalize::nodeToMatchedArray( $thead[2], Table::Row, all: true );
 
 		if ( ! $rowsFound || empty( $tableRows ) || ! $firstRow = reset( $tableRows ) ) {
 			return $unmatched;
@@ -149,13 +149,13 @@ trait HtmlTableFromString {
 	/** @return ?array{0:string,1:list<array{0:string,1:string,2:string}>} */
 	protected function bodyStructureContentFrom( string $node ): ?array {
 		// NOTE: Does not support nested table.
-		$matched = preg_match( '/<tbody(.*?)>(.*?)<\/tbody>/', subject: $node, matches: $tbody );
+		[$matched, $tbody] = Normalize::nodeToMatchedArray( $node, Table::TBody );
 
 		if ( ! $matched || ! isset( $tbody[2] ) ) {
 			return null;
 		}
 
-		[$rowFound, $tableRows] = Normalize::tableRowsFrom( $tbody[2] );
+		[$rowFound, $tableRows] = Normalize::nodeToMatchedArray( $tbody[2], Table::Row, all: true );
 
 		if ( ! $rowFound || empty( $tableRows ) ) {
 			return null;
@@ -170,8 +170,8 @@ trait HtmlTableFromString {
 
 	/** @return ?array{0:string,1:string,2:string} */
 	private function fromCurrentStructure( string $node ): ?array {
-		$content = Normalize::controlsAndWhitespacesIn( $node );
-		$matched = preg_match( '/<table(.*?)>(.*?)<\/table>/', subject: $content, matches: $table );
+		$content           = Normalize::controlsAndWhitespacesIn( $node );
+		[$matched, $table] = Normalize::nodeToMatchedArray( $content, 'table' );
 
 		return $matched && ! empty( $table ) ? $table : null;
 	}

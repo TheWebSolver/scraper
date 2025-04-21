@@ -3,6 +3,8 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Helper;
 
+use BackedEnum;
+
 class Normalize {
 	final public const NON_BREAKING_SPACES = [ '&nbsp;', /* "&" entity is "&amp;" + "nbsp;" */ '&amp;nbsp;' ];
 	final public const CONTROLS            = [ "\n", "\r", "\t", "\v" ];
@@ -75,20 +77,28 @@ class Normalize {
 	/**
 	 * Returns array with first index as matched or not and second index contains extracted list.
 	 *
-	 * @return array{0:int|false,1:list<array{0:string,1:string,2:string}>} List Contains:
-	 * - **0:** Whole table row's opening tag to closing tag.
+	 * @param string|BackedEnum<TType> $tagName
+	 * @return (
+	 *   $all is true
+	 *     ? array{0:int|false,1:list<array{0:string,1:string,2:string}>}
+	 *     : array{0:int|false,1:array{0:string,1:string,2:string}}
+	 * )
+	 *
+	 * Array Contains:
+	 * - **0:** Whole matched html node from opening tag to closing tag.
 	 * - **1:** The attribute part
 	 * - **2:** The content part
+	 *
+	 * @template TType of int|string
 	 */
-	public static function tableRowsFrom( string $string ): array {
-		$matched = preg_match_all(
-			pattern: '/<tr(.*?)>(.*?)<\/tr>/',
-			subject: $string,
-			matches: $tableRows,
-			flags: PREG_SET_ORDER
-		);
+	public static function nodeToMatchedArray( string $node, string|BackedEnum $tagName, bool $all = false ): array {
+		$tagName = $tagName instanceof BackedEnum ? $tagName->value : $tagName;
+		$pattern = "/<{$tagName}(.*?)>(.*?)<\/{$tagName}>/";
+		$matched = $all
+			? preg_match_all( $pattern, $node, matches: $parts, flags: PREG_SET_ORDER )
+			: preg_match( $pattern, $node, matches: $parts );
 
-		return [ $matched, $tableRows ];
+		return [ $matched, $parts ];
 	}
 
 	/**

@@ -39,3 +39,8 @@ parameters:
 			path: Src/Marshaller/MarshallTableRow.php
 			identifier: return.type
 			message: '#^Method .*?MarshallTableRow\:\:validate\(\) should return iterable\<int, DOMNode\|list\<array\{string, string, string, string, string\}\>\> but returns array\<mixed\>\|Traversable\<int, DOMNode\>\.$#'
+		-
+			path: Src/Helper/Normalize.php
+			identifier: return.type
+			count: 1
+			message: '#^Method .*?Normalize\:\:nodeToMatchedArray\(\) should return array\{int\|false, list\<array\{string, string, string\}\|string\>\} but returns array\{int\<0, max\>\|false, array\<array\<string\>\|string\>\}\.$#'
