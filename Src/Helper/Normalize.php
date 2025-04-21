@@ -58,20 +58,24 @@ class Normalize {
 
 		for ( $i = 0; $i <= $lastSkipped; $i++ ) {
 			if ( ! isset( $skipList[ $i ] ) && isset( $array[ $current ] ) ) {
+				// Collect every item that is not in offset list but in original list.
 				$collectList[ $i ] = $array[ $current ];
 
 				unset( $array[ $current++ ] );
+
+			} elseif ( isset( $skipList[ $i ] ) && ! isset( $array[ $current ] ) ) {
+				// Remove every offset item that is beyond last item in original list.
+				// Extra offsets beyond last item in original list makes no sense.
+				unset( $skipList[ $i ] );
 			}
 		}
 
+		// Collect remaining items in original list beyond last offset position.
 		foreach ( $array as $value ) {
 			$collectList[ ++$lastSkipped ] = $value;
 		}
 
-		$lastKey  = (int) array_key_last( $collectList );
-		$skipList = array_filter( $skipList, static fn( int $skip ) => $skip < $lastKey, ARRAY_FILTER_USE_KEY );
-
-		return [ $collectList, $skipList, $lastKey ];
+		return [ $collectList, $skipList, (int) array_key_last( $collectList ) ];
 	}
 
 	/**
