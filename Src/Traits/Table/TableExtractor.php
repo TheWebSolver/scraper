@@ -39,7 +39,7 @@ trait TableExtractor {
 	/** @var array<string,array{0?:Closure(TableTraced): void, 1?:Closure(TableTraced): void}> */
 	private array $discoveredTable__eventListeners;
 	private ?TableTraced $discoveredTable__eventBeingDispatched = null;
-	/** @var array<array-key,array<value-of<Table>,array<string,bool>>> */
+	/** @var array<array-key,array<value-of<Table>,array{0:bool,1:array<string,bool>}>> */
 	private array $discoveredTable__eventListenersDispatched = [];
 
 	/** @var (int|string)[] */
@@ -208,14 +208,14 @@ trait TableExtractor {
 	}
 
 	/**
-	 * @param Closure(TableTraced): void $callback
+	 * @param Closure(TableTraced): void $listenTo
 	 * @throws Throwable When user throws exception within callback.
 	 */
-	private function tryHandlingTaskOfDispatched( TableTraced $event, Closure $callback ): void {
+	private function tryHandlingTaskOfDispatched( TableTraced $event, Closure $listenTo ): void {
 		try {
 			$this->discoveredTable__eventBeingDispatched = $event;
 
-			$callback( $event );
+			$listenTo( $event );
 
 			$event->handleTask( $this );
 		} finally {
@@ -228,8 +228,11 @@ trait TableExtractor {
 		$id                  = $this->currentTable__id;
 		[$tagName, $eventAt] = $event->scope();
 		$whenDispatched      = $this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] ?? [
-			EventAt::Start->name => false,
-			EventAt::End->name   => false,
+			$event->shouldStopTrace(),
+			[
+				EventAt::Start->name => false,
+				EventAt::End->name   => false,
+			],
 		];
 
 		if ( ! $callback ) {
@@ -238,7 +241,7 @@ trait TableExtractor {
 			return;
 		}
 
-		$whenDispatched[ $eventAt ] = true;
+		$whenDispatched[1][ $eventAt ]                                      = true;
 		$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
 		$this->tryHandlingTaskOfDispatched( $event, $callback );
@@ -248,10 +251,12 @@ trait TableExtractor {
 		return $this->discoveredTable__eventBeingDispatched?->isTargeted( $when, $structure ) ?? false;
 	}
 
-	private function hasDispatchedEventListenerFor( Table $structure, EventAt $when ): bool {
+	/** @return array{0:?bool,1:?array<string,bool>} **0:** Whether event was stopped, **1:** EventAt */
+	private function getDispatchedEventStatus( Table $structure ): array {
+		$id        = $this->currentTable__id;
 		$listeners = $this->discoveredTable__eventListenersDispatched;
 
-		return $listeners[ $this->currentTable__id ][ $structure->value ][ $when->name ] ?? false;
+		return $listeners[ $id ][ $structure->value ] ?? [ null, null ];
 	}
 
 	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
