@@ -9,9 +9,9 @@ use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
-use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
 /** @template TColumnReturn */
@@ -42,15 +42,14 @@ trait HtmlTableFromString {
 
 		$this->dispatchEventListenerForTable( $id = $this->get64bitHash( $table ), $table );
 
-		$this->discoveredTable__captions[ $id ] = $traceCaption
-			? $this->captionStructureContentFrom( $table )
-			: null;
-
-		$traceHead && $this->contentsAfterDispatchingEventWhenHeadFound( $table );
+		$traceCaption && $this->captionStructureContentFrom( $table );
+		$traceHead && $this->headStructureContentFrom( $table );
 
 		$iterator = $this->bodyStructureIteratorFrom( $body );
 
 		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
+
+		$this->dispatchEventListener( new TableTraced( Table::TBody, EventAt::End, $table ) );
 	}
 
 	/** @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList */
@@ -92,13 +91,7 @@ trait HtmlTableFromString {
 	 * @param iterable<array-key,array{0:string,1:string,2:string,3:string,4:string}> $elementList
 	 * @return ?list<string>
 	 */
-	protected function inferTableHeadFrom( iterable $elementList, string $node ): ?array {
-		$this->dispatchEventListener( $event = new TableTraced( Table::THead, EventAt::Start, $node ) );
-
-		if ( $event->shouldStopTrace() ) {
-			return null;
-		}
-
+	protected function inferTableHeadFrom( iterable $elementList ): ?array {
 		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
 		foreach ( $elementList as $currentIndex => $head ) {
@@ -122,61 +115,63 @@ trait HtmlTableFromString {
 		return $names ?: null;
 	}
 
-	protected function captionStructureContentFrom( string $content ): ?string {
-		[$matched, $caption] = Normalize::nodeToMatchedArray( $content, Table::Caption );
+	protected function captionStructureContentFrom( string $table ): void {
+		[$matched, $caption] = Normalize::nodeToMatchedArray( $table, Table::Caption );
 		$transformer         = $this->discoveredTable__transformers['caption'] ?? null;
 
-		if ( ! $matched || ! $caption ) {
-			return null;
+		if ( ! $matched ) {
+			return;
 		}
 
-		$this->dispatchEventListener( $event = new TableTraced( Table::Caption, EventAt::Start, $content ) );
+		$this->dispatchEventListener( new TableTraced( Table::Caption, EventAt::Start, $caption[0] ) );
 
-		if ( $event->shouldStopTrace() ) {
-			return null;
-		}
+		$content = $transformer?->transform( $caption, $this ) ?? trim( $caption[2] );
 
-		$caption = $transformer?->transform( $caption, $this );
+		$this->discoveredTable__captions[ $this->currentTable__id ] = $content;
 
-		$this->dispatchEventListener( new TableTraced( Table::Caption, EventAt::End, $content ) );
-
-		return $caption;
+		$this->dispatchEventListener( new TableTraced( Table::Caption, EventAt::End, $caption[0] ) );
 	}
 
-		/** @return array{0:?string,1:?list<string>} */
-	protected function headStructureContentFrom( string $string ): array {
+	protected function headStructureContentFrom( string $string ): void {
 		[$matched, $thead] = Normalize::nodeToMatchedArray( $string, Table::THead );
-		$unmatched         = [ null, null ];
 
-		if ( ! $matched || empty( $thead[2] ) ) {
-			return $unmatched;
+		if ( ! $matched ) {
+			return;
 		}
 
-		[$rowsFound, $tableRows] = Normalize::nodeToMatchedArray( $thead[2], Table::Row, all: true );
+		[$rowsFound, $headRow] = Normalize::nodeToMatchedArray( $thead[2], Table::Row );
 
-		if ( ! $rowsFound || empty( $tableRows ) || ! $firstRow = reset( $tableRows ) ) {
-			return $unmatched;
+		if ( ! $rowsFound ) {
+			return;
 		}
 
-		[$columnsFound, $tableColumns] = Normalize::tableColumnsFrom( $firstRow[2] );
+		[$headsFound, $tableHeads] = Normalize::tableColumnsFrom( $headRow[2] );
 
-		return $columnsFound
-			? [ $firstRow[0], $this->inferTableHeadFrom( $tableColumns, $firstRow[0] ) ]
-			: [ null, null ];
+		if ( ! $headsFound ) {
+			return;
+		}
+
+		$this->dispatchEventListener( $event = new TableTraced( Table::THead, EventAt::Start, $headRow[0] ) );
+
+		$content = $event->shouldStopTrace() ? null : $this->inferTableHeadFrom( $tableHeads );
+
+		$content && $this->registerCurrentTableHead( $content );
+
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $headRow[0] ) );
 	}
 
 	/** @return ?array{0:string,1:list<array{0:string,1:string,2:string}>} */
 	protected function bodyStructureContentFrom( string $node ): ?array {
-		// NOTE: Does not support nested table.
+		// Does not support nested table.
 		[$matched, $tbody] = Normalize::nodeToMatchedArray( $node, Table::TBody );
 
-		if ( ! $matched || ! isset( $tbody[2] ) ) {
+		if ( ! $matched ) {
 			return null;
 		}
 
 		[$rowFound, $tableRows] = Normalize::nodeToMatchedArray( $tbody[2], Table::Row, all: true );
 
-		if ( ! $rowFound || empty( $tableRows ) ) {
+		if ( ! $rowFound ) {
 			return null;
 		}
 
@@ -224,20 +219,6 @@ trait HtmlTableFromString {
 		return [ $table, $body, $traceCaption, $traceHead ];
 	}
 
-	/** @return ?list<string> */
-	private function contentsAfterDispatchingEventWhenHeadFound( string $table ): ?array {
-		[$row, $headContents] = $this->headStructureContentFrom( $table );
-
-		if ( ! $row || ! $headContents ) {
-			return null;
-		}
-
-		$this->registerCurrentTableHead( $headContents );
-		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $row ) );
-
-		return $headContents;
-	}
-
 	/**
 	 * @param array{0:string,1:list<array{0:string,1:string,2:string}>} $body
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
@@ -259,12 +240,14 @@ trait HtmlTableFromString {
 				continue;
 			}
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $columns, $node );
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $columns );
 			$headInspected = true;
 
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
 			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
+				// We can only determine whether first row contains table heads after it is inferred.
+				// We'll simply dispatch the ending event here to notify subscribers, if any.
 				$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node ) );
 
 				next( $rows );
@@ -275,6 +258,8 @@ trait HtmlTableFromString {
 			if ( ! $bodyStarted ) {
 				$this->dispatchEventListener( $event = new TableTraced( Table::Row, EventAt::Start, $tbodyNode ) );
 
+				// Although not recommended, it is entirely possible to stop inferring further table rows.
+				// This just means that tracer was used to trace "<th>" that were present in "<tbody>".
 				if ( $event->shouldStopTrace() ) {
 					break;
 				}
@@ -299,8 +284,8 @@ trait HtmlTableFromString {
 	}
 
 	/** @param array{0:string,1:string,2:string,3:string,4:string}[] $row */
-	private function inspectFirstRowForHeadStructure( array $row, string $node ): bool {
-		( $firstRowContent = $this->inferTableHeadFrom( $row, $node ) )
+	private function inspectFirstRowForHeadStructure( array $row ): bool {
+		( $firstRowContent = $this->inferTableHeadFrom( $row ) )
 			&& $this->currentIteration__allTableHeads
 			&& $this->registerCurrentTableHead( $firstRowContent );
 
