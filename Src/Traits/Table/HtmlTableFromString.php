@@ -117,7 +117,7 @@ trait HtmlTableFromString {
 		return $data;
 	}
 
-	protected function captionStructureContentFrom( string $table ): void {
+	private function captionStructureContentFrom( string $table ): void {
 		[$matched, $caption] = Normalize::nodeToMatchedArray( $table, Table::Caption );
 
 		if ( ! $matched ) {
@@ -134,7 +134,7 @@ trait HtmlTableFromString {
 		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::End, $caption[0], $this ) );
 	}
 
-	protected function headStructureContentFrom( string $string ): void {
+	private function headStructureContentFrom( string $string ): void {
 		[$matched, $thead] = Normalize::nodeToMatchedArray( $string, Table::THead );
 
 		if ( ! $matched ) {
@@ -161,7 +161,7 @@ trait HtmlTableFromString {
 	}
 
 	/** @return ?array{0:string,1:list<array{0:string,1:string,2:string}>} */
-	protected function bodyStructureContentFrom( string $node ): ?array {
+	private function bodyStructureContentFrom( string $node ): ?array {
 		// Does not support nested table.
 		[$matched, $tbody] = Normalize::nodeToMatchedArray( $node, Table::TBody );
 
