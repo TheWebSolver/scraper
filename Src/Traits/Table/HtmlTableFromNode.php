@@ -22,10 +22,17 @@ trait HtmlTableFromNode {
 	/** @use TableExtractor<TColumnReturn> */
 	use TableExtractor;
 
-	public function inferTableFrom( string $source, bool $normalize = true ): void {
-		$this->inferTableFromDOMNodeList(
-			DOMDocumentFactory::bodyFromHtml( $source, normalize: $normalize )->childNodes
-		);
+	/** @throws InvalidSource When "table" cannot be resolved in given source. */
+	public function inferTableFrom( string|DOMElement $source, bool $normalize = true ): void {
+		$source = $this->getValidatedTableSource( $source, $normalize );
+
+		if ( $source instanceof DOMNodeList ) {
+			$this->inferTableFromDOMNodeList( $source );
+
+			return;
+		}
+
+		$this->inferChildNodesFromTable( $source );
 	}
 
 	/** @param DOMNodeList<DOMNode> $elementList */
@@ -87,37 +94,43 @@ trait HtmlTableFromNode {
 		return $data;
 	}
 
+	protected function inferChildNodesFromTable( DOMElement $element ): bool {
+		$iterator = $this->childNodesIteratorOfTable( $element );
+
+		if ( ! $iterator || ! $tableStructure = $this->traceTableStructureIn( $iterator ) ) {
+			return false;
+		}
+
+		[$bodyNode, $captionNode, $headNode] = $tableStructure;
+
+		$splId = spl_object_id( $element );
+		$id    = $splId * spl_object_id( $bodyNode );
+
+		$this->dispatchEventForTable( $id, $bodyNode );
+
+		$captionNode && $this->captionStructureContentFrom( $captionNode );
+		$headNode && $this->headStructureContentFrom( $headNode );
+
+		$iterator = $this->bodyStructureIteratorFrom( $bodyNode );
+
+		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
+
+		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $element, $this ) );
+
+		return true;
+	}
+
 	/** @param DOMNodeList<DOMNode> $elementList */
 	protected function inferTableFromDOMNodeList( DOMNodeList $elementList ): void {
 		foreach ( $elementList as $node ) {
-			if ( ! $tableStructure = $this->traceStructureFrom( $node ) ) {
+			if ( ! AssertDOMElement::isValid( $node ) || ! $this->inferChildNodesFromTable( $node ) ) {
 				continue;
 			}
 
-			assert( $node instanceof DOMElement );
-
-			[$bodyNode, $captionNode, $headNode] = $tableStructure;
-
-			$splId = spl_object_id( $node );
-			$id    = $splId * spl_object_id( $bodyNode );
-
-			$this->dispatchEventForTable( $id, $bodyNode );
-
-			$captionNode && $this->captionStructureContentFrom( $captionNode );
-			$headNode && $this->headStructureContentFrom( $headNode );
-
-			$iterator = $this->bodyStructureIteratorFrom( $bodyNode );
-
-			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
-
 			if ( $this->discoveredTargetedTable( $node ) ) {
-				$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $node, $this ) );
-
 				break;
 			}
-
-			$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $node, $this ) );
-		}//end foreach
+		}
 	}
 
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
@@ -132,8 +145,8 @@ trait HtmlTableFromNode {
 	}
 
 	/** @return Iterator<int,DOMNode> */
-	private function getChildNodesIteratorFrom( DOMNode $node ): Iterator {
-		return $node->childNodes->getIterator();
+	private function getChildNodesIteratorFrom( DOMElement $element ): Iterator {
+		return $element->childNodes->getIterator();
 	}
 
 	/**
@@ -151,15 +164,15 @@ trait HtmlTableFromNode {
 	}
 
 	/** @return ?Iterator<int,DOMNode> */
-	private function fromCurrentStructure( DOMNode $node ): ?Iterator {
-		if ( ! AssertDOMElement::isValid( $node, 'table' ) ) {
-			$this->findTableStructureIn( $node );
+	private function childNodesIteratorOfTable( DOMElement $element ): ?Iterator {
+		if ( 'table' !== $element->tagName ) {
+			$this->findTableStructureIn( $element );
 
 			return null;
 		}
 
-		return $this->isTargetedTable( $node ) && $node->childNodes->length
-			? $this->getChildNodesIteratorFrom( $node )
+		return $this->isTargetedTable( $element ) && $element->childNodes->length
+			? $this->getChildNodesIteratorFrom( $element )
 			: null;
 	}
 
@@ -209,12 +222,11 @@ trait HtmlTableFromNode {
 		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 	}
 
-	/** @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement} */
-	private function traceStructureFrom( DOMNode $node ): ?array {
-		if ( ! $tableIterator = $this->fromCurrentStructure( $node ) ) {
-			return null;
-		}
-
+	/**
+	 * @param Iterator<int,DOMNode> $tableIterator
+	 * @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement}
+	 */
+	private function traceTableStructureIn( Iterator $tableIterator ): ?array {
 		$bodyNode = $captionNode = $headNode = null;
 
 		while ( ! $bodyNode && $tableIterator->valid() ) {
@@ -302,5 +314,21 @@ trait HtmlTableFromNode {
 		return ! $this->shouldPerform__allTableDiscovery
 			&& AssertDOMElement::isValid( $node )
 			&& $this->isTargetedTable( $node );
+	}
+
+	/**
+	 * @return DOMElement|DOMNodeList<DOMNode>
+	 * @throws InvalidSource When source invalid.
+	 */
+	private function getValidatedTableSource( string|DOMElement $source, bool $normalize ): DOMElement|DOMNodeList {
+		if ( ! $source instanceof DOMElement ) {
+			return DOMDocumentFactory::bodyFromHtml( $source, normalize: $normalize )->childNodes;
+		}
+
+		'table' !== $source->tagName && throw new InvalidSource(
+			sprintf( '%s trait only supports table "DOMElement"', HtmlTableFromNode::class )
+		);
+
+		return $source;
 	}
 }

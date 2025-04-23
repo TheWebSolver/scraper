@@ -5,6 +5,7 @@ namespace TheWebSolver\Codegarage\Scraper\Traits\Table;
 
 use DOMNode;
 use Iterator;
+use DOMElement;
 use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
@@ -12,6 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
 /** @template TColumnReturn */
@@ -31,7 +33,10 @@ trait HtmlTableFromString {
 		return $this;
 	}
 
-	public function inferTableFrom( string $source, bool $normalize = true ): void {
+	/** @throws InvalidSource When given $source is not a string. */
+	public function inferTableFrom( string|DOMElement $source, bool $normalize = true ): void {
+		$this->validateSourceHasTableStructure( $source );
+
 		$node = $normalize ? Normalize::controlsAndWhitespacesIn( $source ) : $source;
 
 		if ( ! $tableStructure = $this->traceStructureFrom( $node ) ) {
@@ -283,5 +288,22 @@ trait HtmlTableFromString {
 		$this->inferTableHeadFrom( $row );
 
 		return $this->currentIteration__allTableHeads;
+	}
+
+	/**
+	 * @throws InvalidSource When source invalid.
+	 * @phpstan-assert string $source
+	 */
+	private function validateSourceHasTableStructure( string|DOMElement $source ): void {
+		$source instanceof DOMElement && throw new InvalidSource(
+			sprintf( '%s trait only supports "string" source to infer table.', HtmlTableFromString::class )
+		);
+
+		( str_contains( $source, '<table' ) && str_contains( $source, '</table>' ) ) || throw new InvalidSource(
+			sprintf(
+				'%s trait cannot trace table structure from string that does not have table.',
+				HtmlTableFromString::class
+			)
+		);
 	}
 }

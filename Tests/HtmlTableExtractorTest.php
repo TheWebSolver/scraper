@@ -7,6 +7,7 @@ use Closure;
 use DOMNode;
 use DOMElement;
 use ArrayObject;
+use DOMDocument;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,6 +19,7 @@ use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallTableRow;
@@ -29,6 +31,44 @@ class HtmlTableExtractorTest extends TestCase {
 
 	private function getTableFromSource(): string {
 		return file_get_contents( self::TABLE_SOURCE ) ?: '';
+	}
+
+	/** @param class-string<TableTracer<mixed>> $classname */
+	#[Test]
+	#[DataProvider( 'provideInvalidSource' )]
+	public function itThrowsExceptionWhenInvalidSourceGiven(
+		string $classname,
+		string|DOMElement $element,
+		?int $count = null
+	): void {
+		if ( null === $count ) {
+			$this->expectException( InvalidSource::class );
+		}
+
+		$scanner = new $classname();
+		$scanner->inferTableFrom( $element, false );
+
+		// @phpstan-ignore-next-line -- "null" always throws exception.
+		$this->assertCount( $count, $scanner->getTableId() );
+	}
+
+	/** @return mixed[] */
+	public static function provideInvalidSource(): array {
+		$divElement  = new DOMElement( 'div' );
+		$string      = '<div></div>';
+		$tableString = '<table><tbody><tr><td>content</td></tr></tbody></table>';
+
+		$dom = new DOMDocument();
+		$dom->loadHTML( $tableString, LIBXML_NOERROR | LIBXML_NOBLANKS );
+
+		return [
+			[ DOMNodeScanner::class, $divElement ],
+			[ DOMNodeScanner::class, $string, 0 ], // Does not verify string value.
+			[ DOMNodeScanner::class, $dom->getElementsByTagName( 'body' )->item( 0 )?->firstChild, 1 ],
+			[ DOMStringScanner::class, $divElement ],
+			[ DOMStringScanner::class, $string ],
+			[ DOMStringScanner::class, $tableString, 1 ],
+		];
 	}
 
 	#[Test]

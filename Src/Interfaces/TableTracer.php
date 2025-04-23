@@ -5,6 +5,7 @@ namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use Iterator;
 use ArrayObject;
+use DOMElement;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
@@ -14,19 +15,19 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 /** @template TColumnReturn */
 interface TableTracer extends Indexable {
 	/**
-	 * Sets whether all traced tables should be scanned or not.
+	 * Registers whether all tables present in the given source should be traced or not.
 	 */
 	public function withAllTables( bool $trace = true ): static;
 
 	/**
-	 * Registers target table structure(s) to be omitted from being traced and inferred.
+	 * Registers targeted table structure(s) to be omitted from being traced.
 	 *
 	 * @no-named-arguments
 	 */
 	public function traceWithout( Table ...$targets ): static;
 
 	/**
-	 * Registers transformer for targeted table structure.
+	 * Registers transformer for the targeted table structure.
 	 *
 	 * @param Transformer<contravariant static,TReturn> $transformer
 	 * @template TReturn
@@ -34,7 +35,7 @@ interface TableTracer extends Indexable {
 	public function addTransformer( Table $for, Transformer $transformer ): static;
 
 	/**
-	 * Registers event listener for targeted table structure.
+	 * Registers event listener for the targeted table structure and at the given event time.
 	 *
 	 * @param callable(TableTraced): void $callback
 	 */
@@ -43,13 +44,15 @@ interface TableTracer extends Indexable {
 	/**
 	 * Infers table(s) from given HTML content source.
 	 *
-	 * @param bool $normalize When set to true, whitespaces/tabs/newlines and other
-	 *                        similar characters and controls must get cleaned.
+	 * @param string|DOMElement $source    Either a HTML source or a table DOMElement.
+	 * @param bool              $normalize When set to true, whitespaces/tabs/newlines and other
+	 *                                     similar characters and controls must be cleaned.
+	 * @throws InvalidSource When unsupported $source given, or no "table" in $source.
 	 */
-	public function inferTableFrom( string $source, bool $normalize ): void;
+	public function inferTableFrom( string|DOMElement $source, bool $normalize ): void;
 
 	/**
-	 * Infers table head content from given element list.
+	 * Infers table head content from the given element list.
 	 *
 	 * @param iterable<array-key,TElement> $elementList
 	 * @throws InvalidSource When TElement is not a valid type.
@@ -58,12 +61,11 @@ interface TableTracer extends Indexable {
 	public function inferTableHeadFrom( iterable $elementList ): void;
 
 	/**
-	 * Infers table column data from given element list.
+	 * Infers table columns' content as a dataset from the given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList
 	 * @return array<TColumnReturn>
 	 * @throws InvalidSource When TElement is not a valid type.
-	 *
 	 * @template TElement
 	 */
 	public function inferTableDataFrom( iterable $elementList ): array;
@@ -76,37 +78,38 @@ interface TableTracer extends Indexable {
 	public function getTableId( bool $current = false ): int|string|array;
 
 	/**
-	 * Gets collection of traced table columns's data indexed by respective table ID.
-	 *
-	 * @return array<Iterator<int,ArrayObject<array-key,TColumnReturn>>>
-	 */
-	public function getTableData(): array;
-
-	/**
-	 * Gets traced table caption data indexed by respective table ID.
+	 * Gets traced table caption content indexed by respective table ID, if any.
 	 *
 	 * @return array<string|null>
 	 */
 	public function getTableCaption(): array;
 
 	/**
-	 * Gets traced table head data indexed by respective table ID.
+	 * Gets traced table head content indexed by respective table ID.
 	 *
 	 * @return array<SplFixedArray<string>>
 	 */
 	public function getTableHead(): array;
 
 	/**
-	 * Resets traced structures' details.
+	 * Gets traced table columns' content Iterator indexed by respective table ID.
 	 *
-	 * This may only be invoked after retrieving a table Iterator and no further table tracing is required.
+	 * @return array<Iterator<int,ArrayObject<array-key,TColumnReturn>>>
+	 */
+	public function getTableData(): array;
+
+	/**
+	 * Resets traced table structures' details.
+	 *
+	 * This may only be invoked after retrieving table columns' content Iterator
+	 * and no further tracing is required of any remaining table structures.
 	 */
 	public function resetTableTraced(): void;
 
 	/**
 	 * Resets registered hooks such as event listeners and transformers.
 	 *
-	 * This may only be invoked after any iteration is complete to prevent side-effects
+	 * This may only be invoked after an iteration is complete to prevent side-effects
 	 * of hooks not being applied to remaining items of an Iterator being iterated.
 	 */
 	public function resetTableHooks(): void;
