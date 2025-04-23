@@ -306,10 +306,14 @@ trait TableExtractor {
 
 	/** @param list<string> $names */
 	private function registerCurrentTableHead( array $names ): void {
+		$this->registerCurrentIterationTableHead( false );
+
+		if ( ! $this->currentIteration__allTableHeads || ! $names ) {
+			return;
+		}
+
 		$tableId                                      = $this->getTableId( current: true );
 		$this->discoveredTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
-
-		$this->registerCurrentIterationTableHead( false );
 	}
 
 	private function registerCurrentIterationTableHead( int|false $position ): void {

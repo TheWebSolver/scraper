@@ -28,6 +28,29 @@ trait HtmlTableFromNode {
 		);
 	}
 
+	/** @param DOMNodeList<DOMNode> $elementList */
+	public function inferTableHeadFrom( iterable $elementList ): void {
+		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
+
+		foreach ( $elementList as $currentIndex => $node ) {
+			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
+				$this->tickCurrentHeadIterationSkippedHeadNode( $node );
+
+				++$skippedNodes;
+
+				continue;
+			}
+
+			$position = $currentIndex - $skippedNodes;
+
+			$this->registerCurrentIterationTableHead( $position );
+
+			$names[] = $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
+		}
+
+		$this->registerCurrentTableHead( $names );
+	}
+
 	/** @param iterable<array-key,string|DOMNode> $elementList */
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data = [];
@@ -95,36 +118,6 @@ trait HtmlTableFromNode {
 
 			$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $node, $this ) );
 		}//end foreach
-	}
-
-	/**
-	 * @return ?list<string>
-	 * @throws InvalidSource When element list is not DOMNodeList.
-	 */
-	protected function inferTableHeadFrom( DOMNode $element ): ?array {
-		if ( ! AssertDOMElement::isValid( $element, Table::Row ) || ! $element->childNodes->length ) {
-			return null;
-		}
-
-		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
-
-		foreach ( $element->childNodes as $currentIndex => $node ) {
-			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
-				$this->tickCurrentHeadIterationSkippedHeadNode( $node );
-
-				++$skippedNodes;
-
-				continue;
-			}
-
-			$position = $currentIndex - $skippedNodes;
-
-			$this->registerCurrentIterationTableHead( $position );
-
-			$names[] = $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
-		}
-
-		return $names ?: null;
 	}
 
 	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
@@ -211,9 +204,7 @@ trait HtmlTableFromNode {
 			$iterator->next();
 		}
 
-		if ( $row && ( $headContent = $this->inferTableHeadFrom( $row ) ) ) {
-			$this->registerCurrentTableHead( $headContent );
-		}
+		$row && $row->childNodes->length && $this->inferTableHeadFrom( $row->childNodes );
 
 		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 	}
@@ -302,9 +293,7 @@ trait HtmlTableFromNode {
 	}
 
 	private function inspectFirstRowForHeadStructure( DOMNode $row ): bool {
-		( $firstRowContent = $this->inferTableHeadFrom( $row ) )
-			&& $this->currentIteration__allTableHeads
-			&& $this->registerCurrentTableHead( $firstRowContent );
+		$this->inferTableHeadFrom( $row->childNodes );
 
 		return $this->currentIteration__allTableHeads;
 	}

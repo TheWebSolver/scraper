@@ -49,6 +49,15 @@ interface TableTracer extends Indexable {
 	public function inferTableFrom( string $source, bool $normalize ): void;
 
 	/**
+	 * Infers table head content from given element list.
+	 *
+	 * @param iterable<array-key,TElement> $elementList
+	 * @throws InvalidSource When TElement is not a valid type.
+	 * @template TElement
+	 */
+	public function inferTableHeadFrom( iterable $elementList ): void;
+
+	/**
 	 * Infers table column data from given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList

@@ -52,6 +52,31 @@ trait HtmlTableFromString {
 		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $table, $this ) );
 	}
 
+	/** @param iterable<array-key,array{0:string,1:string,2:string,3:string,4:string}> $elementList */
+	public function inferTableHeadFrom( iterable $elementList ): void {
+		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
+
+		foreach ( $elementList as $currentIndex => $head ) {
+			[$node, $nodeName, $attribute, $content] = $head;
+
+			if ( Table::Head->value !== $nodeName ) {
+				$this->tickCurrentHeadIterationSkippedHeadNode();
+
+				++$skippedNodes;
+
+				continue;
+			}
+
+			$position = $currentIndex - $skippedNodes;
+
+			$this->registerCurrentIterationTableHead( $position );
+
+			$names[] = $transformer?->transform( $head, $this ) ?? trim( $content );
+		}
+
+		$this->registerCurrentTableHead( $names );
+	}
+
 	/** @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList */
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data = [];
@@ -85,34 +110,6 @@ trait HtmlTableFromString {
 		}//end foreach
 
 		return $data;
-	}
-
-	/**
-	 * @param iterable<array-key,array{0:string,1:string,2:string,3:string,4:string}> $elementList
-	 * @return ?list<string>
-	 */
-	protected function inferTableHeadFrom( iterable $elementList ): ?array {
-		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
-
-		foreach ( $elementList as $currentIndex => $head ) {
-			[$node, $nodeName, $attribute, $content] = $head;
-
-			if ( Table::Head->value !== $nodeName ) {
-				$this->tickCurrentHeadIterationSkippedHeadNode();
-
-				++$skippedNodes;
-
-				continue;
-			}
-
-			$position = $currentIndex - $skippedNodes;
-
-			$this->registerCurrentIterationTableHead( $position );
-
-			$names[] = $transformer?->transform( $head, $this ) ?? trim( $content );
-		}
-
-		return $names ?: null;
 	}
 
 	protected function captionStructureContentFrom( string $table ): void {
@@ -151,9 +148,8 @@ trait HtmlTableFromString {
 
 		if ( $rowsFound ) {
 			[$headsFound, $rowColumns] = Normalize::tableColumnsFrom( $headRow[2] );
-			$content                   = ! $headsFound ? null : $this->inferTableHeadFrom( $rowColumns );
 
-			$content && $this->registerCurrentTableHead( $content );
+			$headsFound && $this->inferTableHeadFrom( $rowColumns );
 		}
 
 		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $thead[0], $this ) );
@@ -284,9 +280,7 @@ trait HtmlTableFromString {
 
 	/** @param array{0:string,1:string,2:string,3:string,4:string}[] $row */
 	private function inspectFirstRowForHeadStructure( array $row ): bool {
-		( $firstRowContent = $this->inferTableHeadFrom( $row ) )
-			&& $this->currentIteration__allTableHeads
-			&& $this->registerCurrentTableHead( $firstRowContent );
+		$this->inferTableHeadFrom( $row );
 
 		return $this->currentIteration__allTableHeads;
 	}
