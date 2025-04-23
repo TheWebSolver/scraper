@@ -94,7 +94,7 @@ trait HtmlTableFromNode {
 		return $data;
 	}
 
-	protected function inferChildNodesFromTable( DOMElement $element ): bool {
+	private function inferChildNodesFromTable( DOMElement $element ): bool {
 		$iterator = $this->childNodesIteratorOfTable( $element );
 
 		if ( ! $iterator || ! $tableStructure = $this->traceTableStructureIn( $iterator ) ) {
@@ -121,7 +121,7 @@ trait HtmlTableFromNode {
 	}
 
 	/** @param DOMNodeList<DOMNode> $elementList */
-	protected function inferTableFromDOMNodeList( DOMNodeList $elementList ): void {
+	private function inferTableFromDOMNodeList( DOMNodeList $elementList ): void {
 		foreach ( $elementList as $node ) {
 			if ( ! AssertDOMElement::isValid( $node ) || ! $this->inferChildNodesFromTable( $node ) ) {
 				continue;
@@ -133,14 +133,14 @@ trait HtmlTableFromNode {
 		}
 	}
 
-	final protected function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
+	private function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
 		( ! $this->getTableId() || $this->shouldPerform__allTableDiscovery )
 			&& ( ( $nodes = $node->childNodes )->length > $minChildNodesCount )
 			&& $this->inferTableFromDOMNodeList( $nodes );
 	}
 
 	/** @phpstan-assert-if-true =DOMElement $node */
-	final protected function isTableRowStructure( DOMNode $node ): bool {
+	private function isTableRowStructure( DOMNode $node ): bool {
 		return $node->childNodes->length && AssertDOMElement::isValid( $node, Table::Row );
 	}
 
