@@ -6,7 +6,6 @@ namespace TheWebSolver\Codegarage\Scraper\Traits\Table;
 use Closure;
 use DOMNode;
 use Iterator;
-use Throwable;
 use BackedEnum;
 use DOMElement;
 use ArrayObject;
@@ -22,8 +21,8 @@ use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 
 /** @template TColumnReturn */
 trait TableExtractor {
-	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` Table enum, `4:` Table case, `5:` reason. */
-	final public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s::%2$s()". Use event listener for "%3$s::%4$s" to %5$s';
+	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` Table enum, `4:` Table case, `5`: EventAt enum, `6`: EventAt case, `7:` reason. */
+	final public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s::%2$s()". Use event listener for "%3$s::%4$s" and "%5$s::%6$s" to %7$s';
 
 	private bool $shouldPerform__allTableDiscovery = false;
 
@@ -91,8 +90,8 @@ trait TableExtractor {
 	}
 
 	public function setItemsIndices( array $keys, int ...$offset ): void {
-		if ( ! $this->isDispatchingEventFor( Table::Row, EventAt::Start ) ) {
-			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name ];
+		if ( ! $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
+			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name ];
 
 			throw new ScraperError(
 				sprintf( self::USE_EVENT_LISTENER, ...[ ...$placeholders, 'set column names.' ] )
@@ -142,31 +141,6 @@ trait TableExtractor {
 		};
 	}
 
-	/** Accepts either text content, extracted array or converted DOMElement from default Table Row Marshaller. */
-	protected function isTableColumnStructure( mixed $node ): bool {
-		$nodeName = match ( true ) {
-			$node instanceof DOMElement => $node->tagName,
-			is_array( $node )           => $node[1] ?? null,
-			is_string( $node )          => $node,
-			default                     => null
-		};
-
-		return ( $nodeName && ( Table::Head->value === $nodeName || Table::Column->value === $nodeName ) );
-	}
-
-	protected function dispatchEventListenerForTable( int|string $id, string|DOMElement $body ): void {
-		if ( ! in_array( $id, $this->discoveredTable__ids, true ) ) {
-			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
-		}
-
-		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::Start, $body, $this ) );
-	}
-
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
-	protected function isTargetedTable( string|DOMElement $node ): bool {
-		return true;
-	}
-
 	public function resetTableHooks(): void {
 		unset(
 			$this->discoveredTable__transformers,
@@ -182,6 +156,23 @@ trait TableExtractor {
 			$this->discoveredTable__captions           = [];
 			$this->discoveredTable__headNames          = [];
 			$this->discoveredTable__rows               = [];
+	}
+
+	/** Accepts either text content, extracted array or converted DOMElement from default Table Row Marshaller. */
+	protected function isTableColumnStructure( mixed $node ): bool {
+		$nodeName = match ( true ) {
+			$node instanceof DOMElement => $node->tagName,
+			is_array( $node )           => $node[1] ?? null,
+			is_string( $node )          => $node,
+			default                     => null
+		};
+
+		return ( $nodeName && ( Table::Head->value === $nodeName || Table::Column->value === $nodeName ) );
+	}
+
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
+	protected function isTargetedTable( string|DOMElement $node ): bool {
+		return true;
 	}
 
 	private function getCurrentIterationColumnCount(): ?int {
@@ -207,11 +198,8 @@ trait TableExtractor {
 		return $this->discoveredTable__eventListeners[ $nodeName ][ $when ] ?? null;
 	}
 
-	/**
-	 * @param Closure(TableTraced): void $listenTo
-	 * @throws Throwable When user throws exception within callback.
-	 */
-	private function tryHandlingTaskOfDispatched( TableTraced $event, Closure $listenTo ): void {
+	/** @param Closure(TableTraced): void $listenTo */
+	private function tryListeningToDispatchedEvent( TableTraced $event, Closure $listenTo ): void {
 		try {
 			$this->discoveredTable__eventBeingDispatched = $event;
 
@@ -222,7 +210,7 @@ trait TableExtractor {
 	}
 
 	private function dispatchEvent( TableTraced $event ): void {
-		$callback            = $this->getEventListener( $event );
+		$listener            = $this->getEventListener( $event );
 		$id                  = $this->currentTable__id;
 		[$tagName, $eventAt] = $event->scope();
 		$whenDispatched      = $this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] ?? [
@@ -233,7 +221,7 @@ trait TableExtractor {
 			],
 		];
 
-		if ( ! $callback ) {
+		if ( ! $listener ) {
 			$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
 			return;
@@ -242,10 +230,18 @@ trait TableExtractor {
 		$whenDispatched[1][ $eventAt ]                                      = true;
 		$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
-		$this->tryHandlingTaskOfDispatched( $event, $callback );
+		$this->tryListeningToDispatchedEvent( $event, $listener );
 	}
 
-	private function isDispatchingEventFor( Table $structure, EventAt $when ): bool {
+	private function dispatchEventForTable( int|string $id, string|DOMElement $body ): void {
+		if ( ! in_array( $id, $this->discoveredTable__ids, true ) ) {
+			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
+		}
+
+		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::Start, $body, $this ) );
+	}
+
+	private function isInvokedByEventListenerOf( Table $structure, EventAt $when ): bool {
 		return $this->discoveredTable__eventBeingDispatched?->isTargeted( $when, $structure ) ?? false;
 	}
 

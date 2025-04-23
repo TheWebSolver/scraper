@@ -76,13 +76,13 @@ trait HtmlTableFromNode {
 			$splId = spl_object_id( $node );
 			$id    = $splId * spl_object_id( $bodyNode );
 
-			$this->dispatchEventListenerForTable( $id, $bodyNode );
+			$this->dispatchEventForTable( $id, $bodyNode );
 
 			$this->discoveredTable__captions[ $id ] = $captionNode
 				? $this->captionStructureContentFrom( $captionNode )
 				: null;
 
-			$this->dispatchEventListenerForTableHead( $headNode );
+			$this->dispatchEventForTableHead( $headNode );
 
 			$iterator = $this->bodyStructureIteratorFrom( $bodyNode );
 
@@ -219,7 +219,7 @@ trait HtmlTableFromNode {
 	}
 
 	/** @return ?list<string> */
-	private function dispatchEventListenerForTableHead( ?DOMElement $node ): ?array {
+	private function dispatchEventForTableHead( ?DOMElement $node ): ?array {
 		if ( ! $node ) {
 			return null;
 		}

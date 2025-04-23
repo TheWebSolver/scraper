@@ -170,7 +170,7 @@ class HtmlTableExtractorTest extends TestCase {
 		TableTracer $scanner,
 		?string $throwing = null,
 	): void {
-		$placeholders = [ $scanner::class, $throwing ?? $methodName, Table::class, Table::Row->name, '' ];
+		$placeholders = [ $scanner::class, $throwing ?? $methodName, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name, '' ];
 
 		$this->expectException( ScraperError::class );
 		$this->expectExceptionMessage( sprintf( DOMNodeScanner::USE_EVENT_LISTENER, ...$placeholders ) );

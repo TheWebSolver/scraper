@@ -40,7 +40,7 @@ trait HtmlTableFromString {
 
 		[[$table], $body, $traceCaption, $traceHead] = $tableStructure;
 
-		$this->dispatchEventListenerForTable( $id = $this->get64bitHash( $table ), $table );
+		$this->dispatchEventForTable( $id = $this->get64bitHash( $table ), $table );
 
 		$traceCaption && $this->captionStructureContentFrom( $table );
 		$traceHead && $this->headStructureContentFrom( $table );
