@@ -49,7 +49,7 @@ trait HtmlTableFromString {
 
 		$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 
-		$this->dispatchEventListener( new TableTraced( Table::TBody, EventAt::End, $table, $this ) );
+		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $table, $this ) );
 	}
 
 	/** @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList */
@@ -123,13 +123,13 @@ trait HtmlTableFromString {
 			return;
 		}
 
-		$this->dispatchEventListener( new TableTraced( Table::Caption, EventAt::Start, $caption[0], $this ) );
+		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::Start, $caption[0], $this ) );
 
 		$content = $transformer?->transform( $caption, $this ) ?? trim( $caption[2] );
 
 		$this->discoveredTable__captions[ $this->currentTable__id ] = $content;
 
-		$this->dispatchEventListener( new TableTraced( Table::Caption, EventAt::End, $caption[0], $this ) );
+		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::End, $caption[0], $this ) );
 	}
 
 	protected function headStructureContentFrom( string $string ): void {
@@ -151,13 +151,13 @@ trait HtmlTableFromString {
 			return;
 		}
 
-		$this->dispatchEventListener( $event = new TableTraced( Table::THead, EventAt::Start, $headRow[0], $this ) );
+		$this->dispatchEvent( $event = new TableTraced( Table::THead, EventAt::Start, $headRow[0], $this ) );
 
 		$content = $event->shouldStopTrace() ? null : $this->inferTableHeadFrom( $tableHeads );
 
 		$content && $this->registerCurrentTableHead( $content );
 
-		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $headRow[0], $this ) );
+		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $headRow[0], $this ) );
 	}
 
 	/** @return ?array{0:string,1:list<array{0:string,1:string,2:string}>} */
@@ -248,7 +248,7 @@ trait HtmlTableFromString {
 			if ( $isHead ) {
 				// We can only determine whether first row contains table heads after it is inferred.
 				// We'll simply dispatch the ending event here to notify subscribers, if any.
-				$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
+				$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 
 				next( $rows );
 
@@ -256,7 +256,7 @@ trait HtmlTableFromString {
 			}
 
 			if ( ! $bodyStarted ) {
-				$this->dispatchEventListener( $event = new TableTraced( Table::Row, EventAt::Start, $tbodyNode, $this ) );
+				$this->dispatchEvent( $event = new TableTraced( Table::Row, EventAt::Start, $tbodyNode, $this ) );
 
 				// Although not recommended, it is entirely possible to stop inferring further table rows.
 				// This just means that tracer was used to trace "<th>" that were present in "<tbody>".
@@ -280,7 +280,7 @@ trait HtmlTableFromString {
 			next( $rows );
 		}//end while
 
-		$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::End, $tbodyNode, $this ) );
+		$this->dispatchEvent( new TableTraced( Table::Row, EventAt::End, $tbodyNode, $this ) );
 	}
 
 	/** @param array{0:string,1:string,2:string,3:string,4:string}[] $row */

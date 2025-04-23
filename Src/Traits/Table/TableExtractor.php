@@ -159,7 +159,7 @@ trait TableExtractor {
 			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
 		}
 
-		$this->dispatchEventListener( new TableTraced( Table::TBody, EventAt::Start, $body, $this ) );
+		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::Start, $body, $this ) );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -221,7 +221,7 @@ trait TableExtractor {
 		}
 	}
 
-	private function dispatchEventListener( TableTraced $event ): void {
+	private function dispatchEvent( TableTraced $event ): void {
 		$callback            = $this->getEventListener( $event );
 		$id                  = $this->currentTable__id;
 		[$tagName, $eventAt] = $event->scope();
