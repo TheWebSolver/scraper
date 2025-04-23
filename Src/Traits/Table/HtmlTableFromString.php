@@ -117,7 +117,6 @@ trait HtmlTableFromString {
 
 	protected function captionStructureContentFrom( string $table ): void {
 		[$matched, $caption] = Normalize::nodeToMatchedArray( $table, Table::Caption );
-		$transformer         = $this->discoveredTable__transformers['caption'] ?? null;
 
 		if ( ! $matched ) {
 			return;
@@ -125,7 +124,8 @@ trait HtmlTableFromString {
 
 		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::Start, $caption[0], $this ) );
 
-		$content = $transformer?->transform( $caption, $this ) ?? trim( $caption[2] );
+		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
+		$content     = $transformer?->transform( $caption, $this ) ?? trim( $caption[2] );
 
 		$this->discoveredTable__captions[ $this->currentTable__id ] = $content;
 
@@ -139,25 +139,24 @@ trait HtmlTableFromString {
 			return;
 		}
 
+		$this->dispatchEvent( $event = new TableTraced( Table::THead, EventAt::Start, $thead[0], $this ) );
+
+		if ( $event->shouldStopTrace() ) {
+			$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $thead[0], $this ) );
+
+			return;
+		}
+
 		[$rowsFound, $headRow] = Normalize::nodeToMatchedArray( $thead[2], Table::Row );
 
-		if ( ! $rowsFound ) {
-			return;
+		if ( $rowsFound ) {
+			[$headsFound, $rowColumns] = Normalize::tableColumnsFrom( $headRow[2] );
+			$content                   = ! $headsFound ? null : $this->inferTableHeadFrom( $rowColumns );
+
+			$content && $this->registerCurrentTableHead( $content );
 		}
 
-		[$headsFound, $tableHeads] = Normalize::tableColumnsFrom( $headRow[2] );
-
-		if ( ! $headsFound ) {
-			return;
-		}
-
-		$this->dispatchEvent( $event = new TableTraced( Table::THead, EventAt::Start, $headRow[0], $this ) );
-
-		$content = $event->shouldStopTrace() ? null : $this->inferTableHeadFrom( $tableHeads );
-
-		$content && $this->registerCurrentTableHead( $content );
-
-		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $headRow[0], $this ) );
+		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $thead[0], $this ) );
 	}
 
 	/** @return ?array{0:string,1:list<array{0:string,1:string,2:string}>} */

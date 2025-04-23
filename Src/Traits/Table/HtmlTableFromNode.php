@@ -71,6 +71,8 @@ trait HtmlTableFromNode {
 				continue;
 			}
 
+			assert( $node instanceof DOMElement );
+
 			[$bodyNode, $captionNode, $headNode] = $tableStructure;
 
 			$splId = spl_object_id( $node );
@@ -78,19 +80,20 @@ trait HtmlTableFromNode {
 
 			$this->dispatchEventForTable( $id, $bodyNode );
 
-			$this->discoveredTable__captions[ $id ] = $captionNode
-				? $this->captionStructureContentFrom( $captionNode )
-				: null;
-
-			$this->dispatchEventForTableHead( $headNode );
+			$captionNode && $this->captionStructureContentFrom( $captionNode );
+			$headNode && $this->headStructureContentFrom( $headNode );
 
 			$iterator = $this->bodyStructureIteratorFrom( $bodyNode );
 
 			$iterator->valid() && ( $this->discoveredTable__rows[ $id ] = $iterator );
 
 			if ( $this->discoveredTargetedTable( $node ) ) {
+				$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $node, $this ) );
+
 				break;
 			}
+
+			$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $node, $this ) );
 		}//end foreach
 	}
 
@@ -104,8 +107,6 @@ trait HtmlTableFromNode {
 		}
 
 		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
-
-		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::Start, $element, $this ) );
 
 		foreach ( $element->childNodes as $currentIndex => $node ) {
 			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
@@ -179,24 +180,42 @@ trait HtmlTableFromNode {
 		return null;
 	}
 
-	private function captionStructureContentFrom( DOMElement $node ): ?string {
-		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
+	private function captionStructureContentFrom( DOMElement $node ): void {
+		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::Start, $node, $this ) );
 
-		return $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
+		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
+		$content     = $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
+
+		$this->discoveredTable__captions[ $this->currentTable__id ] = $content;
+
+		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::End, $node, $this ) );
 	}
 
-	/** @return array{0:?DOMElement,1:?list<string>} */
-	private function headStructureContentFrom( DOMElement $node ): array {
-		$headIterator = $this->getChildNodesIteratorFrom( $node );
-		$row          = null;
+	private function headStructureContentFrom( DOMElement $node ): void {
+		$this->dispatchEvent( $event = new TableTraced( Table::THead, EventAt::Start, $node, $this ) );
 
-		while ( ! $row && $headIterator->valid() ) {
-			$this->isTableRowStructure( $node = $headIterator->current() ) && ( $row = $node );
+		if ( $event->shouldStopTrace() ) {
+			$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 
-			$headIterator->next();
+			return;
 		}
 
-		return $row ? [ $row, $this->inferTableHeadFrom( $row ) ] : [ null, null ];
+		$iterator = $this->getChildNodesIteratorFrom( $node );
+		$row      = null;
+
+		while ( ! $row && $iterator->valid() ) {
+			if ( $this->isTableRowStructure( $headRow = $iterator->current() ) ) {
+				$row = $headRow;
+			}
+
+			$iterator->next();
+		}
+
+		if ( $row && ( $headContent = $this->inferTableHeadFrom( $row ) ) ) {
+			$this->registerCurrentTableHead( $headContent );
+		}
+
+		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 	}
 
 	/** @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement} */
@@ -216,36 +235,6 @@ trait HtmlTableFromNode {
 		}
 
 		return $bodyNode ? [ $bodyNode, $captionNode, $headNode ] : null;
-	}
-
-	/** @return ?list<string> */
-	private function dispatchEventForTableHead( ?DOMElement $node ): ?array {
-		if ( ! $node ) {
-			return null;
-		}
-
-		[$row, $headContents] = $this->headStructureContentFrom( $node );
-
-		if ( ! $row || ! $headContents ) {
-			return null;
-		}
-
-		$this->registerCurrentTableHead( $headContents );
-		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
-
-		return $headContents;
-	}
-
-	private function continueAfterFiringEventListenerWhenHeadFoundInBody( Iterator $iterator ): bool {
-		if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
-			return false;
-		}
-
-		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
-
-		$iterator->next();
-
-		return true;
 	}
 
 	/**
@@ -268,19 +257,23 @@ trait HtmlTableFromNode {
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
 			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
-				if ( ! $this->continueAfterFiringEventListenerWhenHeadFoundInBody( $iterator ) ) {
-					return;
-				}
+				// We can only determine whether first row contains table heads after it is inferred.
+				// We'll simply dispatch the ending event here to notify subscribers, if any.
+				$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
+
+				$iterator->next();
 
 				continue;
 			}
 
-			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
-				return;
-			}
-
 			if ( ! $bodyStarted ) {
-				$this->dispatchEvent( new TableTraced( Table::Row, EventAt::Start, $body, $this ) );
+				$this->dispatchEvent( $event = new TableTraced( Table::Row, EventAt::Start, $body, $this ) );
+
+				// Although not recommended, it is entirely possible to stop inferring further table rows.
+				// This just means that tracer was used to trace "<th>" that were present in "<tbody>".
+				if ( $event->shouldStopTrace() ) {
+					break;
+				}
 
 				$bodyStarted = true;
 			}
