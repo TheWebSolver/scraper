@@ -36,7 +36,7 @@ trait TableExtractor {
 	 * }
 	 */
 	private array $discoveredTable__transformers;
-	/** @var array<string,array{0?:Closure(TableTraced): void, 1?:Closure(TableTraced): void}> */
+	/** @var array<value-of<Table>,array{Start?:Closure(TableTraced): void,End?:Closure(TableTraced): void}> */
 	private array $discoveredTable__eventListeners;
 	private ?TableTraced $discoveredTable__eventBeingDispatched = null;
 	/** @var array<array-key,array<value-of<Table>,array{0:bool,1:array<string,bool>}>> */
@@ -159,7 +159,7 @@ trait TableExtractor {
 			$this->discoveredTable__ids[] = $this->currentTable__id = $id;
 		}
 
-		$this->dispatchEventListener( new TableTraced( Table::TBody, EventAt::Start, $body ) );
+		$this->dispatchEventListener( new TableTraced( Table::TBody, EventAt::Start, $body, $this ) );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
@@ -216,8 +216,6 @@ trait TableExtractor {
 			$this->discoveredTable__eventBeingDispatched = $event;
 
 			$listenTo( $event );
-
-			$event->handleTask( $this );
 		} finally {
 			unset( $this->discoveredTable__eventBeingDispatched );
 		}

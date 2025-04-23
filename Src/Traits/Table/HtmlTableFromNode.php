@@ -105,7 +105,7 @@ trait HtmlTableFromNode {
 
 		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
-		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::Start, $element ) );
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::Start, $element, $this ) );
 
 		foreach ( $element->childNodes as $currentIndex => $node ) {
 			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
@@ -231,7 +231,7 @@ trait HtmlTableFromNode {
 		}
 
 		$this->registerCurrentTableHead( $headContents );
-		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node ) );
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 
 		return $headContents;
 	}
@@ -241,7 +241,7 @@ trait HtmlTableFromNode {
 			return false;
 		}
 
-		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node ) );
+		$this->dispatchEventListener( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 
 		$iterator->next();
 
@@ -280,7 +280,7 @@ trait HtmlTableFromNode {
 			}
 
 			if ( ! $bodyStarted ) {
-				$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::Start, $body ) );
+				$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::Start, $body, $this ) );
 
 				$bodyStarted = true;
 			}
@@ -305,7 +305,7 @@ trait HtmlTableFromNode {
 			$iterator->next();
 		}//end while
 
-		$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::End, $body ) );
+		$this->dispatchEventListener( new TableTraced( Table::Row, EventAt::End, $body, $this ) );
 	}
 
 	private function inspectFirstRowForHeadStructure( DOMNode $row ): bool {

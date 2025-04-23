@@ -60,9 +60,9 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 
 	/**
 	 * Inheriting class may override this method to provide column names with offset position(s).
-	 * Use `$this->collectSourceItems()` as indices and offset position(s) as required.
+	 * Use `$this->collectSourceItems()` as indices and add offset position(s) as required.
 	 */
-	protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-		$event->handle( fn() => $this->setItemsIndices( $this->collectSourceItems() ) );
+	protected function useCollectedKeysAsTableColumnIndices(): void {
+		$this->setItemsIndices( $this->collectSourceItems() );
 	}
 }
