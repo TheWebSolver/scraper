@@ -7,7 +7,7 @@ use BackedEnum;
 
 interface Indexable {
 	/** @placeholder: **1:** minimum expected items count, **2:** possible mappable keys. */
-	public const INVALID_COUNT = 'Dataset count invalid. It must have atleast "%2$s" items mappable with keys: "%2$s".';
+	public const INVALID_COUNT = 'Dataset count invalid. It must have atleast "%1$s" items mappable with keys: "%2$s".';
 
 	/**
 	 * Sets indices to be used as collected items' keys.
