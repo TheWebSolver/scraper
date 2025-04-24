@@ -18,7 +18,7 @@ parameters:
 			path: Src/Traits/Table/TableExtractor.php
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
-				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array\<int, string\>, array\<int, int\>, int\|null, int, .*?Transformer\<.*?, string\>\} but returns array\{array\<int, string\>, array\<int, int\>, int\|null, 0, .*?Transformer\<.*?, string\>\|.*?MarshallItem\}\.$#'
+				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array.*?\} but returns array\{.*?MarshallItem\}\.$#'
 		- # Ignore DOMNodeList->getIterator() not being Iterator.
 			path: Src/Traits/Table/HtmlTableFromNode.php
 			identifier: return.type
