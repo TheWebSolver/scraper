@@ -41,7 +41,7 @@ class TransformerTest extends TestCase {
 
 		$base->expects( $this->once() )
 			->method( 'transform' )
-			->willReturn( 'Develôper' );
+			->willReturn( 'Devel&ocirc;per' );
 
 		$this->assertSame(
 			'Develôper',
