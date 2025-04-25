@@ -160,4 +160,14 @@ class TransformerTest extends TestCase {
 		// @phpstan-ignore-next-line argument.type -- Generics not required for mocking.
 		$this->assertSame( 'Developer', $validatorProxy->transform( 'Devel&ocirc;per', $validator ) );
 	}
+
+	#[Test]
+	public function itThrowsExceptionIfProvidedArrayIsNotNormalizedArray(): void {
+		$stub = $this->createStub( DOMElement::class );
+
+		$this->expectException( InvalidSource::class );
+		$this->expectExceptionMessage( sprintf( MarshallItem::INVALID_ARRAY, $stub::class ) );
+
+		( new MarshallItem() )->transform( [ 'Must have a value in 3rd index' ], $stub );
+	}
 }
