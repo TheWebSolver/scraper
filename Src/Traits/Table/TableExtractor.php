@@ -16,14 +16,12 @@ use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 
 /** @template TColumnReturn */
 trait TableExtractor {
-	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` Table enum, `4:` Table case, `5`: EventAt enum, `6`: EventAt case, `7:` reason. */
-	final public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s::%2$s()". Use event listener for "%3$s::%4$s" and "%5$s::%6$s" to %7$s';
-
 	private bool $shouldPerform__allTableDiscovery = false;
 
 	/**
@@ -94,7 +92,7 @@ trait TableExtractor {
 			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name ];
 
 			throw new ScraperError(
-				sprintf( self::USE_EVENT_LISTENER, ...[ ...$placeholders, 'set column names.' ] )
+				sprintf( TableTracer::USE_EVENT_LISTENER, ...[ ...$placeholders, 'set column names.' ] )
 			);
 		}
 

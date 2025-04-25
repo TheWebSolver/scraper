@@ -17,6 +17,6 @@ class StripTags implements Transformer {
 	public function transform( string|array|DOMElement $el, object $scope ): string {
 		$base = new HtmlEntityDecode( new MarshallItem() );
 
-		return strip_tags( explode( '[', $base->transform( $el, $scope ), 2 )[0] );
+		return trim( strip_tags( explode( '[', $base->transform( $el, $scope ), 2 )[0] ) );
 	}
 }

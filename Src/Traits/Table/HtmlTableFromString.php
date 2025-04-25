@@ -175,7 +175,9 @@ trait HtmlTableFromString {
 			return null;
 		}
 
-		return [ $tbody[0], $tableRows ];
+		$hasATableColumn = str_contains( $tbody[0], '<td' ) && str_contains( $tbody[0], '</td>' );
+
+		return $hasATableColumn ? [ $tbody[0], $tableRows ] : null;
 	}
 
 	private function get64bitHash( string $string ): string {
