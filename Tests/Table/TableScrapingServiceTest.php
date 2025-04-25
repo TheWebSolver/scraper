@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
+use TheWebSolver\Codegarage\Test\ScrapingServiceTest;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
@@ -22,7 +23,7 @@ use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 
 class TableScrapingServiceTest extends TestCase {
 	private function getTableContent(): string {
-		$path = TableScrapingService::CACHE_PATH . DIRECTORY_SEPARATOR;
+		$path = ScrapingServiceTest::RESOURCE_PATH . DIRECTORY_SEPARATOR;
 
 		return file_get_contents( "{$path}single-table.html" ) ?: '';
 	}

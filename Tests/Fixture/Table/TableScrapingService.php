@@ -5,6 +5,7 @@ namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
 use Iterator;
 use TheWebSolver\Codegarage\Scraper\ScrapingService;
+use TheWebSolver\Codegarage\Test\ScrapingServiceTest;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 
@@ -17,8 +18,6 @@ class TableScrapingService extends ScrapingService {
 	/** @use TraceATable<TTracer> */
 	use TraceATable;
 
-	final public const CACHE_PATH = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Resource';
-
 	/** @param TTracer $tracer */
 	public function __construct( protected TableTracer $tracer ) {
 		parent::__construct();
@@ -29,6 +28,6 @@ class TableScrapingService extends ScrapingService {
 	}
 
 	protected function defaultCachePath(): string {
-		return self::CACHE_PATH;
+		return ScrapingServiceTest::RESOURCE_PATH;
 	}
 }
