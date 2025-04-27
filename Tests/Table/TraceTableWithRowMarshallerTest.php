@@ -9,8 +9,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
-use TheWebSolver\Codegarage\Test\ScrapingServiceTest;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Indexable;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
@@ -53,7 +53,7 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 	#[Test]
 	#[DataProvider( 'provideTableTracerWithKeys' )]
 	public function itIndexesDatasetWithProvidedKey( TableTracer $tracer ): void {
-		$content  = file_get_contents( ScrapingServiceTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'single-table.html' ) ?: '';
+		$content  = file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'single-table.html' ) ?: '';
 		$keyValue = [ [ 'name', 'John Doe' ], [ 'age', '22' ] ];
 
 		foreach ( $keyValue as [$key, $value] ) {

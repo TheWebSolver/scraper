@@ -5,7 +5,7 @@ namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
 use Iterator;
 use TheWebSolver\Codegarage\Scraper\ScrapingService;
-use TheWebSolver\Codegarage\Test\ScrapingServiceTest;
+use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 
@@ -28,6 +28,6 @@ class TableScrapingService extends ScrapingService {
 	}
 
 	protected function defaultCachePath(): string {
-		return ScrapingServiceTest::RESOURCE_PATH;
+		return DOMDocumentFactoryTest::RESOURCE_PATH;
 	}
 }

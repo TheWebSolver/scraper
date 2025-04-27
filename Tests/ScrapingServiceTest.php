@@ -11,8 +11,6 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 
 class ScrapingServiceTest extends TestCase {
-	final public const RESOURCE_PATH = __DIR__ . DIRECTORY_SEPARATOR . 'Resource' . DIRECTORY_SEPARATOR;
-
 	/** @var Scrapable<array-key,mixed> */
 	private Scrapable $service;
 
@@ -31,7 +29,7 @@ class ScrapingServiceTest extends TestCase {
 			}
 
 			protected function defaultCachePath(): string {
-				return ScrapingServiceTest::RESOURCE_PATH;
+				return DOMDocumentFactoryTest::RESOURCE_PATH;
 			}
 		};
 	}
@@ -43,7 +41,7 @@ class ScrapingServiceTest extends TestCase {
 	#[Test]
 	public function itReturnsDefaultValuesUsingGetters(): void {
 		$this->assertNotEmpty( $this->service->fromCache() );
-		$this->assertSame( self::RESOURCE_PATH . 'full-content.html', $this->service->getCachePath() );
+		$this->assertSame( DOMDocumentFactoryTest::RESOURCE_PATH . 'full-content.html', $this->service->getCachePath() );
 		$this->assertSame( 'https://scrapeService.test', $this->service->getSourceUrl() );
 		$this->assertTrue( $this->service->hasCache() );
 	}

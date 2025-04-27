@@ -16,11 +16,11 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
-use TheWebSolver\Codegarage\Test\ScrapingServiceTest;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
@@ -29,7 +29,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
 class TableExtractorTest extends TestCase {
 	private function getTableContent( string $filename = 'table' ): string {
-		return file_get_contents( ScrapingServiceTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . "{$filename}.html" ) ?: '';
+		return file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . "{$filename}.html" ) ?: '';
 	}
 
 	/** @param class-string<TableTracer<string>> $classname */
@@ -343,7 +343,7 @@ class TableExtractorTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideCasesWhenEventListenerExceptionIsThrown(): array {
 		$listener = static fn( TableTraced $e ) => $e->tracer->setItemsIndices( [] );
-		$table    = ScrapingServiceTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'table.html';
+		$table    = DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'table.html';
 
 		return [
 			[ 'setItemsIndices', [ [] ], new NodeTableTracer() ],
