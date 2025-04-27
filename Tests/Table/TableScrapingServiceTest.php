@@ -141,7 +141,12 @@ class TableScrapingServiceTest extends TestCase {
 	#[Test]
 	#[DataProvider( 'provideTranslitArgsToOperateOnAccentedCharacters' )]
 	public function itScrapesAndTranslitAccentedCharacters( int $action, string $expectedTitle, array $keys ): void {
-		foreach ( [ StringTableTracerWithKeys::class, NodeTableTracerWithKeys::class ] as $tracer ) {
+		$tracerWithAccents = [
+			new #[CollectFrom( DevDetails::class )] class( $keys ) extends StringTableTracerWithKeys {},
+			new #[CollectFrom( DevDetails::class )] class( $keys ) extends NodeTableTracerWithKeys {},
+		];
+
+		foreach ( $tracerWithAccents as $tracer ) {
 			/** @var TableScrapingService<StringTableTracerWithKeys|NodeTableTracerWithKeys> */
 			$service     = new TableScrapingService( new $tracer( $keys ) );
 			$transformer = new TranslitAccentedIndexableItem( new StripTags() );
@@ -219,7 +224,7 @@ class TableScrapingServiceTest extends TestCase {
 	/** @return mixed[] */
 	public static function providePartialDatasetKeys(): array {
 		return [
-			[
+			'String: Using PHP Attribute' => [
 				new #[CollectFrom( DevDetails::class, DevDetails::Name, DevDetails::Address )] class()
 				extends StringTableTracerWithKeys {
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
@@ -231,9 +236,41 @@ class TableScrapingServiceTest extends TestCase {
 					'address' => '<a href="/location" title="Developer location">Ktm</a>',
 				],
 			],
-			[
+			'Node: Using PHP Attribute' => [
 				new #[CollectFrom( DevDetails::class, DevDetails::Name, DevDetails::Address )] class()
 				extends NodeTableTracerWithKeys {
+					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
+						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
+					}
+				},
+				[
+					'name'    => 'John Doe',
+					'address' => 'Ktm',
+				],
+			],
+			'String: Using method call' => [
+				new class() extends StringTableTracerWithKeys {
+					public function __construct() {
+						$this->collectFromMappable( DevDetails::class, DevDetails::Name, DevDetails::Address );
+						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
+					}
+
+					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
+						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
+					}
+				},
+				[
+					'name'    => 'John Doe',
+					'address' => '<a href="/location" title="Developer location">Ktm</a>',
+				],
+			],
+			'Node: Using method call' => [
+				new class() extends NodeTableTracerWithKeys {
+					public function __construct() {
+						$this->collectFromMappable( DevDetails::class, DevDetails::Name, DevDetails::Address );
+						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
+					}
+
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
 						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
 					}

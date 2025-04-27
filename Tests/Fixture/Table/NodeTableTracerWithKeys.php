@@ -5,17 +5,14 @@ namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
 use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
 use TheWebSolver\Codegarage\Scraper\Traits\Diacritic;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
-use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 
 /** @template-implements TableTracer<string> */
-#[CollectFrom( DevDetails::class )]
 class NodeTableTracerWithKeys implements TableTracer, AccentedIndexableItem {
 	/** @use HtmlTableFromNode<string> */
 	use HtmlTableFromNode, Diacritic, CollectorSource;
