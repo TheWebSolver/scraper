@@ -95,9 +95,9 @@ trait HtmlTableFromNode {
 	}
 
 	private function inferChildNodesFromTable( DOMElement $element ): bool {
-		$iterator = $this->childNodesIteratorOfTable( $element );
+		$table = $this->ensureTableWithChildNodesStructure( $element );
 
-		if ( ! $iterator || ! $tableStructure = $this->traceTableStructureIn( $iterator ) ) {
+		if ( ! $table || ! $tableStructure = $this->traceTableStructureIn( $table ) ) {
 			return false;
 		}
 
@@ -144,11 +144,6 @@ trait HtmlTableFromNode {
 		return $node->childNodes->length && AssertDOMElement::isValid( $node, Table::Row );
 	}
 
-	/** @return Iterator<int,DOMNode> */
-	private function getChildNodesIteratorFrom( DOMElement $element ): Iterator {
-		return $element->childNodes->getIterator();
-	}
-
 	/**
 	 * @phpstan-assert DOMElement $node
 	 * @throws InvalidSource When $node is not a DOMElement.
@@ -163,27 +158,14 @@ trait HtmlTableFromNode {
 		);
 	}
 
-	/** @return ?Iterator<int,DOMNode> */
-	private function childNodesIteratorOfTable( DOMElement $element ): ?Iterator {
+	private function ensureTableWithChildNodesStructure( DOMElement $element ): ?DOMElement {
 		if ( 'table' !== $element->tagName ) {
 			$this->findTableStructureIn( $element );
 
 			return null;
 		}
 
-		return $this->isTargetedTable( $element ) && $element->childNodes->length
-			? $this->getChildNodesIteratorFrom( $element )
-			: null;
-	}
-
-	private function toNextStructureIfInCurrentPosition( Table $target, Iterator $tableIterator ): ?DOMElement {
-		if ( AssertDOMElement::isValid( $node = $tableIterator->current(), $target ) ) {
-			$tableIterator->next();
-
-			return $this->shouldTraceTableStructure( $target ) ? $node : null;
-		}
-
-		return null;
+		return $this->isTargetedTable( $element ) && $element->childNodes->length ? $element : null;
 	}
 
 	private function captionStructureContentFrom( DOMElement $node ): void {
@@ -206,40 +188,31 @@ trait HtmlTableFromNode {
 			return;
 		}
 
-		$iterator = $this->getChildNodesIteratorFrom( $node );
-		$row      = null;
+		$headRow = $node->getElementsByTagName( Table::Head->value );
 
-		while ( ! $row && $iterator->valid() ) {
-			if ( $this->isTableRowStructure( $headRow = $iterator->current() ) ) {
-				$row = $headRow;
-			}
-
-			$iterator->next();
-		}
-
-		$row && $row->childNodes->length && $this->inferTableHeadFrom( $row->childNodes );
+		$headRow->length && $this->inferTableHeadFrom( $headRow );
 
 		$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 	}
 
-	/**
-	 * @param Iterator<int,DOMNode> $tableIterator
-	 * @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement}
-	 */
-	private function traceTableStructureIn( Iterator $tableIterator ): ?array {
-		$bodyNode = $captionNode = $headNode = null;
-
-		while ( ! $bodyNode && $tableIterator->valid() ) {
-			$captionNode = $this->toNextStructureIfInCurrentPosition( Table::Caption, $tableIterator );
-			$headNode    = $this->toNextStructureIfInCurrentPosition( Table::THead, $tableIterator );
-			$bodyNode    = $this->toNextStructureIfInCurrentPosition( Table::TBody, $tableIterator );
-
-			$tableIterator->next();
+	/** @return ?array{0:DOMElement,1:?DOMElement,2:?DOMElement} */
+	private function traceTableStructureIn( DOMElement $element ): ?array {
+		if ( ! $bodyNode = $element->getElementsByTagName( Table::TBody->value )->item( 0 ) ) {
+			return null;
 		}
 
-		return $bodyNode && $this->tableColumnsExistInBody( $bodyNode )
-			? [ $bodyNode, $captionNode, $headNode ]
-			: null;
+		if ( ! $this->tableColumnsExistInBody( $bodyNode ) ) {
+			return null;
+		}
+
+		$captionNode = $element->getElementsByTagName( Table::Caption->value )->item( 0 );
+		$headNode    = $element->getElementsByTagName( Table::THead->value )->item( 0 );
+
+		return [
+			$bodyNode,
+			$this->shouldTraceTableStructure( Table::Caption ) ? $captionNode : null,
+			$this->shouldTraceTableStructure( Table::THead ) ? $headNode : null,
+		];
 	}
 
 	/**
@@ -247,16 +220,14 @@ trait HtmlTableFromNode {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( DOMElement $body ): Iterator {
-		[$headInspected, $position, $transformer] = $this->useCurrentTableBodyDetails();
-		$iterator                                 = $this->getChildNodesIteratorFrom( $body );
-		$bodyStarted                              = false;
+		if ( ! ( $rowList = $body->getElementsByTagName( Table::Row->value ) )->length ) {
+			return;
+		}
 
-		while ( $iterator->valid() ) {
-			if ( ! $node = AssertDOMElement::nextIn( $iterator, Table::Row ) ) {
-				return;
-			}
+		[$headInspected, $bodyStarted, $position, $transformer] = $this->useCurrentTableBodyDetails();
 
-			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $node );
+		foreach ( $rowList as $row ) {
+			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $row );
 			$headInspected = true;
 
 			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
@@ -264,9 +235,7 @@ trait HtmlTableFromNode {
 			if ( $isHead ) {
 				// We can only determine whether first row contains table heads after it is inferred.
 				// We'll simply dispatch the ending event here to notify subscribers, if any.
-				$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
-
-				$iterator->next();
+				$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $row, $this ) );
 
 				continue;
 			}
@@ -284,13 +253,11 @@ trait HtmlTableFromNode {
 			}
 
 			// TODO: add support whether to skip yielding empty <tr> or not.
-			if ( ! trim( $node->textContent ) ) {
-				$iterator->next();
-
+			if ( ! trim( $row->textContent ) ) {
 				continue;
 			}
 
-			$content = $transformer?->transform( $node, $this ) ?? $node->childNodes;
+			$content = $transformer?->transform( $row, $this ) ?? $row->childNodes;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,
@@ -299,14 +266,12 @@ trait HtmlTableFromNode {
 			};
 
 			$this->registerCurrentIterationTableRow( ++$position );
-
-			$iterator->next();
-		}//end while
+		}//end foreach
 
 		$this->dispatchEvent( new TableTraced( Table::Row, EventAt::End, $body, $this ) );
 	}
 
-	private function inspectFirstRowForHeadStructure( DOMNode $row ): bool {
+	private function inspectFirstRowForHeadStructure( DOMElement $row ): bool {
 		$this->inferTableHeadFrom( $row->childNodes );
 
 		return $this->currentIteration__allTableHeads;

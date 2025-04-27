@@ -19,10 +19,6 @@ parameters:
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
 				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array.*?\} but returns array\{.*?MarshallItem\}\.$#'
-		- # Ignore DOMNodeList->getIterator() not being Iterator.
-			path: Src/Traits/Table/HtmlTableFromNode.php
-			identifier: return.type
-			message: '#^Method .*?::getChildNodesIteratorFrom\(\) should return Iterator\<int, DOMNode\> but returns Traversable\<int, DOMNode\>.$#'
 		-
 			path: Src/Traits/Table/HtmlTableFromString.php
 			identifier: argument.type

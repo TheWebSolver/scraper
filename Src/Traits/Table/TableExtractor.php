@@ -283,13 +283,15 @@ trait TableExtractor {
 	/**
 	 * @return array{
 	 *   0 :  bool,
-	 *   1 :  int,
-	 *   2 :? Transformer<static, CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>
+	 *   1 : bool,
+	 *   2 :  int,
+	 *   3 :? Transformer<static, CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>
 	 * }
 	 */
 	private function useCurrentTableBodyDetails(): array {
 		return [
 			/* headInspected */ false,
+			/* bodyStarted   */ false,
 			/* position      */ $this->currentIteration__rowCount[ $this->currentTable__id ] = 0,
 			/* transformer   */ $this->discoveredTable__transformers[ Table::Row->value ] ?? null,
 		];

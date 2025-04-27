@@ -220,19 +220,16 @@ trait HtmlTableFromString {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( array $body ): Iterator {
-		[$headInspected, $position, $transformer] = $this->useCurrentTableBodyDetails();
-		$bodyStarted                              = false;
-		[$tbodyNode, $rows]                       = $body;
+		[$headInspected, $bodyStarted, $position, $transformer] = $this->useCurrentTableBodyDetails();
+		[$tbodyNode, $rows]                                     = $body;
 
-		while ( false !== ( $row = current( $rows ) ) ) {
+		foreach ( $rows as $row ) {
 			[$node, $attribute, $content] = $row;
 			[$columnsFound, $columns]     = Normalize::tableColumnsFrom( $content );
 
 			// ‼️No columns found‼️ Should never have happened in the first place. I mean,
 			// why would there be no table columns in the middle of the table row 🤔?
 			if ( ! $columnsFound || empty( $columns ) ) {
-				next( $rows );
-
 				continue;
 			}
 
@@ -245,8 +242,6 @@ trait HtmlTableFromString {
 				// We can only determine whether first row contains table heads after it is inferred.
 				// We'll simply dispatch the ending event here to notify subscribers, if any.
 				$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
-
-				next( $rows );
 
 				continue;
 			}
@@ -272,9 +267,7 @@ trait HtmlTableFromString {
 			};
 
 			$this->registerCurrentIterationTableRow( ++$position );
-
-			next( $rows );
-		}//end while
+		}//end foreach
 
 		$this->dispatchEvent( new TableTraced( Table::Row, EventAt::End, $tbodyNode, $this ) );
 	}
