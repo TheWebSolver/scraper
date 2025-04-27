@@ -13,7 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromNode;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 
 /** @template-implements TableTracer<string> */
-class NodeTableTracerWithKeys implements TableTracer, AccentedIndexableItem {
+class NodeTableTracerWithAccents implements TableTracer, AccentedIndexableItem {
 	/** @use HtmlTableFromNode<string> */
 	use HtmlTableFromNode, Diacritic, CollectorSource;
 

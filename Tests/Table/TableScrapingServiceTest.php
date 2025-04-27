@@ -17,9 +17,9 @@ use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracer;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
-use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithKeys;
-use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithKeys;
+use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithAccents;
 use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
+use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithAccents;
 
 class TableScrapingServiceTest extends TestCase {
 	private function getTableContent(): string {
@@ -142,12 +142,12 @@ class TableScrapingServiceTest extends TestCase {
 	#[DataProvider( 'provideTranslitArgsToOperateOnAccentedCharacters' )]
 	public function itScrapesAndTranslitAccentedCharacters( int $action, string $expectedTitle, array $keys ): void {
 		$tracerWithAccents = [
-			new #[CollectFrom( DevDetails::class )] class( $keys ) extends StringTableTracerWithKeys {},
-			new #[CollectFrom( DevDetails::class )] class( $keys ) extends NodeTableTracerWithKeys {},
+			new #[CollectFrom( DevDetails::class )] class( $keys ) extends StringTableTracerWithAccents {},
+			new #[CollectFrom( DevDetails::class )] class( $keys ) extends NodeTableTracerWithAccents {},
 		];
 
 		foreach ( $tracerWithAccents as $tracer ) {
-			/** @var TableScrapingService<StringTableTracerWithKeys|NodeTableTracerWithKeys> */
+			/** @var TableScrapingService<StringTableTracerWithAccents|NodeTableTracerWithAccents> */
 			$service     = new TableScrapingService( new $tracer( $keys ) );
 			$transformer = new TranslitAccentedIndexableItem( new StripTags() );
 
@@ -188,7 +188,7 @@ class TableScrapingServiceTest extends TestCase {
 	public static function provideDatasetKeysWithAllEnumCases(): array {
 		return [
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithKeys {},
+				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents {},
 				[
 					'name'    => 'John Doe',
 					'title'   => 'PHP Devel&ocirc;per',
@@ -197,7 +197,7 @@ class TableScrapingServiceTest extends TestCase {
 				],
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithKeys {},
+				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents {},
 				[
 					'name'    => 'John Doe',
 					'title'   => 'PHP Develôper',
@@ -226,7 +226,7 @@ class TableScrapingServiceTest extends TestCase {
 		return [
 			'String: Using PHP Attribute' => [
 				new #[CollectFrom( DevDetails::class, DevDetails::Name, DevDetails::Address )] class()
-				extends StringTableTracerWithKeys {
+				extends StringTableTracerWithAccents {
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
 						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
 					}
@@ -238,7 +238,7 @@ class TableScrapingServiceTest extends TestCase {
 			],
 			'Node: Using PHP Attribute' => [
 				new #[CollectFrom( DevDetails::class, DevDetails::Name, DevDetails::Address )] class()
-				extends NodeTableTracerWithKeys {
+				extends NodeTableTracerWithAccents {
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
 						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
 					}
@@ -249,7 +249,7 @@ class TableScrapingServiceTest extends TestCase {
 				],
 			],
 			'String: Using method call' => [
-				new class() extends StringTableTracerWithKeys {
+				new class() extends StringTableTracerWithAccents {
 					public function __construct() {
 						$this->collectFromMappable( DevDetails::class, DevDetails::Name, DevDetails::Address );
 						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
@@ -265,7 +265,7 @@ class TableScrapingServiceTest extends TestCase {
 				],
 			],
 			'Node: Using method call' => [
-				new class() extends NodeTableTracerWithKeys {
+				new class() extends NodeTableTracerWithAccents {
 					public function __construct() {
 						$this->collectFromMappable( DevDetails::class, DevDetails::Name, DevDetails::Address );
 						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );

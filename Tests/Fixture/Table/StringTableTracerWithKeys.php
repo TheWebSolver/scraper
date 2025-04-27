@@ -13,7 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
 /** @template-implements TableTracer<string> */
-class StringTableTracerWithKeys implements TableTracer, AccentedIndexableItem {
+class StringTableTracerWithAccents implements TableTracer, AccentedIndexableItem {
 	/** @use HtmlTableFromString<string> */
 	use HtmlTableFromString, Diacritic, CollectorSource;
 

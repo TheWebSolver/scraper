@@ -16,8 +16,8 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallTableRow;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
-use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithKeys;
-use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithKeys;
+use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithAccents;
+use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithAccents;
 
 class TraceTableWithRowMarshallerTest extends TestCase {
 	private const TABLE_INVALID_COUNT = '<table><tbody><tr><td>John Doe</td><td>22</td></tr></tbody></table>';
@@ -74,10 +74,10 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideTableTracerWithKeys(): array {
 		return [
-			[ new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithKeys {} ],
-			[ new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithKeys {}, Indexable::INVALID_COUNT ],
-			[ new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithKeys {} ],
-			[ new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithKeys {}, Indexable::INVALID_COUNT ],
+			[ new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents {} ],
+			[ new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents {}, Indexable::INVALID_COUNT ],
+			[ new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents {} ],
+			[ new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents {}, Indexable::INVALID_COUNT ],
 		];
 	}
 }
