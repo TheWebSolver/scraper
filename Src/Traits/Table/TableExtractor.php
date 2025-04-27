@@ -173,6 +173,13 @@ trait TableExtractor {
 		return true;
 	}
 
+	private function tableColumnsExistInBody( string|DOMElement $node ): bool {
+		return match ( true ) {
+			$node instanceof DOMElement => ! ! $node->getElementsByTagName( 'td' )->length,
+			default                     => str_contains( $node, '<td' ) && str_contains( $node, '</td>' ),
+		};
+	}
+
 	private function getCurrentIterationColumnCount(): ?int {
 		$countUptoCurrent = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
 

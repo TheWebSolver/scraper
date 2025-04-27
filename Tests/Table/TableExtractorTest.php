@@ -71,72 +71,36 @@ class TableExtractorTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @param bool|array<class-string<TableTracer<string>>,bool> $hasHead
-	 * @param int|array<class-string<TableTracer<string>>,int>   $idsCount
-	 */
 	#[Test]
 	#[DataProvider( 'provideTableStructuresForTracing' )]
-	public function itTracesTableStructureOnlyWhenBodyExists(
-		string $source,
-		bool|array $hasHead,
-		int|array $idsCount = 0
-	): void {
+	public function itTracesTableStructureOnlyWhenBodyExists( string $source, bool $hasHead, int $idsCount = 0 ): void {
 		foreach ( [ new StringTableTracer(), new NodeTableTracer() ] as $tracer ) {
 			$tracer->inferTableFrom( $source );
 
 			$heads   = $tracer->getTableHead();
 			$columns = $tracer->getTableData();
 
-			if ( is_int( $idsCount ) ) {
-				// $this->assertCount( $idsCount, $tracer->getTableId(), $tracer::class );
-
-				if ( $idsCount ) {
-					$this->assertNotEmpty( $columns );
-				} else {
-					$this->assertEmpty( $columns );
-				}
+			if ( $idsCount ) {
+				$this->assertNotEmpty( $columns );
 			} else {
-				$idsCount = $idsCount[ $tracer::class ];
-
-				// $this->assertCount( $idsCount, $tracer->getTableId(), $tracer::class );
-
-				if ( $idsCount ) {
-					$this->assertNotEmpty( $columns );
-				} else {
-					$this->assertEmpty( $columns );
-				}
+				$this->assertEmpty( $columns );
 			}
 
-			if ( is_bool( $hasHead ) ) {
-				// if ( $hasHead ) {
-				// 	$this->assertNotEmpty( $heads, $tracer::class );
-				// } else {
-				// 	$this->assertEmpty( $heads, $tracer::class );
-				// }
+			if ( $hasHead ) {
+				$this->assertNotEmpty( $heads, $tracer::class );
 			} else {
-				$hasHead = $hasHead[ $tracer::class ];
-
-				if ( $hasHead ) {
-					$this->assertNotEmpty( $heads, $tracer::class );
-				} else {
-					$this->assertEmpty( $heads, $tracer::class );
-				}
+				$this->assertEmpty( $heads, $tracer::class );
 			}
-		}//end foreach
+		}
 	}
 
 	/** @return mixed[] */
 	public static function provideTableStructuresForTracing(): array {
 		return [
 			[ '<table><thead><!-- only heads --><tr><th>head</th></tr></thead></table>', false ],
-			[
-				'<table><tbody><!-- only heads --><tr><th>head</th></tr></tbody></table>',
-				// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
-				[ NodeTableTracer::class => true, StringTableTracer::class => false ],
-				[ NodeTableTracer::class => 1, StringTableTracer::class => 0 ],
-			],
+			[ '<table><tbody><!-- only heads --><tr><th>head</th></tr></tbody></table>', false, 0 ],
 			[ '<table><tbody><tr><th>head</th></tr><tr><td>col</td></tr></tbody></table>', true, 1 ],
+			[ '<table><thead><tr><th>head</th></tr></thead><tbody><tr><td>col</td></tr></tbody></table>', true, 1 ],
 			[ '<table><tbody><!-- empty rows --><tr></tr><tr></tr></tbody></table>', false ],
 			[ '<table><tbody><!-- no rows --></tbody></table>', false ],
 			[ '<table><tbody id="no-childNodes"></tbody></table>', false ],

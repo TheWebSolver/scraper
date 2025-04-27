@@ -237,9 +237,9 @@ trait HtmlTableFromNode {
 			$tableIterator->next();
 		}
 
-		$hasBodyContent = ! empty( trim( $bodyNode->textContent ?? '' ) );
-
-		return $bodyNode && $hasBodyContent ? [ $bodyNode, $captionNode, $headNode ] : null;
+		return $bodyNode && $this->tableColumnsExistInBody( $bodyNode )
+			? [ $bodyNode, $captionNode, $headNode ]
+			: null;
 	}
 
 	/**

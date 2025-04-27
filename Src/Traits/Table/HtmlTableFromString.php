@@ -171,13 +171,7 @@ trait HtmlTableFromString {
 
 		[$rowFound, $tableRows] = Normalize::nodeToMatchedArray( $tbody[2], Table::Row, all: true );
 
-		if ( ! $rowFound ) {
-			return null;
-		}
-
-		$hasATableColumn = str_contains( $tbody[0], '<td' ) && str_contains( $tbody[0], '</td>' );
-
-		return $hasATableColumn ? [ $tbody[0], $tableRows ] : null;
+		return $rowFound && $this->tableColumnsExistInBody( $tbody[0] ) ? [ $tbody[0], $tableRows ] : null;
 	}
 
 	private function get64bitHash( string $string ): string {
