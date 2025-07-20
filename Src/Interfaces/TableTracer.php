@@ -4,13 +4,14 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use Iterator;
-use ArrayObject;
 use DOMElement;
+use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 
 /** @template TColumnReturn */
 interface TableTracer extends Indexable {
@@ -100,6 +101,11 @@ interface TableTracer extends Indexable {
 	 * @return array<Iterator<int,ArrayObject<array-key,TColumnReturn>>>
 	 */
 	public function getTableData(): array;
+
+	/**
+	 * Gets the source for mapping table column index keys, if any.
+	 */
+	public function getCollectorSource(): ?CollectFrom;
 
 	/**
 	 * Resets traced table structures' details.

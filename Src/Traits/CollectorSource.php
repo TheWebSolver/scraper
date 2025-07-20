@@ -10,13 +10,13 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 trait CollectorSource {
 	private CollectFrom $collectionSource;
 
-	/** @return list<string> */
-	final protected function collectSourceItems(): array {
-		return $this->getCollectionSource()->items ?? [];
+	final public function getCollectorSource(): ?CollectFrom {
+		return $this->collectionSource ?? null;
 	}
 
-	final protected function getCollectionSource(): ?CollectFrom {
-		return $this->collectionSource ?? null;
+	/** @return list<string> */
+	final protected function collectSourceItems(): array {
+		return $this->getCollectorSource()->items ?? [];
 	}
 
 	/** @param ReflectionClass<static> $reflection */

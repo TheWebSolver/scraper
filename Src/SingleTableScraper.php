@@ -34,7 +34,7 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename )
 			->collectSourceItems();
 
-		$this->getCollectionSource()
+		$this->getCollectorSource()
 			&& $this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
 
 		$this->unsubscribeError = ScraperError::for( $this->getScraperSource() );
