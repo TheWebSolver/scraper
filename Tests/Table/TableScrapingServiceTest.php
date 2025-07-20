@@ -22,7 +22,7 @@ use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithAccents;
 
 class TableScrapingServiceTest extends TestCase {
-	private function getTableContent(): string {
+	public static function getTableContent(): string {
 		$path = DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR;
 
 		return file_get_contents( "{$path}single-table.html" ) ?: '';
