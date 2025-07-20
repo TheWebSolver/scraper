@@ -8,21 +8,21 @@ use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\ScrapingService;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 
 /**
- * @template TScrapedColumn
- * @template TTracer of TableTracer<TScrapedColumn>
- * @template-extends ScrapingService<TScrapedColumn>
+ * @template TInferredColumn
+ * @template-extends ScrapingService<TInferredColumn>
+ * @template-implements ScrapeTraceableTable<TInferredColumn>
  */
-abstract class TableScrapingService extends ScrapingService {
-	/** @param TTracer $tracer */
+abstract class TableScrapingService extends ScrapingService implements ScrapeTraceableTable {
+	/** @param TableTracer<TInferredColumn> $tracer */
 	public function __construct( protected TableTracer $tracer ) {
 		$tracer->withAllTables( false );
 
 		parent::__construct();
 	}
 
-	/** @return TTracer */
 	public function getTableTracer(): TableTracer {
 		return $this->tracer;
 	}
@@ -31,7 +31,7 @@ abstract class TableScrapingService extends ScrapingService {
 		yield from $this->currentTableIterator( $content );
 	}
 
-	/** @return Iterator<array-key,ArrayObject<array-key,TScrapedColumn>> */
+	/** @return Iterator<array-key,ArrayObject<array-key,TInferredColumn>> */
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->tracer->inferTableFrom( $content, $normalize );
 

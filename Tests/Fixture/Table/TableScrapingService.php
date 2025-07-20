@@ -5,13 +5,9 @@ namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
 use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
-use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Service\TableScrapingService as AbstractTableScrapingService;
 
-/**
- * @template TTracer of TableTracer<string>
- * @template-extends AbstractTableScrapingService<string,TTracer>
-*/
+/** @template-extends AbstractTableScrapingService<string> */
 #[ScrapeFrom( 'Scraping with String Table Tracer', url: 'https://thisIs.test', filename: '' )]
 class TableScrapingService extends AbstractTableScrapingService {
 	protected function defaultCachePath(): string {

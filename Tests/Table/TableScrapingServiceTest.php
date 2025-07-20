@@ -147,12 +147,11 @@ class TableScrapingServiceTest extends TestCase {
 		];
 
 		foreach ( $tracerWithAccents as $tracer ) {
-			/** @var TableScrapingService<StringTableTracerWithAccents|NodeTableTracerWithAccents> */
-			$service     = new TableScrapingService( new $tracer( $keys ) );
-			$transformer = new TranslitAccentedIndexableItem( new StripTags() );
+			$accentedTracer = new $tracer( $keys );
+			$service        = new TableScrapingService( $accentedTracer );
+			$transformer    = new TranslitAccentedIndexableItem( new StripTags() );
 
-			$service->getTableTracer()->addTransformer( Table::Column, $transformer )
-				->setAccentOperationType( $action );
+			$accentedTracer->addTransformer( Table::Column, $transformer )->setAccentOperationType( $action );
 
 			$iterator = $service->parse( $this->getTableContent() );
 
