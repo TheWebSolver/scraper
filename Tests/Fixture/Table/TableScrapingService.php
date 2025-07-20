@@ -1,32 +1,19 @@
-<?php // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
+<?php
 declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
-use Iterator;
-use TheWebSolver\Codegarage\Scraper\ScrapingService;
 use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
+use TheWebSolver\Codegarage\Scraper\Service\TableScrapingService as AbstractTableScrapingService;
 
 /**
  * @template TTracer of TableTracer<string>
- * @template-extends ScrapingService<string>
- */
+ * @template-extends AbstractTableScrapingService<string,TTracer>
+*/
 #[ScrapeFrom( 'Scraping with String Table Tracer', url: 'https://thisIs.test', filename: '' )]
-class TableScrapingService extends ScrapingService {
-	/** @use TraceATable<TTracer> */
-	use TraceATable;
-
-	/** @param TTracer $tracer */
-	public function __construct( protected TableTracer $tracer ) {
-		parent::__construct();
-	}
-
-	public function parse( string $content ): Iterator {
-		yield from $this->currentTableIterator( $content );
-	}
-
+class TableScrapingService extends AbstractTableScrapingService {
 	protected function defaultCachePath(): string {
 		return DOMDocumentFactoryTest::RESOURCE_PATH;
 	}
