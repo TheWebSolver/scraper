@@ -11,8 +11,8 @@ use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
-use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracer;
@@ -142,8 +142,8 @@ class TableScrapingServiceTest extends TestCase {
 	#[DataProvider( 'provideTranslitArgsToOperateOnAccentedCharacters' )]
 	public function itScrapesAndTranslitAccentedCharacters( int $action, string $expectedTitle, array $keys ): void {
 		$tracerWithAccents = [
-			new #[CollectFrom( DevDetails::class )] class( $keys ) extends StringTableTracerWithAccents {},
-			new #[CollectFrom( DevDetails::class )] class( $keys ) extends NodeTableTracerWithAccents {},
+			new #[CollectUsing( DevDetails::class )] class( $keys ) extends StringTableTracerWithAccents {},
+			new #[CollectUsing( DevDetails::class )] class( $keys ) extends NodeTableTracerWithAccents {},
 		];
 
 		foreach ( $tracerWithAccents as $tracer ) {
@@ -187,7 +187,7 @@ class TableScrapingServiceTest extends TestCase {
 	public static function provideDatasetKeysWithAllEnumCases(): array {
 		return [
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents {},
+				new #[CollectUsing( DevDetails::class )] class() extends StringTableTracerWithAccents {},
 				[
 					'name'    => 'John Doe',
 					'title'   => 'PHP Devel&ocirc;per',
@@ -196,7 +196,7 @@ class TableScrapingServiceTest extends TestCase {
 				],
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents {},
+				new #[CollectUsing( DevDetails::class )] class() extends NodeTableTracerWithAccents {},
 				[
 					'name'    => 'John Doe',
 					'title'   => 'PHP Develôper',
@@ -224,7 +224,7 @@ class TableScrapingServiceTest extends TestCase {
 	public static function providePartialDatasetKeys(): array {
 		return [
 			'String: Using PHP Attribute' => [
-				new #[CollectFrom( DevDetails::class, DevDetails::Name, DevDetails::Address )] class()
+				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address )] class()
 				extends StringTableTracerWithAccents {
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
 						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
@@ -236,7 +236,7 @@ class TableScrapingServiceTest extends TestCase {
 				],
 			],
 			'Node: Using PHP Attribute' => [
-				new #[CollectFrom( DevDetails::class, DevDetails::Name, DevDetails::Address )] class()
+				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address )] class()
 				extends NodeTableTracerWithAccents {
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
 						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
@@ -250,7 +250,7 @@ class TableScrapingServiceTest extends TestCase {
 			'String: Using method call' => [
 				new class() extends StringTableTracerWithAccents {
 					public function __construct() {
-						$this->collectFromMappable( DevDetails::class, DevDetails::Name, DevDetails::Address );
+						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address ) );
 						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
 					}
 
@@ -266,7 +266,7 @@ class TableScrapingServiceTest extends TestCase {
 			'Node: Using method call' => [
 				new class() extends NodeTableTracerWithAccents {
 					public function __construct() {
-						$this->collectFromMappable( DevDetails::class, DevDetails::Name, DevDetails::Address );
+						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address ) );
 						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
 					}
 

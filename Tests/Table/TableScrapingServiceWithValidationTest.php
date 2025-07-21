@@ -9,9 +9,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
-use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Proxy\ItemValidatorProxy;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithAccents;
@@ -40,7 +40,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 	public static function provideValidatableTableTracers(): array {
 		return [
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -50,7 +50,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 			[
 				new class() extends StringTableTracerWithAccents implements Validatable {
 					public function __construct() {
-						$this->collectFromMappable( DevDetails::class );
+						$this->setCollectorSource( new CollectUsing( DevDetails::class ) );
 						parent::__construct();
 					}
 
@@ -61,7 +61,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				null,
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -70,7 +70,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'name',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -79,7 +79,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'title',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -88,7 +88,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'address',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -97,7 +97,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'age',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends StringTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -106,7 +106,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'age',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -116,7 +116,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 			[
 				new class() extends NodeTableTracerWithAccents implements Validatable {
 					public function __construct() {
-						$this->collectFromMappable( DevDetails::class );
+						$this->setCollectorSource( new CollectUsing( DevDetails::class ) );
 						parent::__construct();
 					}
 
@@ -127,7 +127,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				null,
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -136,7 +136,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'name',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -145,7 +145,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'title',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -154,7 +154,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'address',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
@@ -163,7 +163,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				'age',
 			],
 			[
-				new #[CollectFrom( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
+				new #[CollectUsing( DevDetails::class )] class() extends NodeTableTracerWithAccents implements Validatable {
 					public function validate( mixed $data ): void {
 						DevDetails::from( $this->getCurrentItemIndex() )->validate( $data ); // @phpstan-ignore-line
 					}
