@@ -96,8 +96,7 @@ trait TableExtractor {
 			);
 		}
 
-		$id                                    = $this->getTableId( true );
-		$this->currentTable__columnInfo[ $id ] = Normalize::listWithOffset( $keys, $offset );
+		$keys && $this->currentTable__columnInfo[ $this->currentTable__id ] = Normalize::listWithOffset( $keys, $offset );
 	}
 
 	/** @return ($current is true ? int|string : (int|string)[]) */
