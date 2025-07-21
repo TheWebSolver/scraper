@@ -30,4 +30,8 @@ trait ScraperSource {
 
 		return $this;
 	}
+
+	final protected function setScraperSource( ScrapeFrom $source ): void {
+		$this->scraperSource = $source;
+	}
 }
