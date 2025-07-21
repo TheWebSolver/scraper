@@ -113,6 +113,11 @@ interface TableTracer extends Indexable {
 	public function getCollectorSource(): ?CollectUsing;
 
 	/**
+	 * Ensures whether transformer has been added for the given table structure.
+	 */
+	public function hasTransformer( Table $structure ): bool;
+
+	/**
 	 * Resets traced table structures' details.
 	 *
 	 * This may only be invoked after retrieving table columns' content Iterator

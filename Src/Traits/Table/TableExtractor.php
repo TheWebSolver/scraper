@@ -81,6 +81,10 @@ trait TableExtractor {
 		return $this;
 	}
 
+	public function hasTransformer( Table $structure ): bool {
+		return isset( $this->discoveredTable__transformers[ $structure->value ] );
+	}
+
 	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static {
 		$this->discoveredTable__eventListeners[ $for->value ][ $eventAt->name ] = $callback( ... );
 
