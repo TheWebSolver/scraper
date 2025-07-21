@@ -5,7 +5,6 @@ namespace TheWebSolver\Codegarage\Scraper;
 
 use Closure;
 use ArrayObject;
-use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Traits\ScrapeYard;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
@@ -21,7 +20,7 @@ abstract class ScrapingService implements Scrapable {
 	private Closure $unsubscribeError;
 
 	public function __construct() {
-		$this->sourceFromAttribute( new ReflectionClass( $this ) )
+		$this->sourceFromAttribute()
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename );
 
 		$this->unsubscribeError = ScraperError::for( $this->getScraperSource() );

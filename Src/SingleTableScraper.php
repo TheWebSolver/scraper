@@ -29,7 +29,7 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 	public function __construct() {
 		$reflection = new ReflectionClass( $this );
 
-		$this->sourceFromAttribute( $reflection )
+		$this->sourceFromAttribute()
 			->collectableFromAttribute( $reflection )
 			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename )
 			->collectSourceItems();
