@@ -7,7 +7,7 @@ use Attribute;
 use BackedEnum;
 
 #[Attribute( flags: Attribute::TARGET_CLASS )]
-final readonly class CollectFrom {
+final readonly class CollectUsing {
 	/** @var list<string> */
 	public array $items;
 
@@ -21,7 +21,7 @@ final readonly class CollectFrom {
 		$this->items = array_map( self::collect( ... ), $only ?: $enumClass::cases() );
 	}
 
-	/** @param BackedEnum<string> $item */
+	/** @param string|BackedEnum<string> $item */
 	private static function collect( string|BackedEnum $item ): string {
 		return $item instanceof BackedEnum ? $item->value : $item;
 	}
