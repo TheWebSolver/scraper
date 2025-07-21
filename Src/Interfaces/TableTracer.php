@@ -11,7 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
-use TheWebSolver\Codegarage\Scraper\Attributes\CollectFrom;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 
 /** @template TColumnReturn */
 interface TableTracer extends Indexable {
@@ -44,6 +44,11 @@ interface TableTracer extends Indexable {
 	 * @param callable(TableTraced): void $callback
 	 */
 	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static;
+
+	/**
+	 * Sets the source for mapping table column index keys, if any.
+	 */
+	public function setCollectorSource( CollectUsing $source ): void;
 
 	/**
 	 * Infers table(s) from given HTML content source.
@@ -105,7 +110,7 @@ interface TableTracer extends Indexable {
 	/**
 	 * Gets the source for mapping table column index keys, if any.
 	 */
-	public function getCollectorSource(): ?CollectFrom;
+	public function getCollectorSource(): ?CollectUsing;
 
 	/**
 	 * Resets traced table structures' details.
