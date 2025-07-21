@@ -10,15 +10,22 @@ use BackedEnum;
 final readonly class CollectUsing {
 	/** @var list<string> */
 	public array $items;
+	public ?string $indexKey;
 
 	/**
 	 * @param class-string<BackedEnum<string>> $enumClass The BackedEnum classname whose case values will be used as mappable keys.
+	 * @param string|BackedEnum<string>|null   $indexKey  The key whose value to be used as dataset key.
 	 * @param string|BackedEnum<string>        ...$only   If only subset of mappable keys is required and passed as arg to
 	 *                                                    this param, only these keys will be used. Passed order matters.
 	 * @no-named-arguments
 	 */
-	public function __construct( public string $enumClass, string|BackedEnum ...$only ) {
-		$this->items = array_map( self::collect( ... ), $only ?: $enumClass::cases() );
+	public function __construct(
+		public string $enumClass,
+		string|BackedEnum|null $indexKey = null,
+		string|BackedEnum ...$only
+	) {
+		$this->items    = array_map( self::collect( ... ), $only ?: $enumClass::cases() );
+		$this->indexKey = $indexKey instanceof BackedEnum ? $indexKey->value : $indexKey;
 	}
 
 	/** @param string|BackedEnum<string> $item */
