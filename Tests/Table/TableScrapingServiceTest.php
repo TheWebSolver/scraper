@@ -220,14 +220,19 @@ class TableScrapingServiceTest extends TestCase {
 		$this->assertSame( $expected, $iterator->current()->getArrayCopy(), $tracer::class );
 	}
 
+	public static function useEventToSetItems( TableTraced $event ): void {
+		$source = $event->tracer->getCollectorSource();
+		$event->tracer->setItemsIndices( $source->items ?? [], ...( $source->offsets ?? [] ) );
+	}
+
 	/** @return mixed[] */
 	public static function providePartialDatasetKeys(): array {
 		return [
 			'String: Using PHP Attribute' => [
-				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address )] class()
+				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )] class()
 				extends StringTableTracerWithAccents {
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
+						TableScrapingServiceTest::useEventToSetItems( $event );
 					}
 				},
 				[
@@ -236,10 +241,10 @@ class TableScrapingServiceTest extends TestCase {
 				],
 			],
 			'Node: Using PHP Attribute' => [
-				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address )] class()
+				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )] class()
 				extends NodeTableTracerWithAccents {
 					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
+						TableScrapingServiceTest::useEventToSetItems( $event );
 					}
 				},
 				[
@@ -250,12 +255,8 @@ class TableScrapingServiceTest extends TestCase {
 			'String: Using method call' => [
 				new class() extends StringTableTracerWithAccents {
 					public function __construct() {
-						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address ) );
-						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
-					}
-
-					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
+						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address ) );
+						$this->addEventListener( Table::Row, TableScrapingServiceTest::useEventToSetItems( ... ) );
 					}
 				},
 				[
@@ -266,12 +267,8 @@ class TableScrapingServiceTest extends TestCase {
 			'Node: Using method call' => [
 				new class() extends NodeTableTracerWithAccents {
 					public function __construct() {
-						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, DevDetails::Address ) );
-						$this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
-					}
-
-					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-						$event->tracer->setItemsIndices( $this->collectSourceItems(), 1 );
+						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address ) );
+						$this->addEventListener( Table::Row, TableScrapingServiceTest::useEventToSetItems( ... ) );
 					}
 				},
 				[
