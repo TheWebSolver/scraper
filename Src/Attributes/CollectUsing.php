@@ -35,11 +35,6 @@ final readonly class CollectUsing {
 		$this->indexKey                            = $indexKey->value ?? null;
 	}
 
-	/** @return array{0:non-empty-array<int,string>,1:list<int>,2:int} */
-	public function toArray(): array {
-		return [ $this->items, $this->offsets, array_key_last( $this->items ) ];
-	}
-
 	/**
 	 * Gets new instance after re-computing offset between subset of items already registered as collectables.
 	 *

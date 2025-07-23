@@ -39,10 +39,6 @@ class CollectUsingTest extends TestCase {
 
 		$this->assertSame( $expectedItems, $collection->items );
 		$this->assertSame( $expectedOffsets, $collection->offsets );
-		$this->assertSame(
-			[ $expectedItems, $expectedOffsets, array_key_last( $expectedItems ) ],
-			$collection->toArray()
-		);
 	}
 
 	/** @return mixed[] */
@@ -108,10 +104,6 @@ class CollectUsingTest extends TestCase {
 
 		$this->assertSame( $expectedItems, $newCollection->items );
 		$this->assertSame( $expectedOffsets, $newCollection->offsets );
-		$this->assertSame(
-			[ $expectedItems, $expectedOffsets, array_key_last( $expectedItems ) ],
-			$newCollection->toArray()
-		);
 
 		if ( [] === $recomputeSubsets ) {
 			$this->assertSame( $collection, $newCollection );
