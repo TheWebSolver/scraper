@@ -22,6 +22,8 @@ abstract class TableTracer implements TraceableTable {
 	}
 
 	protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-		( $indices = $this->collectSourceItems() ) && $event->tracer->setItemsIndices( $indices );
+		$source = $event->tracer->getCollectorSource();
+
+		$source && $event->tracer->setItemsIndices( $source );
 	}
 }

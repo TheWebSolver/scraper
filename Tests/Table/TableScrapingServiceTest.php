@@ -221,8 +221,7 @@ class TableScrapingServiceTest extends TestCase {
 	}
 
 	public static function useEventToSetItems( TableTraced $event ): void {
-		$source = $event->tracer->getCollectorSource();
-		$event->tracer->setItemsIndices( $source->items ?? [], ...( $source->offsets ?? [] ) );
+		$event->tracer->setItemsIndices( $event->tracer->getCollectorSource() );
 	}
 
 	/** @return mixed[] */

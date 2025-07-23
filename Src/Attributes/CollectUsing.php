@@ -12,7 +12,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 final readonly class CollectUsing {
 	/** @var list<?string> */
 	public array $all;
-	/** @var list<string> */
+	/** @var non-empty-array<int,string> */
 	public array $items;
 	/** @var list<int> */
 	public array $offsets;
@@ -35,6 +35,11 @@ final readonly class CollectUsing {
 		$this->indexKey                            = $indexKey->value ?? null;
 	}
 
+	/** @return array{0:non-empty-array<int,string>,1:list<int>,2:int} */
+	public function toArray(): array {
+		return [ $this->items, $this->offsets, array_key_last( $this->items ) ];
+	}
+
 	/**
 	 * Gets new instance after re-computing offset between subset of items already registered as collectables.
 	 *
@@ -50,8 +55,8 @@ final readonly class CollectUsing {
 
 		$self = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
-		$reflection->getProperty( 'all' )->setValue( $self, $this->all );
 		$reflection->getProperty( 'enumClass' )->setValue( $self, $this->enumClass );
+		$reflection->getProperty( 'all' )->setValue( $self, $this->all );
 		$reflection->getProperty( 'items' )->setValue( $self, $subsets );
 		$reflection->getProperty( 'offsets' )->setValue( $self, $offsets );
 		$reflection->getProperty( 'indexKey' )->setValue( $self, $this->indexKey );
@@ -69,7 +74,7 @@ final readonly class CollectUsing {
 	 * Consequently, the order in which `$subsetItems` are passed does not matter.
 	 *
 	 * @param string|BackedEnum<string> $subsetItems
-	 * @return array{0:string[],1:(string|int)[]} Recomputed items and offset positions.
+	 * @return array{0:array<int,string>,1:(string|int)[]} Recomputed items and offset positions.
 	 */
 	public function recomputeFor( string|BackedEnum ...$subsetItems ): array {
 		if ( ! $subsetItems ) {
@@ -82,8 +87,8 @@ final readonly class CollectUsing {
 
 		foreach ( $this->all as $key => $item ) {
 			if ( in_array( $item, $subsetItems, true ) ) {
-				$subsets[]     = $item;
-				$lastSubsetKey = $key;
+				$subsets[ $key ] = $item;
+				$lastSubsetKey   = $key;
 			} else {
 				$offsets[] = $key;
 			}
@@ -106,7 +111,7 @@ final readonly class CollectUsing {
 
 	/**
 	 * @param list<string|BackedEnum<string>|null> $subsetItems
-	 * @return array{0:list<?string>,1:list<string>,2:list<int>}
+	 * @return array{0:list<?string>,1:non-empty-array<int,string>,2:list<int>}
 	 */
 	private function computeFor( array $subsetItems ): array {
 		if ( ! $subsetItems ) {
@@ -123,11 +128,11 @@ final readonly class CollectUsing {
 				$all[]                             = null;
 				$lastSubsetItemFound && $offsets[] = $i;
 			} else {
-				$subsets[]           = $all[] = $this->toString( $subsetItems[ $i ] );
+				$subsets[ $i ]       = $all[] = $this->toString( $subsetItems[ $i ] );
 				$lastSubsetItemFound = true;
 			}
 		}
 
-		return [ array_reverse( $all ), array_reverse( $subsets ), array_reverse( $offsets ) ];
+		return [ array_reverse( $all ), array_reverse( $subsets, preserve_keys: true ), array_reverse( $offsets ) ];
 	}
 }

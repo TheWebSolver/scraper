@@ -10,7 +10,7 @@ parameters:
 	ignoreErrors:
 		- # SplFixedArray is created with a list, so this shouldn't be a problem.
 			identifier: argument.type
-			message: '#^Parameter \#1 .*? of method .*?setItemsIndices\(\) expects list\<string\>\, array\<int\, string\|null\> given\.$#'
+			message: '#^Parameter \#1 .*? of method .*?setItemsIndices\(\) expects list\<string\>|.*?CollectUsing\, array\<int\, string\|null\> given\.$#'
 		-
 			identifier: generics.noParent
 			message: '#^Enum .*? has \@implements tag\, but does not implement any interface\.$#'
@@ -40,3 +40,8 @@ parameters:
 			identifier: return.type
 			count: 1
 			message: '#^Method .*?Normalize\:\:nodeToMatchedArray\(\) should return array\{int\|false, list\<array\{string, string, string\}\|string\>\} but returns array\{int\<0, max\>\|false, array\<array\<string\>\|string\>\}\.$#'
+		-
+			path: Src/Attributes/CollectUsing.php
+			identifier: return.type
+			count: 2
+			message: '#^Method .*?computeFor\(\) should return array.*? but returns array.*?$#'

@@ -86,7 +86,7 @@ trait HtmlTableFromString {
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data = [];
 
-		[$keys, $offset, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
+		[$keys, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
 
 		foreach ( $elementList as $currentIndex => $column ) {
 			if ( ! $this->isTableColumnStructure( $column ) ) {
@@ -97,7 +97,7 @@ trait HtmlTableFromString {
 
 			$currentPosition = $currentIndex - $skippedNodes;
 
-			if ( false !== ( $offset[ $currentPosition ] ?? false ) ) {
+			if ( $this->shouldSkipTableColumnIn( $currentPosition ) ) {
 				continue;
 			}
 

@@ -12,12 +12,12 @@ use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
-use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 
 /** @template TColumnReturn */
@@ -91,7 +91,7 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function setItemsIndices( array $keys, int ...$offset ): void {
+	public function setItemsIndices( array|CollectUsing $source ): void {
 		if ( ! $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
 			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name ];
 
@@ -100,7 +100,13 @@ trait TableExtractor {
 			);
 		}
 
-		$keys && $this->currentTable__columnInfo[ $this->currentTable__id ] = Normalize::listWithOffset( $keys, $offset );
+		if ( $source instanceof CollectUsing ) {
+			$data = $source->toArray();
+
+			! empty( $data[0] ) && $this->currentTable__columnInfo[ $this->currentTable__id ] = $data;
+		} elseif ( ! empty( $source ) ) {
+			$this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source, [], array_key_last( $source ) ];
+		}
 	}
 
 	/** @return ($current is true ? int|string : (int|string)[]) */
@@ -183,6 +189,12 @@ trait TableExtractor {
 		};
 	}
 
+	private function shouldSkipTableColumnIn( int $position ): bool {
+		$offsetPositions = $this->currentTable__columnInfo[ $this->currentTable__id ][1] ?? [];
+
+		return $offsetPositions && in_array( $position, $offsetPositions, true );
+	}
+
 	private function getCurrentIterationColumnCount(): ?int {
 		$countUptoCurrent = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
 
@@ -261,13 +273,12 @@ trait TableExtractor {
 		return $listeners[ $id ][ $structure->value ] ?? [ null, null ];
 	}
 
-	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
+	/** @return array{0:array<int,string>,1:?int,2:int,3:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
 		$columns = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? [];
 
 		return [
 			/* columnNames  */ $columns[0] ?? [],
-			/* offset       */ $columns[1] ?? [],
 			/* lastPosition */ $columns[2] ?? null,
 			/* skippedNodes */ $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
 			/* transformer  */ $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem(),

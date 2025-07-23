@@ -39,16 +39,50 @@ class CollectUsingTest extends TestCase {
 
 		$this->assertSame( $expectedItems, $collection->items );
 		$this->assertSame( $expectedOffsets, $collection->offsets );
+		$this->assertSame(
+			[ $expectedItems, $expectedOffsets, array_key_last( $expectedItems ) ],
+			$collection->toArray()
+		);
 	}
 
 	/** @return mixed[] */
 	public static function provideCollectableItems(): array {
 		return [
 			[ [], [ '0', '1', '2', '3', '4' ] ],
-			[ [ Collectable::Zero, null, Collectable::Two ], [ '0', '2' ], [ 1 ] ],
-			[ [ Collectable::Zero, null, Collectable::Two, null, null ], [ '0', '2' ], [ 1 ] ],
-			[ [ null, Collectable::One, Collectable::Two, null, Collectable::Four ], [ '1', '2', '4' ], [ 0, 3 ] ],
-			[ [ Collectable::Four, null, null, Collectable::Zero, Collectable::Two ], [ '4', '0', '2' ], [ 1, 2 ] ],
+			[
+				[ Collectable::Zero, null, Collectable::Two ],
+				[
+					0 => '0',
+					2 => '2',
+				],
+				[ 1 ],
+			],
+			[
+				[ Collectable::Zero, null, Collectable::Two, null, null ],
+				[
+					0 => '0',
+					2 => '2',
+				],
+				[ 1 ],
+			],
+			[
+				[ null, Collectable::One, Collectable::Two, null, Collectable::Four ],
+				[
+					1 => '1',
+					2 => '2',
+					4 => '4',
+				],
+				[ 0, 3 ],
+			],
+			[
+				[ Collectable::Four, null, null, Collectable::Zero, Collectable::Two ],
+				[
+					0 => '4',
+					3 => '0',
+					4 => '2',
+				],
+				[ 1, 2 ],
+			],
 			[ [ Collectable::Zero, Collectable::One, Collectable::Two ], [ '0', '1', '2' ], [] ],
 		];
 	}
@@ -74,6 +108,10 @@ class CollectUsingTest extends TestCase {
 
 		$this->assertSame( $expectedItems, $newCollection->items );
 		$this->assertSame( $expectedOffsets, $newCollection->offsets );
+		$this->assertSame(
+			[ $expectedItems, $expectedOffsets, array_key_last( $expectedItems ) ],
+			$newCollection->toArray()
+		);
 
 		if ( [] === $recomputeSubsets ) {
 			$this->assertSame( $collection, $newCollection );
@@ -83,11 +121,52 @@ class CollectUsingTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideRecomputeData(): array {
 		return [
-			[ [ '3', Collectable::Zero ], [ '3' ], [ 0, 1, 2 ], [ null, '1', null, '3' ] ],
-			[ [ '2', '4', '1' ], [ '1' ], [ 0 ], [ null, '1', null, '3' ] ],
-			[ [ '3', Collectable::Zero ], [ '0', '3' ], [ 1, 2 ] ],
-			[ [ '1', Collectable::Zero, '3' ], [ '0', '1', '3' ], [ 2 ] ],
-			[ [ '3', Collectable::Zero, Collectable::Four ], [ '0', '3', '4' ], [ 1, 2 ] ],
+			[ [ '3', Collectable::Zero ], [ 3 => '3' ], [ 0, 1, 2 ], [ null, '1', null, '3' ] ],
+			[ [ '2', '4', '1' ], [ 1 => '1' ], [ 0 ], [ null, '1', null, '3' ] ],
+			[
+				[ '3', '0', '1' ],
+				[
+					1 => '1',
+					3 => '3',
+				],
+				[ 0, 2 ],
+				[ null, '1', null, '3' ],
+			],
+			[
+				[ '1', '4', '3' ],
+				[
+					1 => '3',
+					3 => '1',
+				],
+				[ 0, 2 ],
+				[ null, '3', null, '1' ],
+			],
+			[
+				[ '3', Collectable::Zero ],
+				[
+					0 => '0',
+					3 => '3',
+				],
+				[ 1, 2 ],
+			],
+			[
+				[ '1', Collectable::Zero, '3' ],
+				[
+					0 => '0',
+					1 => '1',
+					3 => '3',
+				],
+				[ 2 ],
+			],
+			[
+				[ '3', Collectable::Zero, Collectable::Four ],
+				[
+					0 => '0',
+					3 => '3',
+					4 => '4',
+				],
+				[ 1, 2 ],
+			],
 			[ [], [ '0', '1', '2', '3', '4' ] ],
 		];
 	}
