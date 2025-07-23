@@ -31,8 +31,7 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 
 		$this->sourceFromAttribute()
 			->collectableFromAttribute( $reflection )
-			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename )
-			->collectSourceItems();
+			->withCachePath( $this->defaultCachePath(), $this->getScraperSource()->filename );
 
 		$this->getCollectorSource()
 			&& $this->addEventListener( Table::Row, $this->useCollectedKeysAsTableColumnIndices( ... ) );
@@ -58,11 +57,8 @@ abstract class SingleTableScraper implements TableTracer, Scrapable {
 		return $iterator;
 	}
 
-	/**
-	 * Inheriting class may override this method to provide column names with offset position(s).
-	 * Use `$this->collectSourceItems()` as indices and add offset position(s) as required.
-	 */
+	/** Inheriting class may override this method to provide column names with offset position(s). */
 	protected function useCollectedKeysAsTableColumnIndices(): void {
-		$this->setItemsIndices( $this->collectSourceItems() );
+		( $source = $this->getCollectorSource() ) && $this->setItemsIndices( $source );
 	}
 }

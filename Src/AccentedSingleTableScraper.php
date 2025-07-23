@@ -62,8 +62,6 @@ abstract class AccentedSingleTableScraper extends SingleTableScraper implements 
 		$invalidCount = $this->getScraperSource()->name . ' ' . self::INVALID_COUNT;
 
 		if ( ! $columnTransformer = $this->columnTransformer ) {
-			$this->collectSourceItems();
-
 			$columnTransformer = new MarshallItem();
 
 			$this->indicesWithAccentedCharacters()

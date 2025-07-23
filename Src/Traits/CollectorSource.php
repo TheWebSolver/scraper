@@ -17,11 +17,6 @@ trait CollectorSource {
 		$this->collectionSource = $source;
 	}
 
-	/** @return list<string> */
-	final protected function collectSourceItems(): array {
-		return $this->getCollectorSource()->items ?? [];
-	}
-
 	/** @param ReflectionClass<static> $reflection */
 	protected function collectableFromAttribute( ReflectionClass $reflection ): static {
 		( $attribute = ( $reflection->getAttributes( CollectUsing::class )[0] ?? null ) )
