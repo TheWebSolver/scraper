@@ -6,10 +6,12 @@ namespace TheWebSolver\Codegarage\Test;
 use BackedEnum;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 
+#[CoversClass( CollectUsing::class )]
 class CollectUsingTest extends TestCase {
 	#[Test]
 	public function itConvertsEnumCasesToString(): void {
@@ -22,14 +24,18 @@ class CollectUsingTest extends TestCase {
 	}
 
 	/**
-	 * @param list<null|string|BackedEnum<string>> $items
+	 * @param list<null|string|BackedEnum<string>> $constructorSubsets
 	 * @param list<string>                         $expectedItems
 	 * @param list<int>                            $expectedOffsets
 	 */
 	#[Test]
 	#[DataProvider( 'provideCollectableItems' )]
-	public function itOffsetsInBetweenItems( array $items, array $expectedItems, array $expectedOffsets ): void {
-		$collection = new CollectUsing( Collectable::class, null, ...$items );
+	public function itOffsetsInBetweenItems(
+		array $constructorSubsets,
+		array $expectedItems,
+		array $expectedOffsets = []
+	): void {
+		$collection = new CollectUsing( Collectable::class, null, ...$constructorSubsets );
 
 		$this->assertSame( $expectedItems, $collection->items );
 		$this->assertSame( $expectedOffsets, $collection->offsets );
@@ -38,42 +44,52 @@ class CollectUsingTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideCollectableItems(): array {
 		return [
-			[ [], [ '0', '1', '2', '3', '4' ], [] ],
+			[ [], [ '0', '1', '2', '3', '4' ] ],
 			[ [ Collectable::Zero, null, Collectable::Two ], [ '0', '2' ], [ 1 ] ],
+			[ [ Collectable::Zero, null, Collectable::Two, null, null ], [ '0', '2' ], [ 1 ] ],
 			[ [ null, Collectable::One, Collectable::Two, null, Collectable::Four ], [ '1', '2', '4' ], [ 0, 3 ] ],
 			[ [ Collectable::Four, null, null, Collectable::Zero, Collectable::Two ], [ '4', '0', '2' ], [ 1, 2 ] ],
 			[ [ Collectable::Zero, Collectable::One, Collectable::Two ], [ '0', '1', '2' ], [] ],
 		];
 	}
 
+	/**
+	 * @param list<string|BackedEnum<string>>      $recomputeSubsets
+	 * @param list<string>                         $expectedItems
+	 * @param list<int>                            $expectedOffsets
+	 * @param list<string|BackedEnum<string>|null> $constructorSubsets
+	 * @covers ::with
+	 * @covers ::recomputeFor
+	 */
 	#[Test]
-	public function itRecomputesOffsetsInBetweenItems(): void {
-		$collection = new CollectUsing( Collectable::class );
+	#[DataProvider( 'provideRecomputeData' )]
+	public function itRecomputesOffsetsInBetweenItems(
+		array $recomputeSubsets,
+		array $expectedItems,
+		array $expectedOffsets = [],
+		array $constructorSubsets = []
+	): void {
+		$collection    = new CollectUsing( Collectable::class, null, ...$constructorSubsets );
+		$newCollection = $collection->with( ...$recomputeSubsets );
 
-		[$subsets, $offsets] = $collection->recomputeFor( '3', Collectable::Zero );
+		$this->assertSame( $expectedItems, $newCollection->items );
+		$this->assertSame( $expectedOffsets, $newCollection->offsets );
 
-		$this->assertSame( [ '0', '3' ], $subsets );
-		$this->assertSame( [ 1, 2 ], $offsets );
-
-		$newCollection = $collection->with( '1', Collectable::Zero, '4' );
-
-		$this->assertSame( Collectable::class, $newCollection->enumClass );
-		$this->assertSame( [ '0', '1', '4' ], $newCollection->items );
-		$this->assertSame( [ 2, 3 ], $newCollection->offsets );
-		$this->assertNull( $newCollection->indexKey );
+		if ( [] === $recomputeSubsets ) {
+			$this->assertSame( $collection, $newCollection );
+		}
 	}
 
-	#[Test]
-	public function itDoesNothingIfSubsetIsEmpty(): void {
-		$collection    = new CollectUsing( Collectable::class );
-		$newCollection = $collection->with();
-
-		$this->assertSame( $collection, $newCollection );
-
-		$collection->recomputeFor();
-
-		$this->assertSame( [ '0', '1', '2', '3', '4' ], $collection->items );
-		$this->assertSame( [], $collection->offsets );
+	/** @return mixed[] */
+	public static function provideRecomputeData(): array {
+		return [
+			[ [ '3', Collectable::Zero ], [ '3' ], [ 0, 1, 2 ], [ null, '1', null, '3' ] ],
+			[ [ '2', '4', '1' ], [ '1' ], [ 0 ], [ null, '1', null, '3' ] ],
+			[ [ '3', Collectable::Zero ], [ '0', '3' ], [ 1, 2 ] ],
+			[ [ '1', Collectable::Zero, '3' ], [ '0', '1', '3' ], [ 2 ] ],
+			[ [ '3', Collectable::Zero, Collectable::Four ], [ '0', '3', '4' ], [ 1, 2 ] ],
+			[ [], [ '0', '1', '2', '3', '4' ] ],
+		];
 	}
 
 	#[Test]
