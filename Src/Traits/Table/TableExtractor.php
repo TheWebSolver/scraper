@@ -52,7 +52,7 @@ trait TableExtractor {
 	private array $discoveredTable__rows = [];
 
 	private int|string $currentTable__id;
-	/** @var array{0:array<int,string>,1:array<int,int>,2:int}[] Names, offsets, & last index */
+	/** @var array{0:array<int,string>,1:array<int,int>}[] Column indexes and offset positions */
 	private array $currentTable__columnInfo;
 
 	/** @var int[] */
@@ -101,11 +101,13 @@ trait TableExtractor {
 		}
 
 		if ( $source instanceof CollectUsing ) {
-			$data = $source->toArray();
+			$columnNames     = $source->items;
+			$offsetPositions = $source->offsets;
 
-			! empty( $data[0] ) && $this->currentTable__columnInfo[ $this->currentTable__id ] = $data;
+			! empty( $columnNames )
+				&& $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $columnNames, $offsetPositions ];
 		} elseif ( ! empty( $source ) ) {
-			$this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source, [], array_key_last( $source ) ];
+			$this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source, [] ];
 		}
 	}
 
@@ -278,8 +280,8 @@ trait TableExtractor {
 		$columns = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? [];
 
 		return [
-			/* columnNames  */ $columns[0] ?? [],
-			/* lastPosition */ $columns[2] ?? null,
+			$columnNames = $columns[0] ?? [],
+			/* lastPosition */ array_key_last( $columnNames ),
 			/* skippedNodes */ $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
 			/* transformer  */ $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem(),
 		];
