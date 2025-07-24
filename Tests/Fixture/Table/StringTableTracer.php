@@ -3,7 +3,6 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
-use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
@@ -13,6 +12,6 @@ class StringTableTracer implements TableTracer {
 	use HtmlTableFromString;
 
 	public function __construct() {
-		$this->collectableFromAttribute( new ReflectionClass( $this ) );
+		$this->collectableFromAttribute();
 	}
 }

@@ -7,20 +7,20 @@ use ReflectionClass;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 
 trait CollectorSource {
-	private CollectUsing $collectionSource;
+	private CollectUsing $collectableSource;
 
 	public function getCollectorSource(): ?CollectUsing {
-		return $this->collectionSource ?? null;
+		return $this->collectableSource ?? null;
 	}
 
 	public function setCollectorSource( CollectUsing $source ): void {
-		$this->collectionSource = $source;
+		$this->collectableSource = $source;
 	}
 
-	/** @param ReflectionClass<static> $reflection */
-	protected function collectableFromAttribute( ReflectionClass $reflection ): static {
-		( $attribute = ( $reflection->getAttributes( CollectUsing::class )[0] ?? null ) )
-				&& $this->collectionSource = $attribute->newInstance();
+	protected function collectableFromAttribute(): static {
+		$attribute = ( new ReflectionClass( $this ) )->getAttributes( CollectUsing::class )[0] ?? null;
+
+		$attribute && $this->setCollectorSource( $attribute->newInstance() );
 
 		return $this;
 	}
