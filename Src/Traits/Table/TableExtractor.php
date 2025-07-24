@@ -12,6 +12,7 @@ use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
+use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
@@ -98,9 +99,9 @@ trait TableExtractor {
 			return;
 		}
 
-		$values = [ static::class, __FUNCTION__, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name ];
+		$values = [ Normalize::case( Table::Row ), Normalize::case( EventAt::Start ), 'set column names.' ];
 
-		throw new ScraperError( sprintf( TableTracer::USE_EVENT_LISTENER, ...[ ...$values, 'set column names.' ] ) );
+		$this->throwEventListenerNotUsed( __FUNCTION__, ...$values );
 	}
 
 	/** @return ($current is true ? int|string : (int|string)[]) */
@@ -378,5 +379,11 @@ trait TableExtractor {
 	private function registerCurrentIterationTableColumn( ?string $name, int $count ): void {
 		$this->currentIteration__columnCount[ $this->currentTable__id ] = $count;
 		$name && $this->currentIteration__columnName                    = $name;
+	}
+
+	private function throwEventListenerNotUsed( string $methodName, string ...$placeholders ): never {
+		$method = static::class . '::' . $methodName;
+
+		throw new ScraperError( sprintf( TableTracer::USE_EVENT_LISTENER, $method, ...$placeholders ) );
 	}
 }

@@ -15,8 +15,8 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 
 /** @template TColumnReturn */
 interface TableTracer extends Indexable {
-	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` Table enum, `4:` Table case, `5`: EventAt enum, `6`: EventAt case, `7:` reason. */
-	public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s::%2$s()". Use event listener for "%3$s::%4$s" and "%5$s::%6$s" to %7$s';
+	/** @placeholder `1:` static::methodName, `2:` Table::caseName, `3`: EventAt::caseName, `4:` reason. */
+	public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s()". Use event listener for "%2$s" and "%3$s" to %4$s';
 
 	/**
 	 * Registers whether all tables present in the given source should be traced or not.

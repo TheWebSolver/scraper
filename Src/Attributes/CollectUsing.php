@@ -46,10 +46,10 @@ final readonly class CollectUsing {
 			return $this;
 		}
 
-		$reflection                          = new ReflectionClass( self::class );
-		$_this                               = $reflection->newInstanceWithoutConstructor();
 		$props                               = get_object_vars( $this );
 		[$props['items'], $props['offsets']] = $this->recomputeFor( ...$subsetCases );
+
+		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
 		foreach ( $props as $name => $value ) {
 			$reflection->getProperty( $name )->setValue( $_this, $value );
@@ -112,11 +112,13 @@ final readonly class CollectUsing {
 	 * @throws InvalidSource When enum has no case defined or all given subset cases are `null`.
 	 */
 	private function computeFor( array $subsetCases ): array {
+		$enum = $this->enumClass;
+
 		if ( ! $subsetCases ) {
-			$allItems = array_column( $this->enumClass::cases(), 'value' );
+			$allItems = array_column( $enum::cases(), 'value' );
 
 			return $allItems ? [ $allItems, $allItems, [] ] : throw InvalidSource::nonCollectableItem(
-				sprintf( 'during computation with enum "%s". It does not have any', $this->enumClass )
+				sprintf( 'during computation with enum "%s". It does not have any', $enum )
 			);
 		}
 
@@ -134,7 +136,7 @@ final readonly class CollectUsing {
 		}
 
 		$items ?: throw InvalidSource::nonCollectableItem(
-			sprintf( 'during computation with enum "%s". All given subsets are "null" and none of them are', $this->enumClass )
+			sprintf( 'during computation with enum "%s". All given subsets are "null" and none of them are', $enum )
 		);
 
 		return [ array_reverse( $all ), array_reverse( $items, preserve_keys: true ), array_reverse( $offsets ) ];

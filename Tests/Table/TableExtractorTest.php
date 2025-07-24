@@ -296,10 +296,11 @@ class TableExtractorTest extends TestCase {
 		TableTracer $tracer,
 		?string $throwing = null,
 	): void {
-		$placeholders = [ $tracer::class, $throwing ?? $methodName, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name, '' ];
+		$method = $tracer::class . '::' . ( $throwing ?? $methodName );
+		$values = [ $method, Table::class . '::' . Table::Row->name, EventAt::class . '::' . EventAt::Start->name, '' ];
 
 		$this->expectException( ScraperError::class );
-		$this->expectExceptionMessage( sprintf( TableTracer::USE_EVENT_LISTENER, ...$placeholders ) );
+		$this->expectExceptionMessage( sprintf( TableTracer::USE_EVENT_LISTENER, ...$values ) );
 
 		$tracer->{$methodName}( ...$args );
 	}
