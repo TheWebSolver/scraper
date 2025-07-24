@@ -27,10 +27,6 @@ parameters:
 				- '#^Parameter \#1 \$elementList of method .*?\:\:inferTableDataFrom\(\) expects iterable\<\(int\|string\), array\{string, string, string, string, string\}\|DOMNode\>, iterable\<int, DOMNode\|string\>\|non\-empty\-list\<array\{string, string, string, string, string\}\> given\.$#'
 				# $element is a valid DOMElement. PHPStan cannot narrow down type from TableExtractor::isTableColumnStructure().
 				- '#^Parameter \#1 \$element of method .*?:\:registerCurrentTableColumn\(\) expects array\{string, string, string, string, string\}\|DOMElement\|string, array\{string, string, string, string, string\}\|DOMNode given\.$#'
-		- # Ignore default transformers used.
-			path: Src/AccentedSingleTableScraper.php
-			identifier: return.type
-			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn>} but returns array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?MarshallTableRow\<mixed\>, .*?TranslitAccentedIndexableItem\|.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn>\|.*?MarshallItem\}\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/MarshallTableRow.php
 			identifier: return.type
