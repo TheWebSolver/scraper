@@ -220,20 +220,12 @@ class TableScrapingServiceTest extends TestCase {
 		$this->assertSame( $expected, $iterator->current()->getArrayCopy(), $tracer::class );
 	}
 
-	public static function useEventToSetItems( TableTraced $event ): void {
-		$event->tracer->setItemsIndices( $event->tracer->getCollectorSource() );
-	}
-
 	/** @return mixed[] */
 	public static function providePartialDatasetKeys(): array {
 		return [
 			'String: Using PHP Attribute' => [
 				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )] class()
-				extends StringTableTracerWithAccents {
-					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-						TableScrapingServiceTest::useEventToSetItems( $event );
-					}
-				},
+				extends StringTableTracerWithAccents {},
 				[
 					'name'    => 'John Doe',
 					'address' => '<a href="/location" title="Developer location">Ktm</a>',
@@ -241,11 +233,7 @@ class TableScrapingServiceTest extends TestCase {
 			],
 			'Node: Using PHP Attribute' => [
 				new #[CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )] class()
-				extends NodeTableTracerWithAccents {
-					protected function useCollectedKeysAsTableColumnIndices( TableTraced $event ): void {
-						TableScrapingServiceTest::useEventToSetItems( $event );
-					}
-				},
+				extends NodeTableTracerWithAccents {},
 				[
 					'name'    => 'John Doe',
 					'address' => 'Ktm',
@@ -255,7 +243,6 @@ class TableScrapingServiceTest extends TestCase {
 				new class() extends StringTableTracerWithAccents {
 					public function __construct() {
 						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address ) );
-						$this->addEventListener( Table::Row, TableScrapingServiceTest::useEventToSetItems( ... ) );
 					}
 				},
 				[
@@ -267,7 +254,6 @@ class TableScrapingServiceTest extends TestCase {
 				new class() extends NodeTableTracerWithAccents {
 					public function __construct() {
 						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address ) );
-						$this->addEventListener( Table::Row, TableScrapingServiceTest::useEventToSetItems( ... ) );
 					}
 				},
 				[

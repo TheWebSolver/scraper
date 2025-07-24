@@ -14,12 +14,13 @@ use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
 /** @template TColumnReturn */
 trait HtmlTableFromString {
 	/** @use TableExtractor<TColumnReturn> */
-	use TableExtractor {
+	use CollectorSource, TableExtractor {
 		TableExtractor::withAllTables as private extractWithAllTables;
 	}
 
@@ -253,6 +254,10 @@ trait HtmlTableFromString {
 				// This just means that tracer was used to trace "<th>" that were present in "<tbody>".
 				if ( $event->shouldStopTrace() ) {
 					break;
+				}
+
+				if ( ! $this->getItemsIndices() && $source = $this->getCollectorSource() ) {
+					$this->setItemIndicesFrom( $source );
 				}
 
 				$bodyStarted = true;

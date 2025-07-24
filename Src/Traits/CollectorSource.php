@@ -9,11 +9,11 @@ use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 trait CollectorSource {
 	private CollectUsing $collectionSource;
 
-	final public function getCollectorSource(): ?CollectUsing {
+	public function getCollectorSource(): ?CollectUsing {
 		return $this->collectionSource ?? null;
 	}
 
-	final public function setCollectorSource( CollectUsing $source ): void {
+	public function setCollectorSource( CollectUsing $source ): void {
 		$this->collectionSource = $source;
 	}
 

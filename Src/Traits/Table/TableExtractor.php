@@ -92,23 +92,15 @@ trait TableExtractor {
 	}
 
 	public function setItemsIndices( array|CollectUsing $source ): void {
-		if ( ! $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
-			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name ];
+		if ( $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
+			$this->setItemIndicesFrom( $source );
 
-			throw new ScraperError(
-				sprintf( TableTracer::USE_EVENT_LISTENER, ...[ ...$placeholders, 'set column names.' ] )
-			);
+			return;
 		}
 
-		if ( $source instanceof CollectUsing ) {
-			$columnNames     = $source->items;
-			$offsetPositions = $source->offsets;
+		$values = [ static::class, __FUNCTION__, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name ];
 
-			! empty( $columnNames )
-				&& $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $columnNames, $offsetPositions ];
-		} elseif ( ! empty( $source ) ) {
-			$this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source, [] ];
-		}
+		throw new ScraperError( sprintf( TableTracer::USE_EVENT_LISTENER, ...[ ...$values, 'set column names.' ] ) );
 	}
 
 	/** @return ($current is true ? int|string : (int|string)[]) */
@@ -182,6 +174,16 @@ trait TableExtractor {
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
 	protected function isTargetedTable( string|DOMElement $node ): bool {
 		return true;
+	}
+
+	/** @param list<string>|CollectUsing $source */
+	private function setItemIndicesFrom( array|CollectUsing $source ): void {
+		if ( $source instanceof CollectUsing ) {
+			! empty( $source->items )
+				&& $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source->items, $source->offsets ];
+		} elseif ( ! empty( $source ) ) {
+			$this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source, [] ];
+		}
 	}
 
 	private function tableColumnsExistInBody( string|DOMElement $node ): bool {
