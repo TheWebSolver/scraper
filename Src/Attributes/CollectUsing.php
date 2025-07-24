@@ -19,44 +19,43 @@ final readonly class CollectUsing {
 	public ?string $indexKey;
 
 	/**
-	 * @param class-string<BackedEnum<string>> $enumClass   The BackedEnum classname whose case values will be used as mappable keys.
-	 * @param ?BackedEnum<string>              $indexKey    The key whose value to be used as dataset key.
-	 * @param null|string|BackedEnum<string>   $subsetItems Accepts subset of mappable keys or keys in different order than defined as enum cases.
-	 *                                                      Value passed must be in sequential order they gets mapped to items being collected.
-	 *                                                      If an in-between item needs to be omitted, `null` must be passed to offset it.
+	 * @param class-string<BackedEnum<string>> $enumClass   The BackedEnum classname whose case values will be mapped as keys of collected items.
+	 * @param ?BackedEnum<string>              $indexKey    The key whose value to be used as items' dataset key.
+	 * @param null|string|BackedEnum<string>   $subsetCases Accepts subsets of enum cases or cases in different order than defined in the enum.
+	 *                                                      Cases passed must be in sequential order they gets mapped to items being collected.
+	 *                                                      If an in-between case/item needs to be omitted, `null` must be passed to offset it.
 	 * @no-named-arguments
 	 */
 	public function __construct(
 		public string $enumClass,
 		?BackedEnum $indexKey = null,
-		null|string|BackedEnum ...$subsetItems
+		null|string|BackedEnum ...$subsetCases
 	) {
-		[$this->all, $this->items, $this->offsets] = $this->computeFor( $subsetItems );
+		[$this->all, $this->items, $this->offsets] = $this->computeFor( $subsetCases );
 		$this->indexKey                            = $indexKey->value ?? null;
 	}
 
 	/**
 	 * Gets new instance after re-computing offset between subset of items already registered as collectables.
 	 *
-	 * @param string|BackedEnum<string> $subsetItems
+	 * @param string|BackedEnum<string> ...$subsetCases
 	 * @see CollectUsing::recomputeFor()
 	 */
-	public function with( string|BackedEnum ...$subsetItems ): self {
-		if ( ! $subsetItems ) {
+	public function with( string|BackedEnum ...$subsetCases ): self {
+		if ( ! $subsetCases ) {
 			return $this;
 		}
 
-		[$subsets, $offsets] = $this->recomputeFor( ...$subsetItems );
+		$reflection                          = new ReflectionClass( self::class );
+		$_this                               = $reflection->newInstanceWithoutConstructor();
+		$props                               = get_object_vars( $this );
+		[$props['items'], $props['offsets']] = $this->recomputeFor( ...$subsetCases );
 
-		$self = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
+		foreach ( $props as $name => $value ) {
+			$reflection->getProperty( $name )->setValue( $_this, $value );
+		}
 
-		$reflection->getProperty( 'enumClass' )->setValue( $self, $this->enumClass );
-		$reflection->getProperty( 'all' )->setValue( $self, $this->all );
-		$reflection->getProperty( 'items' )->setValue( $self, $subsets );
-		$reflection->getProperty( 'offsets' )->setValue( $self, $offsets );
-		$reflection->getProperty( 'indexKey' )->setValue( $self, $this->indexKey );
-
-		return $self;
+		return $_this;
 	}
 
 	/**
@@ -66,32 +65,24 @@ final readonly class CollectUsing {
 	 * The order cannot be changed here. It only computes offsets between items in
 	 * same sequence they were registered at the time the class was instantiated.
 	 *
-	 * Consequently, the order in which `$subsetItems` are passed does not matter.
+	 * Consequently, the order in which `$subsetCases` are passed does not matter.
 	 *
-	 * @param string|BackedEnum<string> $subsetItems
+	 * @param string|BackedEnum<string> ...$subsetCases
 	 * @return array{0:array<int,string>,1:(string|int)[]} Recomputed items and offset positions.
 	 */
-	public function recomputeFor( string|BackedEnum ...$subsetItems ): array {
-		if ( ! $subsetItems ) {
-			return [ $this->items, [] ];
+	public function recomputeFor( string|BackedEnum ...$subsetCases ): array {
+		if ( ! $subsetCases ) {
+			return [ $this->items, $this->offsets ];
 		}
 
-		$subsets       = $offsets = [];
-		$subsetItems   = array_map( $this->toString( ... ), $subsetItems );
-		$lastSubsetKey = null;
-
-		foreach ( $this->all as $key => $item ) {
-			if ( in_array( $item, $subsetItems, true ) ) {
-				$subsets[ $key ] = $item;
-				$lastSubsetKey   = $key;
-			} else {
-				$offsets[] = $key;
-			}
+		if ( ! $items = array_intersect( $this->items, array_map( $this->toString( ... ), $subsetCases ) ) ) {
+			return [ $this->items, $this->offsets ];
 		}
 
-		$offsets = array_filter( $offsets, static fn( int $offsetKey ) => $offsetKey < $lastSubsetKey );
+		$lastKey = array_key_last( $items );
+		$offsets = $lastKey ? array_keys( array_diff_key( range( 0, $lastKey ), $items ) ) : [];
 
-		return [ $subsets, $offsets ];
+		return [ $items, $offsets ];
 	}
 
 	/**
@@ -105,29 +96,29 @@ final readonly class CollectUsing {
 	}
 
 	/**
-	 * @param list<string|BackedEnum<string>|null> $subsetItems
+	 * @param list<string|BackedEnum<string>|null> $subsetCases
 	 * @return array{0:list<?string>,1:non-empty-array<int,string>,2:list<int>}
 	 */
-	private function computeFor( array $subsetItems ): array {
-		if ( ! $subsetItems ) {
+	private function computeFor( array $subsetCases ): array {
+		if ( ! $subsetCases ) {
 			$all = array_column( $this->enumClass::cases(), 'value' );
 
 			return [ $all, $all, [] ];
 		}
 
-		$subsets             = $offsets = $all = [];
-		$lastSubsetItemFound = false;
+		$items               = $offsets = $all = [];
+		$lastSubsetCaseFound = false;
 
-		for ( $i = array_key_last( $subsetItems ); $i >= 0; $i-- ) {
-			if ( null === $subsetItems[ $i ] ) {
+		for ( $i = array_key_last( $subsetCases ); $i >= 0; $i-- ) {
+			if ( null === $subsetCases[ $i ] ) {
 				$all[]                             = null;
-				$lastSubsetItemFound && $offsets[] = $i;
+				$lastSubsetCaseFound && $offsets[] = $i;
 			} else {
-				$subsets[ $i ]       = $all[] = $this->toString( $subsetItems[ $i ] );
-				$lastSubsetItemFound = true;
+				$items[ $i ]         = $all[] = $this->toString( $subsetCases[ $i ] );
+				$lastSubsetCaseFound = true;
 			}
 		}
 
-		return [ array_reverse( $all ), array_reverse( $subsets, preserve_keys: true ), array_reverse( $offsets ) ];
+		return [ array_reverse( $all ), array_reverse( $items, preserve_keys: true ), array_reverse( $offsets ) ];
 	}
 }
