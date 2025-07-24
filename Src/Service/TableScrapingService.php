@@ -5,7 +5,6 @@ namespace TheWebSolver\Codegarage\Scraper\Service;
 
 use Iterator;
 use ArrayObject;
-use TheWebSolver\Codegarage\Scraper\ScrapingService;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;

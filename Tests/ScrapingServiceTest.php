@@ -6,9 +6,9 @@ namespace TheWebSolver\Codegarage\Test;
 use Iterator;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use TheWebSolver\Codegarage\Scraper\ScrapingService;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
+use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
 
 class ScrapingServiceTest extends TestCase {
 	/** @var Scrapable<array-key,mixed> */

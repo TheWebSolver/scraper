@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\Scraper;
+namespace TheWebSolver\Codegarage\Scraper\Service;
 
 use Closure;
 use ArrayObject;
