@@ -16,15 +16,18 @@ class InvalidSource extends ValueError {
 	}
 
 	/** @param string[] $names */
-	public static function nonCollectableItem( array $names, string $reason = 'using invalid' ): self {
+	public static function nonCollectableItem( string $reason, array $names = [] ): self {
+		$values = [ CollectUsing::class, $reason ];
+
+		if ( ! $names ) {
+			$values[] = $values[] = '';
+		} else {
+			$values[] = count( $names ) === 1 ? '' : 's';
+			$values[] = ': ["' . implode( '", "', $names ) . '"]';
+		}
+
 		return new self(
-			sprintf(
-				'"%1$s" cannot be used as collectable %2$s enum case value%3$s: ["%4$s"].',
-				CollectUsing::class,
-				$reason,
-				count( $names ) === 1 ? '' : 's',
-				implode( '", "', $names )
-			)
+			sprintf( '"%1$s" cannot be used as collectable %2$s enum case value%3$s%4$s.', ...$values )
 		);
 	}
 }

@@ -40,8 +40,3 @@ parameters:
 			identifier: return.type
 			count: 1
 			message: '#^Method .*?Normalize\:\:nodeToMatchedArray\(\) should return array\{int\|false, list\<array\{string, string, string\}\|string\>\} but returns array\{int\<0, max\>\|false, array\<array\<string\>\|string\>\}\.$#'
-		-
-			path: Src/Attributes/CollectUsing.php
-			identifier: return.type
-			count: 2
-			message: '#^Method .*?computeFor\(\) should return array.*? but returns array.*?$#'

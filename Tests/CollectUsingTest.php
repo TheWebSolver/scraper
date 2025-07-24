@@ -163,11 +163,46 @@ class CollectUsingTest extends TestCase {
 		];
 	}
 
+	/**
+	 * @param class-string<BackedEnum<string>>     $enumClass
+	 * @param list<string|BackedEnum<string>|null> $cases
+	*/
 	#[Test]
-	public function itThrowsExceptionWhenStringCannotResolveEnumCaseWhenInvalidSubsetProvided(): void {
-		$this->expectException( InvalidSource::class );
+	#[DataProvider( 'provideCasesThatThrowsExceptionForCompute' )]
+	public function itThrowsExceptionWhenStringCannotResolveEnumCaseWhenInvalidSubsetProvided(
+		string $enumClass,
+		string $reason,
+		array $cases = []
+	): void {
+		$this->expectExceptionMessage( $reason );
 
-		new CollectUsing( Collectable::class, null, 'not-a-backed-enum-value' );
+		new CollectUsing( $enumClass, null, ...$cases );
+	}
+
+	/** @return mixed[] */
+	public static function provideCasesThatThrowsExceptionForCompute(): array {
+		return [
+			[
+				Collectable::class,
+				sprintf( 'for enum "%s". Cannot translate to corresponding case from given enum case value: ["9"].', Collectable::class ),
+				[ '9' ],
+			],
+			[
+				NonCollectable::class,
+				sprintf( 'during computation with enum "%s". It does not have any enum case value.', NonCollectable::class ),
+			],
+			[
+				NonCollectable::class,
+				// Throws for "3" coz computed in reverse order.
+				sprintf( 'for enum "%s". Cannot translate to corresponding case from given enum case value: ["3"].', NonCollectable::class ),
+				[ '1', null, '3' ],
+			],
+			[
+				Collectable::class,
+				sprintf( 'during computation with enum "%s". All given subsets are "null" and none of them are enum case value.', Collectable::class ),
+				[ null, null ],
+			],
+		];
 	}
 
 	/**
@@ -183,16 +218,21 @@ class CollectUsingTest extends TestCase {
 	): void {
 		$this->expectExceptionMessage( $reason );
 
-		$collection = new CollectUsing( Collectable::class, null, ...$cases );
-
-		$collection->recomputeFor( ...$recomputeCases );
+		( new CollectUsing( Collectable::class, null, ...$cases ) )->recomputeFor( ...$recomputeCases );
 	}
 
 	/** @return mixed[] */
 	public static function provideCasesThatThrowsExceptionForRecompute(): array {
 		return [
-			[ [ 'non-a-backed-enum-value' ], 'using invalid' ],
-			[ [ '0', '4' ], 'when recomputing with none of previously registered', [ null, '1', null, '3' ] ],
+			[
+				[ '9' ],
+				sprintf( 'for enum "%s". Cannot translate to corresponding case from given enum case value: ["9"].', Collectable::class ),
+			],
+			[
+				[ '0', '4' ],
+				sprintf( 'during re-computation with enum "%s". Allowed enum case values: ["1", "3"]. Given enum case values: ["0", "4"].', Collectable::class ),
+				[ null, '1', null, '3' ],
+			],
 		];
 	}
 }
@@ -207,3 +247,6 @@ enum Collectable: string {
 	case Three = '3';
 	case Four  = '4';
 }
+
+/** @template-implements BackedEnum<string> */
+enum NonCollectable: string {}

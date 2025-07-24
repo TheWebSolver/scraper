@@ -79,9 +79,11 @@ final readonly class CollectUsing {
 		$caseValues = array_map( $this->toString( ... ), $subsetCases );
 
 		if ( ! $items = array_intersect( $this->items, $caseValues ) ) {
+			$values = [ $this->enumClass, implode( '", "', $this->items ) ];
+
 			throw InvalidSource::nonCollectableItem(
-				$caseValues,
-				'when recomputing with none of previously registered'
+				reason: sprintf( 'during re-computation with enum "%s". Allowed enum case values: ["%s"]. Given', ...$values ),
+				names: $caseValues
 			);
 		}
 
@@ -97,19 +99,25 @@ final readonly class CollectUsing {
 	 */
 	private function toString( string|BackedEnum $case ): string {
 		return $case instanceof BackedEnum ? $case->value : (
-			$this->enumClass::tryFrom( $case ) ? $case : throw InvalidSource::nonCollectableItem( [ $case ] )
+			$this->enumClass::tryFrom( $case ) ? $case : throw InvalidSource::nonCollectableItem(
+				reason: sprintf( 'for enum "%s". Cannot translate to corresponding case from given', $this->enumClass ),
+				names: [ $case ]
+			)
 		);
 	}
 
 	/**
 	 * @param list<string|BackedEnum<string>|null> $subsetCases
 	 * @return array{0:list<?string>,1:non-empty-array<int,string>,2:list<int>}
+	 * @throws InvalidSource When enum has no case defined or all given subset cases are `null`.
 	 */
 	private function computeFor( array $subsetCases ): array {
 		if ( ! $subsetCases ) {
-			$all = array_column( $this->enumClass::cases(), 'value' );
+			$allItems = array_column( $this->enumClass::cases(), 'value' );
 
-			return [ $all, $all, [] ];
+			return $allItems ? [ $allItems, $allItems, [] ] : throw InvalidSource::nonCollectableItem(
+				sprintf( 'during computation with enum "%s". It does not have any', $this->enumClass )
+			);
 		}
 
 		$items               = $offsets = $all = [];
@@ -124,6 +132,10 @@ final readonly class CollectUsing {
 				$lastSubsetCaseFound = true;
 			}
 		}
+
+		$items ?: throw InvalidSource::nonCollectableItem(
+			sprintf( 'during computation with enum "%s". All given subsets are "null" and none of them are', $this->enumClass )
+		);
 
 		return [ array_reverse( $all ), array_reverse( $items, preserve_keys: true ), array_reverse( $offsets ) ];
 	}
