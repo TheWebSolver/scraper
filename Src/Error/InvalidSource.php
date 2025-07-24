@@ -15,9 +15,16 @@ class InvalidSource extends ValueError {
 		return new self( 'Cannot load content to the DOM Document.' );
 	}
 
-	public static function nonCollectableItem( string $name ): self {
+	/** @param string[] $names */
+	public static function nonCollectableItem( array $names, string $reason = 'using invalid' ): self {
 		return new self(
-			sprintf( '"%1%s" cannot collect data using invalid enum case value "%2$s".', CollectUsing::class, $name )
+			sprintf(
+				'"%1$s" cannot be used as collectable %2$s enum case value%3$s: ["%4$s"].',
+				CollectUsing::class,
+				$reason,
+				count( $names ) === 1 ? '' : 's',
+				implode( '", "', $names )
+			)
 		);
 	}
 }

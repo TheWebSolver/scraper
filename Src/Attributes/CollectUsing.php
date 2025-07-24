@@ -69,14 +69,20 @@ final readonly class CollectUsing {
 	 *
 	 * @param string|BackedEnum<string> ...$subsetCases
 	 * @return array{0:array<int,string>,1:(string|int)[]} Recomputed items and offset positions.
+	 * @throws InvalidSource When none of given subset cases were registered during instantiation.
 	 */
 	public function recomputeFor( string|BackedEnum ...$subsetCases ): array {
 		if ( ! $subsetCases ) {
 			return [ $this->items, $this->offsets ];
 		}
 
-		if ( ! $items = array_intersect( $this->items, array_map( $this->toString( ... ), $subsetCases ) ) ) {
-			return [ $this->items, $this->offsets ];
+		$caseValues = array_map( $this->toString( ... ), $subsetCases );
+
+		if ( ! $items = array_intersect( $this->items, $caseValues ) ) {
+			throw InvalidSource::nonCollectableItem(
+				$caseValues,
+				'when recomputing with none of previously registered'
+			);
 		}
 
 		$lastKey = array_key_last( $items );
@@ -86,12 +92,12 @@ final readonly class CollectUsing {
 	}
 
 	/**
-	 * @param string|BackedEnum<string> $item
+	 * @param string|BackedEnum<string> $case
 	 * @throws InvalidSource When given item is string and cannot instantiate any enum case.
 	 */
-	private function toString( string|BackedEnum $item ): string {
-		return $item instanceof BackedEnum ? $item->value : (
-			$this->enumClass::tryFrom( $item ) ? $item : throw InvalidSource::nonCollectableItem( $item )
+	private function toString( string|BackedEnum $case ): string {
+		return $case instanceof BackedEnum ? $case->value : (
+			$this->enumClass::tryFrom( $case ) ? $case : throw InvalidSource::nonCollectableItem( [ $case ] )
 		);
 	}
 

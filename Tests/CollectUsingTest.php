@@ -170,11 +170,30 @@ class CollectUsingTest extends TestCase {
 		new CollectUsing( Collectable::class, null, 'not-a-backed-enum-value' );
 	}
 
+	/**
+	 * @param list<string|BackedEnum<string>>      $recomputeCases
+	 * @param list<null|string|BackedEnum<string>> $cases
+	 */
 	#[Test]
-	public function itThrowsExceptionWhenStringCannotResolveEnumCaseWhenInvalidSubsetProvidedForRecomputation(): void {
-		$this->expectException( InvalidSource::class );
+	#[DataProvider( 'provideCasesThatThrowsExceptionForRecompute' )]
+	public function itThrowsExceptionWhenStringCannotResolveEnumCaseWhenInvalidSubsetProvidedForRecomputation(
+		array $recomputeCases,
+		string $reason,
+		array $cases = []
+	): void {
+		$this->expectExceptionMessage( $reason );
 
-		( new CollectUsing( Collectable::class ) )->recomputeFor( 'not-a-backed-enum-value' );
+		$collection = new CollectUsing( Collectable::class, null, ...$cases );
+
+		$collection->recomputeFor( ...$recomputeCases );
+	}
+
+	/** @return mixed[] */
+	public static function provideCasesThatThrowsExceptionForRecompute(): array {
+		return [
+			[ [ 'non-a-backed-enum-value' ], 'using invalid' ],
+			[ [ '0', '4' ], 'when recomputing with none of previously registered', [ null, '1', null, '3' ] ],
+		];
 	}
 }
 
