@@ -187,22 +187,22 @@ class CollectUsingTest extends TestCase {
 		return [
 			[
 				Collectable::class,
-				sprintf( 'for enum "%s". Cannot translate to corresponding case from given enum case value: ["9"].', Collectable::class ),
+				sprintf( 'for enum "%s". Cannot translate to corresponding case from given value: ["9"].', Collectable::class ),
 				[ '9' ],
 			],
 			[
 				NonCollectable::class,
-				sprintf( 'during computation with enum "%s". It does not have any enum case value.', NonCollectable::class ),
+				sprintf( 'during computation with enum "%s". It does not have any value.', NonCollectable::class ),
 			],
 			[
 				NonCollectable::class,
 				// Throws for "3" coz computed in reverse order.
-				sprintf( 'for enum "%s". Cannot translate to corresponding case from given enum case value: ["3"].', NonCollectable::class ),
+				sprintf( 'for enum "%s". Cannot translate to corresponding case from given value: ["3"].', NonCollectable::class ),
 				[ '1', null, '3' ],
 			],
 			[
 				Collectable::class,
-				sprintf( 'during computation with enum "%s". All given subsets are "null" and none of them are enum case value.', Collectable::class ),
+				sprintf( 'during computation with enum "%s". All given arguments are "null" and none of them are valid value.', Collectable::class ),
 				[ null, null ],
 			],
 		];
@@ -229,11 +229,11 @@ class CollectUsingTest extends TestCase {
 		return [
 			[
 				[ '9' ],
-				sprintf( 'for enum "%s". Cannot translate to corresponding case from given enum case value: ["9"].', Collectable::class ),
+				sprintf( 'for enum "%s". Cannot translate to corresponding case from given value: ["9"].', Collectable::class ),
 			],
 			[
 				[ '0', '4' ],
-				sprintf( 'during re-computation with enum "%s". Allowed enum case values: ["1", "3"]. Given enum case values: ["0", "4"].', Collectable::class ),
+				sprintf( 'during re-computation with enum "%s". Allowed values: ["1", "3"]. Given values: ["0", "4"].', Collectable::class ),
 				[ null, '1', null, '3' ],
 			],
 		];
@@ -245,18 +245,18 @@ class CollectUsingTest extends TestCase {
 	 */
 	#[Test]
 	#[DataProvider( 'provideCollectableItemsAsArray' )]
-	public function itInstantiatesUsingCollectableItemsArray( array $args, array $expected ): void {
+	public function itInstantiatesStaticallyUsingCollectableItemsArray( array $args, array $expected ): void {
 		if ( $exceptionMsg = ( $expected[3] ?? false ) ) {
 			$this->expectExceptionMessage( $exceptionMsg );
 		}
 
-		$collection = CollectUsing::arrayOf( ...$args );
-
 		[$items, $offsets, $indexKey] = $expected;
+		$collection                   = CollectUsing::arrayOf( ...$args );
 
 		$this->assertSame( $items, $collection->items );
 		$this->assertSame( $offsets, $collection->offsets );
 		$this->assertSame( $indexKey, $collection->indexKey );
+		$this->assertFalse( isset( $collection->enumClass ) );
 	}
 
 	/** @return mixed[] */
@@ -301,6 +301,47 @@ class CollectUsingTest extends TestCase {
 			],
 		];
 		// phpcs:enable
+	}
+
+	#[Test]
+	public function itRecomputesStaticallyInstantiatedCollection(): void {
+		$collection   = CollectUsing::arrayOf( [ '1',null,'2',null,'3' ], '3' );
+		$reCollection = $collection->subsetOf( '2', '1' );
+
+		$this->assertFalse( isset( $reCollection->enumClass ) );
+		$this->assertSame( [ 1 ], $reCollection->offsets );
+		$this->assertSame( '3', $reCollection->indexKey );
+		$this->assertSame(
+			[
+				0 => '1',
+				2 => '2',
+			],
+			$reCollection->items
+		);
+	}
+
+	/**
+	 * @param non-empty-list<?string> $names
+	 * @param list<string>            $subsetNames
+	 */
+	#[Test]
+	#[DataProvider( 'provideCasesThatThrowsExceptionForRecomputeFromArray' )]
+	public function itThrowsExceptionWhenStaticallyInstantiatedOrIsRecomputed(
+		array $names,
+		array $subsetNames,
+		string $expectedMsg
+	): void {
+		$this->expectExceptionMessage( $expectedMsg );
+
+		CollectUsing::arrayOf( $names )->subsetOf( ...$subsetNames );
+	}
+
+	/** @return mixed[] */
+	public static function provideCasesThatThrowsExceptionForRecomputeFromArray(): array {
+		return [
+			[ [ null, null ], [ 'throws exception->' ], 'during computation. All given arguments are "null" and none of them are valid value.' ],
+			[ [ '1', '2' ], [ '3', '4' ], 'during re-computation. Allowed values: ["1", "2"]. Given values: ["3", "4"]' ],
+		];
 	}
 }
 

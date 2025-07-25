@@ -26,8 +26,6 @@ class InvalidSource extends ValueError {
 			$values[] = ': ["' . implode( '", "', $names ) . '"]';
 		}
 
-		return new self(
-			sprintf( '"%1$s" cannot be used as collectable %2$s enum case value%3$s%4$s.', ...$values )
-		);
+		return new self( sprintf( '"%1$s" cannot be used as collectable %2$s value%3$s%4$s.', ...$values ) );
 	}
 }
