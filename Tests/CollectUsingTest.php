@@ -8,7 +8,6 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 
 #[CoversClass( CollectUsing::class )]
@@ -100,7 +99,7 @@ class CollectUsingTest extends TestCase {
 		array $constructorSubsets = []
 	): void {
 		$collection    = new CollectUsing( Collectable::class, null, ...$constructorSubsets );
-		$newCollection = $collection->with( ...$recomputeSubsets );
+		$newCollection = $collection->subsetOf( ...$recomputeSubsets );
 
 		$this->assertSame( $expectedItems, $newCollection->items );
 		$this->assertSame( $expectedOffsets, $newCollection->offsets );
@@ -218,7 +217,7 @@ class CollectUsingTest extends TestCase {
 	): void {
 		$this->expectExceptionMessage( $reason );
 
-		( new CollectUsing( Collectable::class, null, ...$cases ) )->recomputeFor( ...$recomputeCases );
+		( new CollectUsing( Collectable::class, null, ...$cases ) )->recomputationOf( ...$recomputeCases );
 	}
 
 	/** @return mixed[] */
@@ -247,13 +246,13 @@ class CollectUsingTest extends TestCase {
 			$this->expectExceptionMessage( $exceptionMsg );
 		}
 
-		$source = CollectUsing::arrayOf( ...$args );
+		$collection = CollectUsing::arrayOf( ...$args );
 
 		[$items, $offsets, $indexKey] = $expected;
 
-		$this->assertSame( $items, $source->items );
-		$this->assertSame( $offsets, $source->offsets );
-		$this->assertSame( $indexKey, $source->indexKey );
+		$this->assertSame( $items, $collection->items );
+		$this->assertSame( $offsets, $collection->offsets );
+		$this->assertSame( $indexKey, $collection->indexKey );
 	}
 
 	/** @return mixed[] */

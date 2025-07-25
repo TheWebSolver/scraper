@@ -80,16 +80,16 @@ final readonly class CollectUsing {
 	/**
 	 * Gets new instance after re-computing offset between subset of items already registered as collectables.
 	 *
-	 * @param string|BackedEnum<string> ...$subsetCases
+	 * @param string|BackedEnum<string> ...$cases
 	 * @see CollectUsing::recomputeFor()
 	 */
-	public function with( string|BackedEnum ...$subsetCases ): self {
-		if ( ! $subsetCases ) {
+	public function subsetOf( string|BackedEnum ...$cases ): self {
+		if ( ! $cases ) {
 			return $this;
 		}
 
 		$props                               = get_object_vars( $this );
-		[$props['items'], $props['offsets']] = $this->recomputeFor( ...$subsetCases );
+		[$props['items'], $props['offsets']] = $this->recomputationOf( ...$cases );
 
 		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
@@ -113,7 +113,7 @@ final readonly class CollectUsing {
 	 * @return array{0:array<int,string>,1:(string|int)[]} Recomputed items and offset positions.
 	 * @throws InvalidSource When none of given subset cases were registered during instantiation.
 	 */
-	public function recomputeFor( string|BackedEnum ...$subsetCases ): array {
+	public function recomputationOf( string|BackedEnum ...$subsetCases ): array {
 		if ( ! $subsetCases ) {
 			return [ $this->items, $this->offsets ];
 		}
