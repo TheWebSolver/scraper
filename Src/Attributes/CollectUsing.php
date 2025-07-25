@@ -80,16 +80,16 @@ final readonly class CollectUsing {
 	/**
 	 * Gets new instance after re-computing offset between subset of items already registered as collectables.
 	 *
-	 * @param BackedEnum<string>|string ...$items
+	 * @param BackedEnum<string>|string ...$caseOrValue
 	 * @see CollectUsing::recomputationOf()
 	 */
-	public function subsetOf( string|BackedEnum ...$items ): self {
-		if ( ! $items ) {
+	public function subsetOf( BackedEnum|string ...$caseOrValue ): self {
+		if ( ! $caseOrValue ) {
 			return $this;
 		}
 
 		$props                               = get_object_vars( $this );
-		[$props['items'], $props['offsets']] = $this->recomputationOf( ...$items );
+		[$props['items'], $props['offsets']] = $this->recomputationOf( ...$caseOrValue );
 
 		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
@@ -110,18 +110,18 @@ final readonly class CollectUsing {
 	 * The order cannot be changed here. It only computes offsets between items in
 	 * same sequence they were registered at the time the class was instantiated.
 	 *
-	 * Consequently, the order in which `$subsetItems` are passed does not matter.
+	 * Consequently, the order in which `$subsetCaseOrValue` passed does not matter.
 	 *
-	 * @param BackedEnum<string>|string ...$subsetItems
+	 * @param BackedEnum<string>|string ...$subsetCaseOrValue
 	 * @return array{0:array<int,string>,1:(string|int)[]} Recomputed items and offset positions.
 	 * @throws InvalidSource When none of given subset items were registered during instantiation.
 	 */
-	public function recomputationOf( string|BackedEnum ...$subsetItems ): array {
-		if ( ! $subsetItems ) {
+	public function recomputationOf( BackedEnum|string ...$subsetCaseOrValue ): array {
+		if ( ! $subsetCaseOrValue ) {
 			return [ $this->items, $this->offsets ];
 		}
 
-		$values = array_map( $this->toString( ... ), $subsetItems );
+		$values = array_map( $this->toString( ... ), $subsetCaseOrValue );
 		( $items = array_intersect( $this->items, $values ) ) || $this->throwRecomputationMismatch( $values );
 		$lastKey = array_key_last( $items );
 		$offsets = $lastKey ? array_keys( array_diff_key( range( 0, $lastKey ), $items ) ) : [];
