@@ -3,7 +3,6 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Attributes;
 
-use Closure;
 use Attribute;
 use BackedEnum;
 use ReflectionClass;
