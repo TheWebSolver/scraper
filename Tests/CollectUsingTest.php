@@ -20,6 +20,10 @@ class CollectUsingTest extends TestCase {
 		$this->assertSame( [ '0', '1', '2', '3', '4' ], $collection->items );
 		$this->assertSame( '1', $collection->indexKey );
 		$this->assertSame( [], $collection->offsets );
+
+		$this->expectExceptionMessage( 'with invalid enum classname "' . self::class . '"' );
+
+		new CollectUsing( self::class ); // @phpstan-ignore-line
 	}
 
 	/**

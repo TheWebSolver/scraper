@@ -25,6 +25,7 @@ final readonly class CollectUsing {
 	 * @param null|string|BackedEnum<string>   $subsetCases Accepts subsets of enum cases or cases in different order than defined in the enum.
 	 *                                                      Cases passed must be in sequential order they gets mapped to items being collected.
 	 *                                                      If an in-between case/item needs to be omitted, `null` must be passed to offset it.
+	 * @throws InvalidSource When `$enumClass` is not a full qualified enum classname.
 	 * @no-named-arguments
 	 */
 	public function __construct(
@@ -32,6 +33,10 @@ final readonly class CollectUsing {
 		?BackedEnum $indexKey = null,
 		null|string|BackedEnum ...$subsetCases
 	) {
+		is_a( $enumClass, BackedEnum::class, allow_string: true ) || throw InvalidSource::nonCollectableItem(
+			sprintf( 'with invalid enum classname "%s" to compute', $enumClass )
+		);
+
 		[$this->all, $this->items, $this->offsets] = $this->computeFor( $subsetCases );
 		$this->indexKey                            = $indexKey->value ?? null;
 	}
