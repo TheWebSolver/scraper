@@ -53,7 +53,7 @@ trait TableExtractor {
 	private array $discoveredTable__rows = [];
 
 	private int|string $currentTable__id;
-	/** @var array{0:array<int,string>,1:array<int,int>}[] Column indexes and offset positions */
+	/** @var array{0:non-empty-array<int,string>,1:array<int,int>}[] Column indexes and offset positions */
 	private array $currentTable__columnInfo;
 
 	/** @var int[] */
@@ -177,12 +177,12 @@ trait TableExtractor {
 		return true;
 	}
 
-	/** @param list<string>|CollectUsing $source */
-	private function setItemIndicesFrom( array|CollectUsing $source ): void {
+	/** @param list<string>|CollectUsing|null $source */
+	private function setItemIndicesFrom( array|CollectUsing|null $source ): void {
 		if ( $source instanceof CollectUsing ) {
-			! empty( $source->items )
+			$source->items
 				&& $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source->items, $source->offsets ];
-		} elseif ( ! empty( $source ) ) {
+		} elseif ( $source ) {
 			$this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source, [] ];
 		}
 	}

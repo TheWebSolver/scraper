@@ -231,13 +231,13 @@ trait HtmlTableFromNode {
 			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $row );
 			$headInspected = true;
 
-			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
-			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
 				// We can only determine whether first row contains table heads after it is inferred.
 				// We'll simply dispatch the ending event here to notify subscribers, if any.
 				$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $row, $this ) );
 
+				// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
+				// Advance table body to next <tr> if first row is collected as head.
 				continue;
 			}
 
@@ -250,9 +250,8 @@ trait HtmlTableFromNode {
 					break;
 				}
 
-				if ( ! $this->getItemsIndices() && $source = $this->getCollectorSource() ) {
-					$this->setItemIndicesFrom( $source );
-				}
+				// Silently use collectables as item indices if not already set by above event listener.
+				$this->getItemsIndices() || $this->setItemIndicesFrom( $this->getCollectorSource() );
 
 				$bodyStarted = true;
 			}
