@@ -187,10 +187,10 @@ trait HtmlTableFromString {
 		return $matched && ! empty( $table ) ? $table : null;
 	}
 
-	private function isValidStructureIfTraceable( Table $target, string $node ): bool {
-		return $this->shouldTraceTableStructure( $target )
-			&& str_contains( $node, "<{$target->value}" )
-			&& str_contains( $node, "</{$target->value}>" );
+	private function isValidStructureIfTraceable( Table $structure, string $node ): bool {
+		return $this->shouldTraceTableStructure( $structure )
+			&& str_contains( $node, "<{$structure->value}" )
+			&& str_contains( $node, "</{$structure->value}>" );
 	}
 
 	/**

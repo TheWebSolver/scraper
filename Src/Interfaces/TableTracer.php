@@ -28,7 +28,7 @@ interface TableTracer extends Indexable {
 	 *
 	 * @no-named-arguments
 	 */
-	public function traceWithout( Table ...$targets ): static;
+	public function traceWithout( Table ...$structures ): static;
 
 	/**
 	 * Registers transformer for the targeted table structure.
@@ -36,14 +36,14 @@ interface TableTracer extends Indexable {
 	 * @param Transformer<contravariant static,TReturn> $transformer
 	 * @template TReturn
 	 */
-	public function addTransformer( Table $for, Transformer $transformer ): static;
+	public function addTransformer( Table $structure, Transformer $transformer ): static;
 
 	/**
 	 * Registers event listener for the targeted table structure and at the given event time.
 	 *
 	 * @param callable(TableTraced): void $callback
 	 */
-	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static;
+	public function addEventListener( Table $structure, callable $callback, EventAt $eventAt = EventAt::Start ): static;
 
 	/**
 	 * Sets the source for mapping table column index keys, if any.

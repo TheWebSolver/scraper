@@ -70,14 +70,14 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function traceWithout( Table ...$targets ): static {
-		$this->discoveredTable__excludedStructures = $targets;
+	public function traceWithout( Table ...$structures ): static {
+		$this->discoveredTable__excludedStructures = $structures;
 
 		return $this;
 	}
 
-	public function addTransformer( Table $for, Transformer $transformer ): static {
-		$this->discoveredTable__transformers[ $for->value ] = $transformer;
+	public function addTransformer( Table $structure, Transformer $transformer ): static {
+		$this->discoveredTable__transformers[ $structure->value ] = $transformer;
 
 		return $this;
 	}
@@ -86,8 +86,8 @@ trait TableExtractor {
 		return isset( $this->discoveredTable__transformers[ $structure->value ] );
 	}
 
-	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static {
-		$this->discoveredTable__eventListeners[ $for->value ][ $eventAt->name ] = $callback( ... );
+	public function addEventListener( Table $structure, callable $callback, EventAt $eventAt = EventAt::Start ): static {
+		$this->discoveredTable__eventListeners[ $structure->value ][ $eventAt->name ] = $callback( ... );
 
 		return $this;
 	}
@@ -266,8 +266,8 @@ trait TableExtractor {
 		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::Start, $body, $this ) );
 	}
 
-	private function isInvokedByEventListenerOf( Table $structure, EventAt $when ): bool {
-		return $this->discoveredTable__eventBeingDispatched?->isTargeted( $when, $structure ) ?? false;
+	private function isInvokedByEventListenerOf( Table $structure, EventAt $eventAt ): bool {
+		return $this->discoveredTable__eventBeingDispatched?->isTargeted( $eventAt, $structure ) ?? false;
 	}
 
 	/** @return array{0:?bool,1:?array<string,bool>} **0:** Whether event was stopped, **1:** EventAt */
@@ -316,8 +316,8 @@ trait TableExtractor {
 		];
 	}
 
-	private function shouldTraceTableStructure( Table $target ): bool {
-		return ! in_array( $target, $this->discoveredTable__excludedStructures, strict: true );
+	private function shouldTraceTableStructure( Table $structure ): bool {
+		return ! in_array( $structure, $this->discoveredTable__excludedStructures, strict: true );
 	}
 
 	private function hasColumnReachedAtLastPosition( int $currentPosition, ?int $lastPosition ): bool {

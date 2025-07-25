@@ -18,13 +18,14 @@ final class TableTraced {
 	 * @throws LogicException When event is created for unsupported table structure.
 	 */
 	public function __construct(
-		public readonly Table $for,
-		public readonly EventAt $at,
+		public readonly Table $structure,
+		public readonly EventAt $eventAt,
 		public readonly string|DOMElement $target,
 		public readonly TableTracer $tracer,
 		private bool $shouldStopTracing = false
 	) {
-		$for->eventDispatchable() || throw new LogicException( sprintf( Table::NON_DISPATCHABLE_EVENT, $for->name ) );
+		$structure->eventDispatchable()
+			|| throw new LogicException( sprintf( Table::NON_DISPATCHABLE_EVENT, $structure->name ) );
 	}
 
 	/**
@@ -32,11 +33,11 @@ final class TableTraced {
 	 * @phpstan-return array{0:value-of<Table>,1:string}
 	 */
 	public function scope(): array {
-		return [ $this->for->value, $this->at->name ];
+		return [ $this->structure->value, $this->eventAt->name ];
 	}
 
-	public function isTargeted( EventAt $when, Table $tableStructure ): bool {
-		return $when === $this->at && $tableStructure === $this->for;
+	public function isTargeted( EventAt $eventAt, Table $structure ): bool {
+		return $eventAt === $this->eventAt && $structure === $this->structure;
 	}
 
 	/** @throws LogicException When unstoppable table structure or event at. */
@@ -49,10 +50,10 @@ final class TableTraced {
 	}
 
 	private function assertEventIsStoppable(): bool {
-		EventAt::End === $this->at
-			&& throw new LogicException( sprintf( self::TRACING_ALREADY_COMPLETE, $this->for->value ) );
+		EventAt::End === $this->eventAt
+			&& throw new LogicException( sprintf( self::TRACING_ALREADY_COMPLETE, $this->structure->value ) );
 
-		return $this->for->eventStoppable()
-			|| throw new LogicException( sprintf( Table::NON_STOPPABLE_EVENT, $this->for->name ) );
+		return $this->structure->eventStoppable()
+			|| throw new LogicException( sprintf( Table::NON_STOPPABLE_EVENT, $this->structure->name ) );
 	}
 }
