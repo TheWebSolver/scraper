@@ -3,6 +3,7 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Attributes;
 
+use Closure;
 use Attribute;
 use BackedEnum;
 use ReflectionClass;
@@ -33,6 +34,47 @@ final readonly class CollectUsing {
 	) {
 		[$this->all, $this->items, $this->offsets] = $this->computeFor( $subsetCases );
 		$this->indexKey                            = $indexKey->value ?? null;
+	}
+
+	/**
+	 * @param non-empty-list<?string> $names   Names used for collection. These must be passed in sequential order as
+	 *                                         they gets mapped to items being collected. If an in-between item needs
+	 *                                         to be omitted, `null` must be passed to offset it. Be aware that `null`
+	 *                                         is forbidden when using in combination with `$compute` set as `false`.
+	 * @param bool                    $compute When this is `false`, `$names` are set as _all_ property value and
+	 *                                         _items_ property value without computing any in-between offsets.
+	 * @throws InvalidSource When given `$indexKey` not found in `$names` or when `null` passed with `$compute` as `false`.
+	 */
+	public static function arrayOf( array $names, ?string $indexKey = null, bool $compute = true ): self {
+		$indexKey && ! in_array( $indexKey, $names, true ) && throw new InvalidSource(
+			sprintf(
+				'Index key "%1$s" not found within names: ["%2$s"].',
+				$indexKey,
+				self::stringifyNames( $names )
+			)
+		);
+
+		if ( $compute ) {
+			$computed = self::doComputationWith( $names );
+		} else {
+			in_array( null, $names, true ) && throw new InvalidSource(
+				sprintf(
+					'When computation is disabled, "null" (offset) not allowed within names: ["%s"].',
+					self::stringifyNames( $names )
+				)
+			);
+		}
+
+		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
+
+		[$all, $items, $offsets] = $computed ?? [ $names, $names, [] ];
+
+		$reflection->getProperty( 'indexKey' )->setValue( $_this, $indexKey );
+		$reflection->getProperty( 'all' )->setValue( $_this, $all );
+		$reflection->getProperty( 'items' )->setValue( $_this, $items );
+		$reflection->getProperty( 'offsets' )->setValue( $_this, $offsets );
+
+		return $_this;
 	}
 
 	/**
@@ -122,23 +164,44 @@ final readonly class CollectUsing {
 			);
 		}
 
-		$items               = $offsets = $all = [];
-		$lastSubsetCaseFound = false;
+		$computed = self::doComputationWith( $subsetCases, normalize: $this->toString( ... ) );
 
-		for ( $i = array_key_last( $subsetCases ); $i >= 0; $i-- ) {
-			if ( null === $subsetCases[ $i ] ) {
-				$all[]                             = null;
-				$lastSubsetCaseFound && $offsets[] = $i;
-			} else {
-				$items[ $i ]         = $all[] = $this->toString( $subsetCases[ $i ] );
-				$lastSubsetCaseFound = true;
-			}
-		}
-
-		$items ?: throw InvalidSource::nonCollectableItem(
+		$computed[1] ?: throw InvalidSource::nonCollectableItem(
 			sprintf( 'during computation with enum "%s". All given subsets are "null" and none of them are', $enum )
 		);
 
-		return [ array_reverse( $all ), array_reverse( $items, preserve_keys: true ), array_reverse( $offsets ) ];
+		return $computed;
+	}
+
+	/**
+	 * @param non-empty-list<string|BackedEnum<string>|null> $subsetCases
+	 * @param Closure(string|BackedEnum<string>):string      $normalize
+	 * @return array{0:list<?string>,1:array<int,string>,2:list<int>}
+	 */
+	private static function doComputationWith( array $subsetCases, ?Closure $normalize = null ): array {
+		$items         = $offsets = $all = [];
+		$lastCaseFound = false;
+
+		for ( $i = array_key_last( $subsetCases ); $i >= 0; $i-- ) {
+			$case = $subsetCases[ $i ];
+
+			if ( null === $case ) {
+				$all[]                       = null;
+				$lastCaseFound && $offsets[] = $i;
+			} else {
+				$lastCaseFound = true;
+				$case          = $normalize ? $normalize( $case ) : ( $case instanceof BackedEnum ? $case->value : $case );
+				$items[ $i ]   = $all[] = $case;
+			}
+		}
+
+		$items = $items ? array_reverse( $items, preserve_keys: true ) : $items;
+
+		return [ array_reverse( $all ), $items, array_reverse( $offsets ) ];
+	}
+
+	/** @param array<?string> $names */
+	private static function stringifyNames( array $names ): string {
+		return implode( '", "', array_map( static fn( ?string $v ) => $v ??= '{{NULL}}', $names ) );
 	}
 }

@@ -235,6 +235,70 @@ class CollectUsingTest extends TestCase {
 			],
 		];
 	}
+
+	/**
+	 * @param array{0:non-empty-list<?string>,1:?string,2:bool}                          $args
+	 * @param array{0:list<?string>,1:non-empty-array<int,string>,2:list<int>,3?:string} $expected
+	 */
+	#[Test]
+	#[DataProvider( 'provideCollectableItemsAsArray' )]
+	public function itInstantiatesUsingCollectableItemsArray( array $args, array $expected ): void {
+		if ( $exceptionMsg = ( $expected[3] ?? false ) ) {
+			$this->expectExceptionMessage( $exceptionMsg );
+		}
+
+		$source = CollectUsing::arrayOf( ...$args );
+
+		[$items, $offsets, $indexKey] = $expected;
+
+		$this->assertSame( $items, $source->items );
+		$this->assertSame( $offsets, $source->offsets );
+		$this->assertSame( $indexKey, $source->indexKey );
+	}
+
+	/** @return mixed[] */
+	public static function provideCollectableItemsAsArray(): array {
+		// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+		return [
+			[
+				[ [ '1', '2', null, '3' ], null, true ],
+				[ [ 0 => '1', 1 => '2', 3 => '3' ], [ 2 ], null ],
+			],
+			[
+				[ [ '1', '2', null, '3' ], '1', true ],
+				[ [ 0 => '1', 1 => '2', 3 => '3' ], [ 2 ], '1' ],
+			],
+			[
+				[ [ '1', '2', '3' ], '2', false ],
+				[ [ '1', '2', '3' ], [], '2' ],
+			],
+			[
+				[ [ '1', '2', '3' ], '2', true ],
+				[ [ '1', '2', '3' ], [], '2' ],
+			],
+			[
+				[ [ '1', '2', '3' ], null, true ],
+				[ [ '1', '2', '3' ], [], null ],
+			],
+			[
+				[ [ '1', '2', '3' ], null, false ],
+				[ [ '1', '2', '3' ], [], null ],
+			],
+			[
+				[ [ '1', null, '9' ], null, false ],
+				[ 'exception->', 'is->', 'thrown->', 'When computation is disabled, "null" (offset) not allowed within names: ["1", "{{NULL}}", "9"].' ],
+			],
+			[
+				[ [ '1', null, '9' ], '2', false ],
+				[ 'exception->', 'is->', 'thrown->', 'Index key "2" not found within names: ["1", "{{NULL}}", "9"].' ],
+			],
+			[
+				[ [ '1', null ], '2', true ],
+				[ 'exception->', 'is->', 'thrown->', 'Index key "2" not found within names: ["1", "{{NULL}}"].' ],
+			],
+		];
+		// phpcs:enable
+	}
 }
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
