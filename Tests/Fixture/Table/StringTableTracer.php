@@ -10,8 +10,4 @@ use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 class StringTableTracer implements TableTracer {
 	/** @use HtmlTableFromString<string> */
 	use HtmlTableFromString;
-
-	public function __construct() {
-		$this->collectableFromAttribute();
-	}
 }

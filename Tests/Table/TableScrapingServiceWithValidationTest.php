@@ -51,7 +51,6 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				new class() extends StringTableTracerWithAccents implements Validatable {
 					public function __construct() {
 						$this->setCollectorSource( new CollectUsing( DevDetails::class ) );
-						parent::__construct();
 					}
 
 					public function validate( mixed $data ): void {
@@ -117,7 +116,6 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				new class() extends NodeTableTracerWithAccents implements Validatable {
 					public function __construct() {
 						$this->setCollectorSource( new CollectUsing( DevDetails::class ) );
-						parent::__construct();
 					}
 
 					public function validate( mixed $data ): void {

@@ -10,8 +10,4 @@ use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromNode;
 class NodeTableTracer implements TableTracer {
 	/** @use HtmlTableFromNode<string> */
 	use HtmlTableFromNode;
-
-	public function __construct() {
-		$this->collectableFromAttribute();
-	}
 }

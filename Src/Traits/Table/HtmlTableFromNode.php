@@ -15,13 +15,12 @@ use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
-use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
 /** @template TColumnReturn */
 trait HtmlTableFromNode {
 	/** @use TableExtractor<TColumnReturn> */
-	use CollectorSource, TableExtractor;
+	use TableExtractor;
 
 	/** @throws InvalidSource When "table" cannot be resolved in given source. */
 	public function inferTableFrom( string|DOMElement $source, bool $normalize = true ): void {

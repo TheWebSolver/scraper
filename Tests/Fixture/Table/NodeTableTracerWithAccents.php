@@ -9,10 +9,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 class NodeTableTracerWithAccents extends NodeTableTracer implements AccentedIndexableItem {
 	use Diacritic;
 
-	/** @param list<string> $accentedItemIndices */
-	public function __construct( protected array $accentedItemIndices = [] ) {
-		parent::__construct();
-	}
+	/** @var list<string> $accentedItemIndices */
+	protected array $accentedItemIndices = [];
 
 	public function indicesWithAccentedCharacters(): array {
 		return $this->accentedItemIndices;

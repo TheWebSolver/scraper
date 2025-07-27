@@ -142,8 +142,14 @@ class TableScrapingServiceTest extends TestCase {
 	#[DataProvider( 'provideTranslitArgsToOperateOnAccentedCharacters' )]
 	public function itScrapesAndTranslitAccentedCharacters( int $action, string $expectedTitle, array $keys ): void {
 		$tracerWithAccents = [
-			new #[CollectUsing( DevDetails::class )] class( $keys ) extends StringTableTracerWithAccents {},
-			new #[CollectUsing( DevDetails::class )] class( $keys ) extends NodeTableTracerWithAccents {},
+			new #[CollectUsing( DevDetails::class )] class( $keys ) extends StringTableTracerWithAccents {
+				/** @param list<string> $accentedItemIndices */
+				public function __construct( protected array $accentedItemIndices ) {}
+			},
+			new #[CollectUsing( DevDetails::class )] class( $keys ) extends NodeTableTracerWithAccents {
+				/** @param list<string> $accentedItemIndices */
+				public function __construct( protected array $accentedItemIndices ) {}
+			},
 		];
 
 		foreach ( $tracerWithAccents as $tracer ) {

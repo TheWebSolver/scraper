@@ -18,11 +18,14 @@ use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 
 /** @template TColumnReturn */
 trait TableExtractor {
+	use CollectorSource;
+
 	private bool $shouldPerform__allTableDiscovery = false;
 
 	/**
@@ -179,6 +182,8 @@ trait TableExtractor {
 
 	/** @param list<string>|CollectUsing|null $source */
 	private function setItemIndicesFrom( array|CollectUsing|null $source ): void {
+		$source ??= $this->collectableFromAttribute()->getCollectorSource();
+
 		if ( $source instanceof CollectUsing ) {
 			$source->items
 				&& $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source->items, $source->offsets ];
