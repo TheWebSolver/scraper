@@ -23,6 +23,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
@@ -243,7 +244,8 @@ class TableExtractorTest extends TestCase {
 		$stringTracer->addEventListener(
 			Table::Row,
 			static fn ( TableTraced $e ) => $e->tracer->setItemsIndices(
-				$e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray()
+				// @phpstan-ignore-next-line
+				CollectUsing::listOf( $e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray() )
 			)
 		)->inferTableFrom( $source );
 
@@ -307,12 +309,13 @@ class TableExtractorTest extends TestCase {
 
 	/** @return mixed[] */
 	public static function provideCasesWhenEventListenerExceptionIsThrown(): array {
-		$listener = static fn( TableTraced $e ) => $e->tracer->setItemsIndices( [] );
-		$table    = DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'table.html';
+		$collection = CollectUsing::listOf( [] ); // @phpstan-ignore-line
+		$listener   = static fn( TableTraced $e ) => $e->tracer->setItemsIndices( $collection );
+		$table      = DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'table.html';
 
 		return [
-			[ 'setItemsIndices', [ [] ], new NodeTableTracer() ],
-			[ 'setItemsIndices', [ [] ], new StringTableTracer() ],
+			[ 'setItemsIndices', [ $collection ], new NodeTableTracer() ],
+			[ 'setItemsIndices', [ $collection ], new StringTableTracer() ],
 			[
 				'inferTableFrom',
 				[ $table ],
@@ -336,7 +339,8 @@ class TableExtractorTest extends TestCase {
 			$id    = $e->tracer->getTableId( true );
 			$heads = $e->tracer->getTableHead()[ $id ] ?? false; // Not all tables in table.html have head.
 
-			$heads && $e->tracer->setItemsIndices( $heads->toArray() );
+			// @phpstan-ignore-next-line
+			$heads && $e->tracer->setItemsIndices( CollectUsing::listOf( $heads->toArray() ) );
 		};
 
 		foreach ( [ new StringTableTracer(), $domTracer = new NodeTableTracer() ] as $tracer ) {
@@ -365,7 +369,7 @@ class TableExtractorTest extends TestCase {
 
 			$tracer->addEventListener(
 				Table::Row,
-				static fn( TableTraced $e ) => $e->tracer->setItemsIndices( [ 'finalAddress' ] )
+				static fn( TableTraced $e ) => $e->tracer->setItemsIndices( CollectUsing::listOf( [ 'finalAddress' ] ) )
 			);
 
 			$devTable->next();
@@ -591,7 +595,8 @@ class TableExtractorTest extends TestCase {
 		};
 
 		$listener = static fn( TableTraced $e ) => $e->tracer->setItemsIndices(
-			$e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray()
+			// @phpstan-ignore-next-line
+			CollectUsing::listOf( $e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray() )
 		);
 
 		foreach ( [ new StringTableTracer(), new NodeTableTracer() ] as $tracer ) {

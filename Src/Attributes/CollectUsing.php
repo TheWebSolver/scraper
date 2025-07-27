@@ -49,7 +49,7 @@ final readonly class CollectUsing {
 	 *                                         _items_ property value without computing any in-between offsets.
 	 * @throws InvalidSource When given `$indexKey` not found in `$names` or when `null` passed with `$compute` as `false`.
 	 */
-	public static function arrayOf( array $names, ?string $indexKey = null, bool $compute = true ): self {
+	public static function listOf( array $names, ?string $indexKey = null, bool $compute = false ): self {
 		$indexKey && ! in_array( $indexKey, $names, true ) && throw new InvalidSource(
 			sprintf( 'Index key "%1$s" not found within names: ["%2$s"].', $indexKey, self::arrayToString( $names ) )
 		);

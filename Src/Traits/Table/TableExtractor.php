@@ -95,7 +95,7 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function setItemsIndices( array|CollectUsing $source ): void {
+	public function setItemsIndices( CollectUsing $source ): void {
 		if ( $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
 			$this->setItemIndicesFrom( $source );
 
@@ -180,16 +180,12 @@ trait TableExtractor {
 		return true;
 	}
 
-	/** @param list<string>|CollectUsing|null $source */
-	private function setItemIndicesFrom( array|CollectUsing|null $source ): void {
+	/** @param ?CollectUsing $source */
+	private function setItemIndicesFrom( ?CollectUsing $source ): void {
 		$source ??= $this->collectableFromAttribute()->getCollectorSource();
+		$items    = $source?->items;
 
-		if ( $source instanceof CollectUsing ) {
-			$source->items
-				&& $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source->items, $source->offsets ];
-		} elseif ( $source ) {
-			$this->currentTable__columnInfo[ $this->currentTable__id ] = [ $source, [] ];
-		}
+		$items && ( $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $items, $source->offsets ] );
 	}
 
 	private function tableColumnsExistInBody( string|DOMElement $node ): bool {

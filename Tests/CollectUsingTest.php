@@ -250,7 +250,7 @@ class CollectUsingTest extends TestCase {
 		}
 
 		[$items, $offsets, $indexKey] = $expected;
-		$collection                   = CollectUsing::arrayOf( ...$args );
+		$collection                   = CollectUsing::listOf( ...$args );
 
 		$this->assertSame( $items, $collection->items );
 		$this->assertSame( $offsets, $collection->offsets );
@@ -304,7 +304,7 @@ class CollectUsingTest extends TestCase {
 
 	#[Test]
 	public function itRecomputesStaticallyInstantiatedCollection(): void {
-		$collection   = CollectUsing::arrayOf( [ '1',null,'2',null,'3' ], '3' );
+		$collection   = CollectUsing::listOf( [ '1',null,'2',null,'3' ], '3', true );
 		$reCollection = $collection->subsetOf( '2', '1' );
 
 		$this->assertFalse( isset( $reCollection->enumClass ) );
@@ -332,7 +332,7 @@ class CollectUsingTest extends TestCase {
 	): void {
 		$this->expectExceptionMessage( $expectedMsg );
 
-		CollectUsing::arrayOf( $names )->subsetOf( ...$subsetNames );
+		CollectUsing::listOf( $names, compute: true )->subsetOf( ...$subsetNames );
 	}
 
 	/** @return mixed[] */

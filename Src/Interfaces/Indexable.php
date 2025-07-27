@@ -14,13 +14,8 @@ interface Indexable {
 	 * Sets indices to be used as collected items' keys.
 	 *
 	 * If this method is used, remaining items after last mappable key must be omitted from being collected.
-	 *
-	 * @param list<string>|CollectUsing $source Source either as list of strings or an instance
-	 *                                          to map as index keys for iterated items' value.
-	 *
-	 * @no-named-arguments
 	 */
-	public function setItemsIndices( array|CollectUsing $source ): void;
+	public function setItemsIndices( CollectUsing $source ): void;
 
 	/**
 	 * Gets indices to be used as collected items' keys.

@@ -69,7 +69,10 @@ class TableScrapingServiceTest extends TestCase {
 				Table::Row,
 				static function ( TableTraced $event ) {
 					$event->tracer->setItemsIndices(
-						$event->tracer->getTableHead()[ $event->tracer->getTableId( current: true ) ]->toArray()
+						CollectUsing::listOf(
+							// @phpstan-ignore-next-line
+							$event->tracer->getTableHead()[ $event->tracer->getTableId( current: true ) ]->toArray()
+						)
 					);
 				}
 			);
@@ -114,7 +117,8 @@ class TableScrapingServiceTest extends TestCase {
 				Table::Row,
 				static function ( TableTraced $event ) {
 					$event->tracer->setItemsIndices(
-						$event->tracer->getTableHead()[ $event->tracer->getTableId( true ) ]->toArray()
+						// @phpstan-ignore-next-line
+						CollectUsing::listOf( $event->tracer->getTableHead()[ $event->tracer->getTableId( true ) ]->toArray() )
 					);
 				}
 			)->addTransformer( Table::Head, $stripTags )->addTransformer( Table::Column, $stripTags );
