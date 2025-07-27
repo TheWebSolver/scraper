@@ -28,7 +28,7 @@ final readonly class CollectUsing {
 	 * @no-named-arguments
 	 */
 	public function __construct(
-		public string $enumClass,
+		private string $enumClass,
 		?BackedEnum $indexKey = null,
 		BackedEnum|null|string ...$subsetCaseOrValueOrOffset
 	) {
@@ -51,7 +51,7 @@ final readonly class CollectUsing {
 	 */
 	public static function arrayOf( array $names, ?string $indexKey = null, bool $compute = true ): self {
 		$indexKey && ! in_array( $indexKey, $names, true ) && throw new InvalidSource(
-			sprintf( 'Index key "%1$s" not found within names: ["%2$s"].', $indexKey, self::stringifyNames( $names ) )
+			sprintf( 'Index key "%1$s" not found within names: ["%2$s"].', $indexKey, self::arrayToString( $names ) )
 		);
 
 		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
@@ -62,7 +62,7 @@ final readonly class CollectUsing {
 			in_array( null, $names, true ) && throw new InvalidSource(
 				sprintf(
 					'When computation is disabled, "null" (offset) not allowed within names: ["%s"].',
-					self::stringifyNames( $names )
+					self::arrayToString( $names )
 				)
 			);
 		}
@@ -91,13 +91,15 @@ final readonly class CollectUsing {
 		$props                               = get_object_vars( $this );
 		[$props['items'], $props['offsets']] = $this->recomputationOf( ...$caseOrValue );
 
+		// The "enumClass" property doesn't exist or uninitialized only if instantiated statically.
+		if ( array_key_exists( 'enumClass', $props ) && null === $props['enumClass'] ) {
+			unset( $props['enumClass'] );
+		}
+
 		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
 		foreach ( $props as $name => $value ) {
-			// Uninitialized only if instantiated with CollectUsing::arrayOf() method.
-			$ignoreEnumProperty = 'enumClass' === $name && null === $value;
-
-			$ignoreEnumProperty || $reflection->getProperty( $name )->setValue( $_this, $value );
+			$reflection->getProperty( $name )->setValue( $_this, $value );
 		}
 
 		return $_this;
@@ -172,16 +174,16 @@ final readonly class CollectUsing {
 	}
 
 	/**
-	 * @param BackedEnum<string>|string|null ...$names
+	 * @param BackedEnum<string>|string|null ...$caseOrValueOrOffset
 	 * @return array{0:list<?string>,1:non-empty-array<int,string>,2:list<int>}
 	 * @no-named-arguments
 	 */
-	private static function doComputationFor( self $self, BackedEnum|string|null ...$names ): array {
+	private static function doComputationFor( self $self, BackedEnum|string|null ...$caseOrValueOrOffset ): array {
 		$items         = $offsets = $all = [];
 		$lastNameFound = false;
 
-		for ( $i = array_key_last( $names ); $i >= 0; $i-- ) {
-			$name = $names[ $i ];
+		for ( $i = array_key_last( $caseOrValueOrOffset ); $i >= 0; $i-- ) {
+			$name = $caseOrValueOrOffset[ $i ];
 
 			if ( null === $name ) {
 				$all[]                       = null;
@@ -197,11 +199,11 @@ final readonly class CollectUsing {
 		return [ array_reverse( $all ), array_reverse( $items, preserve_keys: true ), array_reverse( $offsets ) ];
 	}
 
-	/** @param array<?string> $names */
-	private static function stringifyNames( array $names, bool $mapNull = true ): string {
-		$mapNull && $names = array_map( static fn( ?string $v ): string => $v ??= '{{NULL}}', $names );
+	/** @param array<?string> $values */
+	private static function arrayToString( array $values, bool $mapNull = true ): string {
+		$mapNull && $values = array_map( static fn( ?string $v ): string => $v ??= '{{NULL}}', $values );
 
-		return implode( '", "', $names );
+		return implode( '", "', $values );
 	}
 
 	/**
@@ -209,8 +211,8 @@ final readonly class CollectUsing {
 	 * @throws InvalidSource Mismatched values.
 	 */
 	private function throwRecomputationMismatch( array $values ): never {
-		$names  = $this->stringifyNames( $this->items, mapNull: false );
 		$prefix = 'during re-computation' . ( ( $enum = $this->enum() ) ? " with enum \"{$enum}\"" : '' );
+		$names  = $this->arrayToString( $this->items, mapNull: false );
 
 		throw InvalidSource::nonCollectableItem( "{$prefix}. Allowed values: [\"{$names}\"]. Given", $values );
 	}

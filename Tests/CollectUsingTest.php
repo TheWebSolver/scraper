@@ -16,7 +16,6 @@ class CollectUsingTest extends TestCase {
 	public function itConvertsEnumCasesToString(): void {
 		$collection = new CollectUsing( Collectable::class, Collectable::One );
 
-		$this->assertSame( Collectable::class, $collection->enumClass );
 		$this->assertSame( [ '0', '1', '2', '3', '4' ], $collection->items );
 		$this->assertSame( '1', $collection->indexKey );
 		$this->assertSame( [], $collection->offsets );
