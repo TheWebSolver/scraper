@@ -191,7 +191,7 @@ class CollectUsingTest extends TestCase {
 			],
 			[
 				NonCollectable::class,
-				sprintf( 'during computation with enum "%s". It does not have any value.', NonCollectable::class ),
+				sprintf( 'because given enum "%s" does not have any case to use as value.', NonCollectable::class ),
 			],
 			[
 				NonCollectable::class,

@@ -50,12 +50,12 @@ final readonly class CollectUsing {
 	 * @throws InvalidSource When given `$indexKey` not found in `$names` or when `null` passed with `$compute` as `false`.
 	 */
 	public static function listOf( array $names, ?string $indexKey = null, bool $compute = false ): self {
+		! ! $names || throw InvalidSource::nonCollectableItem( 'because given list is empty. Provide at-least one' );
+
 		$indexKey && ! in_array( $indexKey, $names, true ) && throw InvalidSource::nonCollectableItem(
 			reason: "because index-key must be one of the value in the given list. \"{$indexKey}\" does not exist in list of",
 			names: self::mapNullToString( ...$names )
 		);
-
-		! ! $names || throw InvalidSource::nonCollectableItem( 'because given list is empty. Provide at-least one' );
 
 		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
@@ -161,17 +161,16 @@ final readonly class CollectUsing {
 	 * @no-named-arguments
 	 */
 	private function computeFor( BackedEnum|string|null ...$caseOrValueOrOffset ): array {
-		$enum = $this->enumClass;
-
-		if ( ! $caseOrValueOrOffset ) {
-			$allItems = array_column( $enum::cases(), 'value' );
-
-			return $allItems ? [ $allItems, $allItems, [] ] : throw InvalidSource::nonCollectableItem(
-				reason: "during computation with enum \"{$enum}\". It does not have any"
-			);
+		if ( $caseOrValueOrOffset ) {
+			return self::doComputationFor( $this, ...$caseOrValueOrOffset );
 		}
 
-		return self::doComputationFor( $this, ...$caseOrValueOrOffset );
+		$enum     = $this->enumClass;
+		$allItems = array_column( $enum::cases(), 'value' );
+
+		return $allItems ? [ $allItems, $allItems, [] ] : throw InvalidSource::nonCollectableItem(
+			reason: "because given enum \"{$enum}\" does not have any case to use as"
+		);
 	}
 
 	/**
