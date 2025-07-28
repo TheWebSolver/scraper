@@ -54,6 +54,8 @@ final readonly class CollectUsing {
 			sprintf( 'Index key "%1$s" not found within names: ["%2$s"].', $indexKey, self::arrayToString( $names ) )
 		);
 
+		! ! $names || throw InvalidSource::nonCollectableItem( 'with an empty list and must pass at-lest one' );
+
 		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
 		if ( $compute ) {

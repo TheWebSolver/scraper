@@ -309,7 +309,7 @@ class TableExtractorTest extends TestCase {
 
 	/** @return mixed[] */
 	public static function provideCasesWhenEventListenerExceptionIsThrown(): array {
-		$collection = CollectUsing::listOf( [] ); // @phpstan-ignore-line
+		$collection = CollectUsing::listOf( [ 'exception', 'thrown', 'test' ] );
 		$listener   = static fn( TableTraced $e ) => $e->tracer->setItemsIndices( $collection );
 		$table      = DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'table.html';
 

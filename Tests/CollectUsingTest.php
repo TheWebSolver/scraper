@@ -340,6 +340,7 @@ class CollectUsingTest extends TestCase {
 		return [
 			[ [ null, null ], [ 'throws exception->' ], 'during computation. All given arguments are "null" and none of them are valid value.' ],
 			[ [ '1', '2' ], [ '3', '4' ], 'during re-computation. Allowed values: ["1", "2"]. Given values: ["3", "4"]' ],
+			[ [], [ 'throws exceptions->' ], 'with an empty list and must pass at-lest one' ],
 		];
 	}
 }
