@@ -33,7 +33,7 @@ final readonly class CollectUsing {
 		BackedEnum|null|string ...$subsetCaseOrValueOrOffset
 	) {
 		is_a( $enumClass, BackedEnum::class, allow_string: true ) || throw InvalidSource::nonCollectableItem(
-			sprintf( 'with invalid enum classname "%s" to compute', $enumClass )
+			reason: "with invalid enum classname \"{$enumClass}\" to compute"
 		);
 
 		[$this->all, $this->items, $this->offsets] = $this->computeFor( ...$subsetCaseOrValueOrOffset );
@@ -50,22 +50,21 @@ final readonly class CollectUsing {
 	 * @throws InvalidSource When given `$indexKey` not found in `$names` or when `null` passed with `$compute` as `false`.
 	 */
 	public static function listOf( array $names, ?string $indexKey = null, bool $compute = false ): self {
-		$indexKey && ! in_array( $indexKey, $names, true ) && throw new InvalidSource(
-			sprintf( 'Index key "%1$s" not found within names: ["%2$s"].', $indexKey, self::arrayToString( $names ) )
+		$indexKey && ! in_array( $indexKey, $names, true ) && throw InvalidSource::nonCollectableItem(
+			reason: "because index-key must be one of the value in the given list. \"{$indexKey}\" does not exist in list of",
+			names: self::mapNullToString( ...$names )
 		);
 
-		! ! $names || throw InvalidSource::nonCollectableItem( 'with an empty list and must pass at-lest one' );
+		! ! $names || throw InvalidSource::nonCollectableItem( 'because given list is empty. Provide at-least one' );
 
 		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
 
 		if ( $compute ) {
 			$computed = self::doComputationFor( $_this, ...$names );
 		} else {
-			in_array( null, $names, true ) && throw new InvalidSource(
-				sprintf(
-					'When computation is disabled, "null" (offset) not allowed within names: ["%s"].',
-					self::arrayToString( $names )
-				)
+			in_array( null, $names, true ) && throw InvalidSource::nonCollectableItem(
+				reason: 'because when computation is disabled, "null" (offset) must not be passed as',
+				names: self::mapNullToString( ...$names )
 			);
 		}
 
@@ -126,7 +125,7 @@ final readonly class CollectUsing {
 		}
 
 		$values = array_map( $this->toString( ... ), $subsetCaseOrValue );
-		( $items = array_intersect( $this->items, $values ) ) || $this->throwRecomputationMismatch( $values );
+		( $items = array_intersect( $this->items, $values ) ) || $this->throwRecomputationMismatch( ...$values );
 		$lastKey = array_key_last( $items );
 		$offsets = $lastKey ? array_keys( array_diff_key( range( 0, $lastKey ), $items ) ) : [];
 
@@ -150,7 +149,7 @@ final readonly class CollectUsing {
 		return ( ! $enum = $this->enum() ) || $enum::tryFrom( $caseOrValue )
 			? $caseOrValue
 			: throw InvalidSource::nonCollectableItem(
-				reason: sprintf( 'for enum "%s". Cannot translate to corresponding case from given', $enum ),
+				reason: "for enum \"$enum\". Cannot translate to corresponding case from given",
 				names: [ $caseOrValue ]
 			);
 	}
@@ -168,7 +167,7 @@ final readonly class CollectUsing {
 			$allItems = array_column( $enum::cases(), 'value' );
 
 			return $allItems ? [ $allItems, $allItems, [] ] : throw InvalidSource::nonCollectableItem(
-				sprintf( 'during computation with enum "%s". It does not have any', $enum )
+				reason: "during computation with enum \"{$enum}\". It does not have any"
 			);
 		}
 
@@ -201,22 +200,17 @@ final readonly class CollectUsing {
 		return [ array_reverse( $all ), array_reverse( $items, preserve_keys: true ), array_reverse( $offsets ) ];
 	}
 
-	/** @param array<?string> $values */
-	private static function arrayToString( array $values, bool $mapNull = true ): string {
-		$mapNull && $values = array_map( static fn( ?string $v ): string => $v ??= '{{NULL}}', $values );
-
-		return implode( '", "', $values );
+	/** @return array<string> */
+	private static function mapNullToString( ?string ...$values ): array {
+		return array_map( static fn( ?string $v ): string => $v ??= '{{NULL}}', $values );
 	}
 
-	/**
-	 * @param string[] $values
-	 * @throws InvalidSource Mismatched values.
-	 */
-	private function throwRecomputationMismatch( array $values ): never {
+	private function throwRecomputationMismatch( string ...$values ): never {
 		$prefix = 'during re-computation' . ( ( $enum = $this->enum() ) ? " with enum \"{$enum}\"" : '' );
-		$names  = $this->arrayToString( $this->items, mapNull: false );
+		$names  = implode( '", "', $this->items );
+		$plural = 1 === count( $this->items ) ? '' : 's';
 
-		throw InvalidSource::nonCollectableItem( "{$prefix}. Allowed values: [\"{$names}\"]. Given", $values );
+		throw InvalidSource::nonCollectableItem( "{$prefix}. Allowed value{$plural}: [\"{$names}\"]. Given", $values );
 	}
 
 	private static function throwComputedAllNull( ?string $enumClass ): never {

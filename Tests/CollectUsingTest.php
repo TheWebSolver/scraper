@@ -227,13 +227,28 @@ class CollectUsingTest extends TestCase {
 	public static function provideCasesThatThrowsExceptionForRecompute(): array {
 		return [
 			[
-				[ '9' ],
+				[ '9', '1' ],
 				sprintf( 'for enum "%s". Cannot translate to corresponding case from given value: ["9"].', Collectable::class ),
 			],
 			[
 				[ '0', '4' ],
 				sprintf( 'during re-computation with enum "%s". Allowed values: ["1", "3"]. Given values: ["0", "4"].', Collectable::class ),
 				[ null, '1', null, '3' ],
+			],
+			[
+				[ '0' ],
+				sprintf( 'during re-computation with enum "%s". Allowed value: ["1"]. Given value: ["0"].', Collectable::class ),
+				[ null, '1' ],
+			],
+			[
+				[ '0', '2' ],
+				sprintf( 'during re-computation with enum "%s". Allowed value: ["1"]. Given values: ["0", "2"].', Collectable::class ),
+				[ '1', null ],
+			],
+			[
+				[ '0' ],
+				sprintf( 'during re-computation with enum "%s". Allowed values: ["1", "2"]. Given value: ["0"].', Collectable::class ),
+				[ null, '1', '2' ],
 			],
 		];
 	}
@@ -288,15 +303,15 @@ class CollectUsingTest extends TestCase {
 			],
 			[
 				[ [ '1', null, '9' ], null, false ],
-				[ 'exception->', 'is->', 'thrown->', 'When computation is disabled, "null" (offset) not allowed within names: ["1", "{{NULL}}", "9"].' ],
+				[ 'exception->', 'is->', 'thrown->', 'because when computation is disabled, "null" (offset) must not be passed as values: ["1", "{{NULL}}", "9"].' ],
 			],
 			[
 				[ [ '1', null, '9' ], '2', false ],
-				[ 'exception->', 'is->', 'thrown->', 'Index key "2" not found within names: ["1", "{{NULL}}", "9"].' ],
+				[ 'exception->', 'is->', 'thrown->', 'because index-key must be one of the value in the given list. "2" does not exist in list of values: ["1", "{{NULL}}", "9"].' ],
 			],
 			[
 				[ [ '1', null ], '2', true ],
-				[ 'exception->', 'is->', 'thrown->', 'Index key "2" not found within names: ["1", "{{NULL}}"].' ],
+				[ 'exception->', 'is->', 'thrown->', 'because index-key must be one of the value in the given list. "2" does not exist in list of values: ["1", "{{NULL}}"].' ],
 			],
 		];
 		// phpcs:enable
@@ -340,7 +355,10 @@ class CollectUsingTest extends TestCase {
 		return [
 			[ [ null, null ], [ 'throws exception->' ], 'during computation. All given arguments are "null" and none of them are valid value.' ],
 			[ [ '1', '2' ], [ '3', '4' ], 'during re-computation. Allowed values: ["1", "2"]. Given values: ["3", "4"]' ],
-			[ [], [ 'throws exceptions->' ], 'with an empty list and must pass at-lest one' ],
+			[ [ '1' ], [ '3' ], 'during re-computation. Allowed value: ["1"]. Given value: ["3"]' ],
+			[ [ '1', '2' ], [ '3' ], 'during re-computation. Allowed values: ["1", "2"]. Given value: ["3"]' ],
+			[ [ '1' ], [ '3', '4' ], 'during re-computation. Allowed value: ["1"]. Given values: ["3", "4"]' ],
+			[ [], [ 'throws exceptions->' ], 'because given list is empty. Provide at-least one value.' ],
 		];
 	}
 }
