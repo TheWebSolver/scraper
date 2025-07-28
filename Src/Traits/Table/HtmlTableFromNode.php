@@ -224,7 +224,7 @@ trait HtmlTableFromNode {
 			return;
 		}
 
-		[$headInspected, $bodyStarted, $position, $transformer] = $this->useCurrentTableBodyDetails();
+		[$headInspected, $bodyStarted, $position] = $this->useCurrentTableBodyDetails();
 
 		foreach ( $rowList as $row ) {
 			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $row );
@@ -258,7 +258,7 @@ trait HtmlTableFromNode {
 				continue;
 			}
 
-			$content = $transformer?->transform( $row, $this ) ?? $row->childNodes;
+			$content = $this->getTransformerOf( Table::Row )?->transform( $row, $this ) ?? $row->childNodes;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,

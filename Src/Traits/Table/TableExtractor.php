@@ -37,9 +37,9 @@ trait TableExtractor {
 	 * }
 	 */
 	private array $discoveredTable__transformers;
-	/** @var array<value-of<Table>,array{Start?:Closure(TableTraced): void,End?:Closure(TableTraced): void}> */
-	private array $discoveredTable__eventListeners;
 	private ?TableTraced $discoveredTable__eventBeingDispatched = null;
+	/** @var array<value-of<Table>,array{Start?:array<Closure(TableTraced): void>,End?:array<Closure(TableTraced): void>}> */
+	private array $discoveredTable__eventListeners = [];
 	/** @var array<array-key,array<value-of<Table>,array{0:bool,1:array<string,bool>}>> */
 	private array $discoveredTable__eventListenersDispatched = [];
 
@@ -90,7 +90,7 @@ trait TableExtractor {
 	}
 
 	public function addEventListener( Table $structure, callable $callback, EventAt $eventAt = EventAt::Start ): static {
-		$this->discoveredTable__eventListeners[ $structure->value ][ $eventAt->name ] = $callback( ... );
+		$this->discoveredTable__eventListeners[ $structure->value ][ $eventAt->name ][] = $callback( ... );
 
 		return $this;
 	}
@@ -148,10 +148,10 @@ trait TableExtractor {
 	public function resetTableHooks(): void {
 		unset(
 			$this->discoveredTable__transformers,
-			$this->discoveredTable__eventListeners,
 			$this->discoveredTable__eventBeingDispatched,
 		);
 
+		$this->discoveredTable__eventListeners           = [];
 		$this->discoveredTable__eventListenersDispatched = [];
 	}
 
@@ -219,26 +219,28 @@ trait TableExtractor {
 		return $countUptoCurrent > $offsetCount ? $countUptoCurrent - $offsetCount : $countUptoCurrent;
 	}
 
-	/** @return ?Closure(TableTraced): void */
-	private function getEventListener( TableTraced $event ): ?Closure {
+	/** @return ?array<Closure(TableTraced): void> */
+	private function getEventListenersFor( TableTraced $event ): ?array {
 		[$nodeName, $when] = $event->scope();
 
 		return $this->discoveredTable__eventListeners[ $nodeName ][ $when ] ?? null;
 	}
 
-	/** @param Closure(TableTraced): void $listenTo */
-	private function tryListeningToDispatchedEvent( TableTraced $event, Closure $listenTo ): void {
+	/** @param array<Closure(TableTraced): void> $listeners */
+	private function tryListeningToDispatchedEvent( TableTraced $event, array $listeners ): void {
 		try {
 			$this->discoveredTable__eventBeingDispatched = $event;
 
-			$listenTo( $event );
+			foreach ( $listeners as $listenTo ) {
+				$listenTo( $event );
+			}
 		} finally {
 			unset( $this->discoveredTable__eventBeingDispatched );
 		}
 	}
 
 	private function dispatchEvent( TableTraced $event ): void {
-		$listener            = $this->getEventListener( $event );
+		$listeners           = $this->getEventListenersFor( $event );
 		$id                  = $this->currentTable__id;
 		[$tagName, $eventAt] = $event->scope();
 		$whenDispatched      = $this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] ?? [
@@ -249,7 +251,7 @@ trait TableExtractor {
 			],
 		];
 
-		if ( ! $listener ) {
+		if ( ! $listeners ) {
 			$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
 			return;
@@ -258,7 +260,7 @@ trait TableExtractor {
 		$whenDispatched[1][ $eventAt ]                                      = true;
 		$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
-		$this->tryListeningToDispatchedEvent( $event, $listener );
+		$this->tryListeningToDispatchedEvent( $event, $listeners );
 	}
 
 	private function dispatchEventForTable( int|string $id, string|DOMElement $body ): void {
@@ -302,21 +304,18 @@ trait TableExtractor {
 		];
 	}
 
-	/**
-	 * @return array{
-	 *   0 :  bool,
-	 *   1 : bool,
-	 *   2 :  int,
-	 *   3 :? Transformer<static, CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>
-	 * }
-	 */
+	/** @return array{0:bool,1:bool,2:int} */
 	private function useCurrentTableBodyDetails(): array {
 		return [
 			/* headInspected */ false,
 			/* bodyStarted   */ false,
 			/* position      */ $this->currentIteration__rowCount[ $this->currentTable__id ] = 0,
-			/* transformer   */ $this->discoveredTable__transformers[ Table::Row->value ] ?? null,
 		];
+	}
+
+	/** @return ?Transformer<static,CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>> */
+	private function getTransformerOf( Table $structure ): ?Transformer {
+		return $this->discoveredTable__transformers[ $structure->value ] ?? null;
 	}
 
 	private function shouldTraceTableStructure( Table $structure ): bool {

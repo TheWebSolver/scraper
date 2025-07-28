@@ -220,8 +220,8 @@ trait HtmlTableFromString {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( array $body ): Iterator {
-		[$headInspected, $bodyStarted, $position, $transformer] = $this->useCurrentTableBodyDetails();
-		[$tbodyNode, $rows]                                     = $body;
+		[$headInspected, $bodyStarted, $position] = $this->useCurrentTableBodyDetails();
+		[$tbodyNode, $rows]                       = $body;
 
 		foreach ( $rows as $row ) {
 			[$node, $attribute, $content] = $row;
@@ -259,7 +259,7 @@ trait HtmlTableFromString {
 				$bodyStarted = true;
 			}
 
-			$content = $transformer?->transform( $columns, $this ) ?? $columns;
+			$content = $this->getTransformerOf( Table::Row )?->transform( $columns, $this ) ?? $columns;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,
