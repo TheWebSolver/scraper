@@ -7,7 +7,7 @@ interface AccentedIndexableItem extends Indexable, AccentedCharacter {
 	/**
 	 * Gets iterable items' indices which contains accented characters.
 	 *
-	 * This must return all or subset of `Indexable::getItemsIndices()`.
+	 * This must return all or subset of `Indexable::getIndicesSource()`.
 	 *
 	 * @return list<string>
 	 */

@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
+use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
@@ -50,7 +51,10 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 			[
 				new class() extends StringTableTracerWithAccents implements Validatable {
 					public function __construct() {
-						$this->setCollectorSource( new CollectUsing( DevDetails::class ) );
+						$this->addEventListener(
+							Table::Row,
+							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) )
+						);
 					}
 
 					public function validate( mixed $data ): void {
@@ -115,7 +119,10 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 			[
 				new class() extends NodeTableTracerWithAccents implements Validatable {
 					public function __construct() {
-						$this->setCollectorSource( new CollectUsing( DevDetails::class ) );
+						$this->addEventListener(
+							Table::Row,
+							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) )
+						);
 					}
 
 					public function validate( mixed $data ): void {

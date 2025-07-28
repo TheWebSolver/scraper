@@ -68,7 +68,7 @@ class TableScrapingServiceTest extends TestCase {
 			$service->getTableTracer()->addEventListener(
 				Table::Row,
 				static function ( TableTraced $event ) {
-					$event->tracer->setItemsIndices(
+					$event->tracer->setIndicesSource(
 						CollectUsing::listOf(
 							// @phpstan-ignore-next-line
 							$event->tracer->getTableHead()[ $event->tracer->getTableId( current: true ) ]->toArray()
@@ -116,7 +116,7 @@ class TableScrapingServiceTest extends TestCase {
 			$service->getTableTracer()->addEventListener(
 				Table::Row,
 				static function ( TableTraced $event ) {
-					$event->tracer->setItemsIndices(
+					$event->tracer->setIndicesSource(
 						// @phpstan-ignore-next-line
 						CollectUsing::listOf( $event->tracer->getTableHead()[ $event->tracer->getTableId( true ) ]->toArray() )
 					);
@@ -252,7 +252,12 @@ class TableScrapingServiceTest extends TestCase {
 			'String: Using method call' => [
 				new class() extends StringTableTracerWithAccents {
 					public function __construct() {
-						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address ) );
+						$this->addEventListener(
+							Table::Row,
+							static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
+								new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )
+							)
+						);
 					}
 				},
 				[
@@ -263,7 +268,12 @@ class TableScrapingServiceTest extends TestCase {
 			'Node: Using method call' => [
 				new class() extends NodeTableTracerWithAccents {
 					public function __construct() {
-						$this->setCollectorSource( new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address ) );
+						$this->addEventListener(
+							Table::Row,
+							static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
+								new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )
+							)
+						);
 					}
 				},
 				[

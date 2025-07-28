@@ -243,7 +243,7 @@ class TableExtractorTest extends TestCase {
 
 		$stringTracer->addEventListener(
 			Table::Row,
-			static fn ( TableTraced $e ) => $e->tracer->setItemsIndices(
+			static fn ( TableTraced $e ) => $e->tracer->setIndicesSource(
 				// @phpstan-ignore-next-line
 				CollectUsing::listOf( $e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray() )
 			)
@@ -310,23 +310,23 @@ class TableExtractorTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideCasesWhenEventListenerExceptionIsThrown(): array {
 		$collection = CollectUsing::listOf( [ 'exception', 'thrown', 'test' ] );
-		$listener   = static fn( TableTraced $e ) => $e->tracer->setItemsIndices( $collection );
+		$listener   = static fn( TableTraced $e ) => $e->tracer->setIndicesSource( $collection );
 		$table      = DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'table.html';
 
 		return [
-			[ 'setItemsIndices', [ $collection ], new NodeTableTracer() ],
-			[ 'setItemsIndices', [ $collection ], new StringTableTracer() ],
+			[ 'setIndicesSource', [ $collection ], new NodeTableTracer() ],
+			[ 'setIndicesSource', [ $collection ], new StringTableTracer() ],
 			[
 				'inferTableFrom',
 				[ $table ],
 				( new NodeTableTracer() )->addEventListener( Table::TBody, $listener ),
-				'setItemsIndices',
+				'setIndicesSource',
 			],
 			[
 				'inferTableFrom',
 				[ $table ],
 				( new NodeTableTracer() )->addEventListener( Table::THead, $listener, EventAt::End ),
-				'setItemsIndices',
+				'setIndicesSource',
 			],
 		];
 	}
@@ -340,7 +340,7 @@ class TableExtractorTest extends TestCase {
 			$heads = $e->tracer->getTableHead()[ $id ] ?? false; // Not all tables in table.html have head.
 
 			// @phpstan-ignore-next-line
-			$heads && $e->tracer->setItemsIndices( CollectUsing::listOf( $heads->toArray() ) );
+			$heads && $e->tracer->setIndicesSource( CollectUsing::listOf( $heads->toArray() ) );
 		};
 
 		foreach ( [ new StringTableTracer(), $domTracer = new NodeTableTracer() ] as $tracer ) {
@@ -369,7 +369,7 @@ class TableExtractorTest extends TestCase {
 
 			$tracer->addEventListener(
 				Table::Row,
-				static fn( TableTraced $e ) => $e->tracer->setItemsIndices( CollectUsing::listOf( [ 'finalAddress' ] ) )
+				static fn( TableTraced $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( [ 'finalAddress' ] ) )
 			);
 
 			$devTable->next();
@@ -381,7 +381,7 @@ class TableExtractorTest extends TestCase {
 			);
 			$this->assertSame(
 				$tracer instanceof NodeTableTracer ? [ 'finalAddress' ] : $firstTableColumNames,
-				$tracer->getItemsIndices(),
+				$tracer->getIndicesSource()?->items,
 				$tracer::class . ' -> Column name of nested table inside third <tr> of first table has one column discoverable by Node Tracer'
 			);
 
@@ -594,7 +594,7 @@ class TableExtractorTest extends TestCase {
 			return $text;
 		};
 
-		$listener = static fn( TableTraced $e ) => $e->tracer->setItemsIndices(
+		$listener = static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
 			// @phpstan-ignore-next-line
 			CollectUsing::listOf( $e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray() )
 		);

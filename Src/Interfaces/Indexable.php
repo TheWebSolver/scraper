@@ -11,23 +11,21 @@ interface Indexable {
 	public const INVALID_COUNT = 'Dataset count invalid. It must have atleast "%1$s" items mappable with keys: "%2$s".';
 
 	/**
-	 * Sets indices to be used as collected items' keys.
+	 * Sets source to be used as collected items' keys.
 	 *
 	 * If this method is used, remaining items after last mappable key must be omitted from being collected.
 	 */
-	public function setItemsIndices( CollectUsing $source ): void;
+	public function setIndicesSource( CollectUsing $collection ): void;
 
 	/**
-	 * Gets indices to be used as collected items' keys.
-	 *
-	 * @return list<string>
+	 * Gets source used as collected items' keys.
 	 */
-	public function getItemsIndices(): array;
+	public function getIndicesSource(): ?CollectUsing;
 
 	/**
 	 * Gets current iteration index of an item being collected.
 	 *
-	 * This must return one of the indices, if provided, with `$this->setItemsIndices()`.
+	 * This must return one of the indices, if provided, with `$this->setIndicesSource()`.
 	 * This must return null after current iteration is complete.
 	 */
 	public function getCurrentItemIndex(): ?string;

@@ -46,11 +46,6 @@ interface TableTracer extends Indexable {
 	public function addEventListener( Table $structure, callable $callback, EventAt $eventAt = EventAt::Start ): static;
 
 	/**
-	 * Sets the source for mapping table column index keys, if any.
-	 */
-	public function setCollectorSource( CollectUsing $source ): void;
-
-	/**
 	 * Infers table(s) from given HTML content source.
 	 *
 	 * @param string|DOMElement $source    Either a HTML source or a table DOMElement.
@@ -106,11 +101,6 @@ interface TableTracer extends Indexable {
 	 * @return array<Iterator<int,ArrayObject<array-key,TColumnReturn>>>
 	 */
 	public function getTableData(): array;
-
-	/**
-	 * Gets the source for mapping table column index keys, if any.
-	 */
-	public function getCollectorSource(): ?CollectUsing;
 
 	/**
 	 * Ensures whether transformer has been added for the given table structure.

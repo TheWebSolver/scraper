@@ -241,6 +241,7 @@ trait HtmlTableFromNode {
 			}
 
 			if ( ! $bodyStarted ) {
+				$this->hydrateIndicesSourceFromAttribute();
 				$this->dispatchEvent( $event = new TableTraced( Table::Row, EventAt::Start, $body, $this ) );
 
 				// Although not recommended, it is entirely possible to stop inferring further table rows.
@@ -248,9 +249,6 @@ trait HtmlTableFromNode {
 				if ( $event->shouldStopTrace() ) {
 					break;
 				}
-
-				// Silently use collectables as item indices if not already set by above event listener.
-				$this->getItemsIndices() || $this->setItemIndicesFrom( $this->getCollectorSource() );
 
 				$bodyStarted = true;
 			}

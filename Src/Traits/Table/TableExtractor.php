@@ -56,7 +56,7 @@ trait TableExtractor {
 	private array $discoveredTable__rows = [];
 
 	private int|string $currentTable__id;
-	/** @var array{0:non-empty-array<int,string>,1:array<int,int>}[] Column indexes and offset positions */
+	/** @var CollectUsing[] Column indexes and offset positions */
 	private array $currentTable__columnInfo;
 
 	/** @var int[] */
@@ -95,9 +95,9 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function setItemsIndices( CollectUsing $source ): void {
+	public function setIndicesSource( CollectUsing $collection ): void {
 		if ( $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
-			$this->setItemIndicesFrom( $source );
+			$this->registerColumnIndicesSource( $collection );
 
 			return;
 		}
@@ -124,9 +124,8 @@ trait TableExtractor {
 		return $this->discoveredTable__rows;
 	}
 
-	/** @return array<int,string> */
-	public function getItemsIndices(): array {
-		return $this->currentTable__columnInfo[ $this->currentTable__id ][0] ?? [];
+	public function getIndicesSource(): ?CollectUsing {
+		return $this->currentTable__columnInfo[ $this->currentTable__id ?? null ] ?? null;
 	}
 
 	public function getCurrentItemIndex(): ?string {
@@ -180,12 +179,15 @@ trait TableExtractor {
 		return true;
 	}
 
-	/** @param ?CollectUsing $source */
-	private function setItemIndicesFrom( ?CollectUsing $source ): void {
-		$source ??= $this->collectableFromAttribute()->getCollectorSource();
-		$items    = $source?->items;
+	private function hydrateIndicesSourceFromAttribute(): void {
+		$this->getIndicesSource() || $this->registerColumnIndicesSource();
+	}
 
-		$items && ( $this->currentTable__columnInfo[ $this->currentTable__id ] = [ $items, $source->offsets ] );
+	/** @param ?CollectUsing $collection */
+	private function registerColumnIndicesSource( ?CollectUsing $collection = null ): void {
+		$collection ??= $this->collectableFromAttribute();
+
+		$collection && ( $this->currentTable__columnInfo[ $this->currentTable__id ] = $collection );
 	}
 
 	private function tableColumnsExistInBody( string|DOMElement $node ): bool {
@@ -196,7 +198,7 @@ trait TableExtractor {
 	}
 
 	private function shouldSkipTableColumnIn( int $position ): bool {
-		$offsetPositions = $this->currentTable__columnInfo[ $this->currentTable__id ][1] ?? [];
+		$offsetPositions = $this->getIndicesSource()->offsets ?? [];
 
 		return $offsetPositions && in_array( $position, $offsetPositions, true );
 	}
@@ -208,11 +210,11 @@ trait TableExtractor {
 			return null;
 		}
 
-		if ( ! $column = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? null ) {
+		if ( ! $column = $this->getIndicesSource() ) {
 			return $countUptoCurrent;
 		}
 
-		$offsetCount = count( $column[1] );
+		$offsetCount = count( $column->offsets ?? [] );
 
 		return $countUptoCurrent > $offsetCount ? $countUptoCurrent - $offsetCount : $countUptoCurrent;
 	}
@@ -281,10 +283,10 @@ trait TableExtractor {
 
 	/** @return array{0:array<int,string>,1:?int,2:int,3:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
-		$columns = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? [];
+		$columns = $this->getIndicesSource();
 
 		return [
-			$columnNames = $columns[0] ?? [],
+			$columnNames = $columns->items ?? [],
 			/* lastPosition */ array_key_last( $columnNames ),
 			/* skippedNodes */ $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
 			/* transformer  */ $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem(),

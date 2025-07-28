@@ -84,7 +84,7 @@ class MarshallTableRow implements Transformer {
 			return;
 		}
 
-		$actualCount = count( $names = $tracer->getItemsIndices() ) ?: $dataCount;
+		$actualCount = count( $names = ( $tracer->getIndicesSource()->items ?? [] ) ) ?: $dataCount;
 
 		$tracer->getCurrentIterationCount( Table::Column ) === $actualCount
 			|| ScraperError::withSourceMsg( $this->invalidCountMsg, $actualCount, implode( '", "', $names ) );
