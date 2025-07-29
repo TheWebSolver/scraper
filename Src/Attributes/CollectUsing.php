@@ -24,7 +24,7 @@ final readonly class CollectUsing {
 	 * @param BackedEnum<string>|string|null   $subsetCaseOrValueOrOffset Accepts subsets of enum cases or cases in different order than defined in the enum.
 	 *                                                                    Cases passed must be in sequential order they gets mapped to items being collected.
 	 *                                                                    If an in-between case/item needs to be omitted, `null` must be passed to offset it.
-	 * @throws InvalidSource When `$enumClass` is not a full qualified enum classname.
+	 * @throws InvalidSource When `$enumClass` is not a enum classname, enum has no case defined, or all `subsetCaseOrValueOrOffset` are null.
 	 * @no-named-arguments
 	 */
 	public function __construct(
@@ -41,13 +41,15 @@ final readonly class CollectUsing {
 	}
 
 	/**
+	 * Gets collection instance when only arbitrary collectable names array is known without any enum class.
+	 *
 	 * @param non-empty-list<?string> $names   Names used for collection. These must be passed in sequential order as
 	 *                                         they gets mapped to items being collected. If an in-between item needs
 	 *                                         to be omitted, `null` must be passed to offset it. Be aware that `null`
 	 *                                         is forbidden when using in combination with `$compute` set as `false`.
 	 * @param bool                    $compute When this is `false`, `$names` are set as _all_ property value and
 	 *                                         _items_ property value without computing any in-between offsets.
-	 * @throws InvalidSource When given `$indexKey` not found in `$names` or when `null` passed with `$compute` as `false`.
+	 * @throws InvalidSource When `$names` empty, `null` passed with `$compute` as `false`, or `$indexKey` not found in `$names`.
 	 */
 	public static function listOf( array $names, ?string $indexKey = null, bool $compute = false ): self {
 		! ! $names || throw InvalidSource::nonCollectableItem( 'because given list is empty. Provide at-least one' );
@@ -57,25 +59,19 @@ final readonly class CollectUsing {
 			names: self::mapNullToString( ...$names )
 		);
 
-		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
+		! $compute && in_array( null, $names, true ) && throw InvalidSource::nonCollectableItem(
+			reason: 'because when computation is disabled, "null" (offset) must not be passed as',
+			names: self::mapNullToString( ...$names )
+		);
 
-		if ( $compute ) {
-			$computed = self::doComputationFor( $_this, ...$names );
-		} else {
-			in_array( null, $names, true ) && throw InvalidSource::nonCollectableItem(
-				reason: 'because when computation is disabled, "null" (offset) must not be passed as',
-				names: self::mapNullToString( ...$names )
-			);
-		}
+		$_this    = ( $reflection = new ReflectionClass( __CLASS__ ) )->newInstanceWithoutConstructor();
+		$computed = $compute ? $_this->findOffsetsIn( ...$names ) : [ $names, $names, [] ];
+		$props    = get_object_vars( $_this );
 
-		[$all, $items, $offsets] = $computed ?? [ $names, $names, [] ];
+		[$props['all'], $props['items'], $props['offsets']] = $computed;
 
-		$reflection->getProperty( 'indexKey' )->setValue( $_this, $indexKey );
-		$reflection->getProperty( 'all' )->setValue( $_this, $all );
-		$reflection->getProperty( 'items' )->setValue( $_this, $items );
-		$reflection->getProperty( 'offsets' )->setValue( $_this, $offsets );
-
-		return $_this;
+		// phpcs:ignore -- We know what we are doing with array. Its OK!
+		return $_this->withProperties( [ ...$props, ...compact( 'indexKey' ) ], $reflection );
 	}
 
 	/**
@@ -89,21 +85,11 @@ final readonly class CollectUsing {
 			return $this;
 		}
 
+		$reflection                          = new ReflectionClass( __CLASS__ );
 		$props                               = get_object_vars( $this );
 		[$props['items'], $props['offsets']] = $this->recomputationOf( ...$caseOrValue );
 
-		// The "enumClass" property doesn't exist or uninitialized only if instantiated statically.
-		if ( array_key_exists( 'enumClass', $props ) && null === $props['enumClass'] ) {
-			unset( $props['enumClass'] );
-		}
-
-		$_this = ( $reflection = new ReflectionClass( self::class ) )->newInstanceWithoutConstructor();
-
-		foreach ( $props as $name => $value ) {
-			$reflection->getProperty( $name )->setValue( $_this, $value );
-		}
-
-		return $_this;
+		return $reflection->newInstanceWithoutConstructor()->withProperties( $props, $reflection );
 	}
 
 	/**
@@ -113,7 +99,7 @@ final readonly class CollectUsing {
 	 * The order cannot be changed here. It only computes offsets between items in
 	 * same sequence they were registered at the time the class was instantiated.
 	 *
-	 * Consequently, the order in which `$subsetCaseOrValue` passed does not matter.
+	 * Consequently, the order in which `$subsetCaseOrValue` is passed does not matter.
 	 *
 	 * @param BackedEnum<string>|string ...$subsetCaseOrValue
 	 * @return array{0:array<int,string>,1:(string|int)[]} Recomputed items and offset positions.
@@ -135,6 +121,22 @@ final readonly class CollectUsing {
 	/** @return class-string<BackedEnum<string>> */
 	private function enum(): ?string {
 		return $this->enumClass ?? null;
+	}
+
+	/**
+	 * @param array<string,mixed>     $props
+	 * @param ReflectionClass<object> $reflection
+	 */
+	private function withProperties( array $props, ReflectionClass $reflection ): self {
+		if ( ! $this->enum() ) {
+			unset( $props['enumClass'] ); // Not required for statically instantiated collection.
+		}
+
+		foreach ( $props as $name => $value ) {
+			$reflection->getProperty( $name )->setValue( $this, $value );
+		}
+
+		return $this;
 	}
 
 	/**
@@ -162,39 +164,41 @@ final readonly class CollectUsing {
 	 */
 	private function computeFor( BackedEnum|string|null ...$caseOrValueOrOffset ): array {
 		if ( $caseOrValueOrOffset ) {
-			return self::doComputationFor( $this, ...$caseOrValueOrOffset );
+			return $this->findOffsetsIn( ...$caseOrValueOrOffset );
 		}
 
-		$enum     = $this->enumClass;
-		$allItems = array_column( $enum::cases(), 'value' );
+		$caseValues = array_column( $this->enumClass::cases(), 'value' );
 
-		return $allItems ? [ $allItems, $allItems, [] ] : throw InvalidSource::nonCollectableItem(
-			reason: "because given enum \"{$enum}\" does not have any case to use as"
+		return $caseValues ? [ $caseValues, $caseValues, [] ] : throw InvalidSource::nonCollectableItem(
+			reason: "because given enum \"{$this->enumClass}\" does not have any case to use as"
 		);
 	}
 
 	/**
 	 * @param BackedEnum<string>|string|null ...$caseOrValueOrOffset
 	 * @return array{0:list<?string>,1:non-empty-array<int,string>,2:list<int>}
+	 * @throws InvalidSource When all args are null.
 	 * @no-named-arguments
 	 */
-	private static function doComputationFor( self $self, BackedEnum|string|null ...$caseOrValueOrOffset ): array {
-		$items         = $offsets = $all = [];
-		$lastNameFound = false;
+	private function findOffsetsIn( BackedEnum|string|null ...$caseOrValueOrOffset ): array {
+		$items          = $offsets = $all = [];
+		$lastValueFound = false;
 
 		for ( $i = array_key_last( $caseOrValueOrOffset ); $i >= 0; $i-- ) {
-			$name = $caseOrValueOrOffset[ $i ];
+			$value = $caseOrValueOrOffset[ $i ];
 
-			if ( null === $name ) {
-				$all[]                       = null;
-				$lastNameFound && $offsets[] = (int) $i;
+			if ( null === $value ) {
+				$all[]                        = null;
+				$lastValueFound && $offsets[] = (int) $i;
 			} else {
-				$lastNameFound     = true;
-				$items[ (int) $i ] = $all[] = $self->toString( $name );
+				$lastValueFound    = true;
+				$items[ (int) $i ] = $all[] = $this->toString( $value );
 			}
 		}
 
-		$items ?: self::throwComputedAllNull( $self->enum() );
+		$items ?: throw InvalidSource::nonCollectableItem(
+			reason: "{$this->pre()}. All given arguments are \"null\" and none of them are valid"
+		);
 
 		return [ array_reverse( $all ), array_reverse( $items, preserve_keys: true ), array_reverse( $offsets ) ];
 	}
@@ -205,16 +209,13 @@ final readonly class CollectUsing {
 	}
 
 	private function throwRecomputationMismatch( string ...$values ): never {
-		$prefix = 'during re-computation' . ( ( $enum = $this->enum() ) ? " with enum \"{$enum}\"" : '' );
-		$names  = implode( '", "', $this->items );
+		$items  = implode( '", "', $this->items );
 		$plural = 1 === count( $this->items ) ? '' : 's';
 
-		throw InvalidSource::nonCollectableItem( "{$prefix}. Allowed value{$plural}: [\"{$names}\"]. Given", $values );
+		throw InvalidSource::nonCollectableItem( "{$this->pre( 're-' )}. Allowed value{$plural}: [\"{$items}\"]. Given", $values );
 	}
 
-	private static function throwComputedAllNull( ?string $enumClass ): never {
-		$prefix = 'during computation' . ( $enumClass ? " with enum \"{$enumClass}\"" : '' );
-
-		throw InvalidSource::nonCollectableItem( "{$prefix}. All given arguments are \"null\" and none of them are valid" );
+	private function pre( string $re = '' ): string {
+		return "during {$re}computation" . ( ( $enum = $this->enum() ) ? " with enum \"{$enum}\"" : '' );
 	}
 }
