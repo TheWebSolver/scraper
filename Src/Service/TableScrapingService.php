@@ -26,8 +26,9 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 		return $this->tracer;
 	}
 
-	public function parse( string $content ): Iterator {
-		yield from $this->currentTableIterator( $content );
+	public function flush(): void {
+		parent::flush();
+		$this->getTableTracer()->resetTableHooks();
 	}
 
 	/** @return Iterator<array-key,ArrayObject<array-key,TInferredColumn>> */

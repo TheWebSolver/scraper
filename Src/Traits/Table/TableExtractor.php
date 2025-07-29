@@ -146,13 +146,10 @@ trait TableExtractor {
 	}
 
 	public function resetTableHooks(): void {
-		unset(
-			$this->discoveredTable__transformers,
-			$this->discoveredTable__eventBeingDispatched,
-		);
+		unset( $this->discoveredTable__transformers );
 
-		$this->discoveredTable__eventListeners           = [];
-		$this->discoveredTable__eventListenersDispatched = [];
+		$this->discoveredTable__eventBeingDispatched     = null;
+		$this->discoveredTable__eventListenersDispatched = $this->discoveredTable__eventListeners = [];
 	}
 
 	public function resetTableTraced(): void {
