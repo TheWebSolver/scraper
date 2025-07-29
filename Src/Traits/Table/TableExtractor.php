@@ -16,13 +16,15 @@ use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
+use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 
 /** @template TColumnReturn */
 trait TableExtractor {
-	/** @placeholder `1:` static classname, `2:` throwing methodname, `3:` Table enum, `4:` Table case, `5`: EventAt enum, `6`: EventAt case, `7:` reason. */
-	final public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s::%2$s()". Use event listener for "%3$s::%4$s" and "%5$s::%6$s" to %7$s';
+	use CollectorSource;
 
 	private bool $shouldPerform__allTableDiscovery = false;
 
@@ -35,9 +37,9 @@ trait TableExtractor {
 	 * }
 	 */
 	private array $discoveredTable__transformers;
-	/** @var array<value-of<Table>,array{Start?:Closure(TableTraced): void,End?:Closure(TableTraced): void}> */
-	private array $discoveredTable__eventListeners;
 	private ?TableTraced $discoveredTable__eventBeingDispatched = null;
+	/** @var array<value-of<Table>,array{Start?:array<Closure(TableTraced): void>,End?:array<Closure(TableTraced): void>}> */
+	private array $discoveredTable__eventListeners = [];
 	/** @var array<array-key,array<value-of<Table>,array{0:bool,1:array<string,bool>}>> */
 	private array $discoveredTable__eventListenersDispatched = [];
 
@@ -54,7 +56,7 @@ trait TableExtractor {
 	private array $discoveredTable__rows = [];
 
 	private int|string $currentTable__id;
-	/** @var array{0:array<int,string>,1:array<int,int>,2:int}[] Names, offsets, & last index */
+	/** @var CollectUsing[] Column indexes and offset positions */
 	private array $currentTable__columnInfo;
 
 	/** @var int[] */
@@ -71,35 +73,38 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function traceWithout( Table ...$targets ): static {
-		$this->discoveredTable__excludedStructures = $targets;
+	public function traceWithout( Table ...$structures ): static {
+		$this->discoveredTable__excludedStructures = $structures;
 
 		return $this;
 	}
 
-	public function addTransformer( Table $for, Transformer $transformer ): static {
-		$this->discoveredTable__transformers[ $for->value ] = $transformer;
+	public function addTransformer( Table $structure, Transformer $transformer ): static {
+		$this->discoveredTable__transformers[ $structure->value ] = $transformer;
 
 		return $this;
 	}
 
-	public function addEventListener( Table $for, callable $callback, EventAt $eventAt = EventAt::Start ): static {
-		$this->discoveredTable__eventListeners[ $for->value ][ $eventAt->name ] = $callback( ... );
+	public function hasTransformer( Table $structure ): bool {
+		return isset( $this->discoveredTable__transformers[ $structure->value ] );
+	}
+
+	public function addEventListener( Table $structure, callable $callback, EventAt $eventAt = EventAt::Start ): static {
+		$this->discoveredTable__eventListeners[ $structure->value ][ $eventAt->name ][] = $callback( ... );
 
 		return $this;
 	}
 
-	public function setItemsIndices( array $keys, int ...$offset ): void {
-		if ( ! $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
-			$placeholders = [ static::class, __FUNCTION__, Table::class, Table::Row->name, EventAt::class, EventAt::Start->name ];
+	public function setIndicesSource( CollectUsing $collection ): void {
+		if ( $this->isInvokedByEventListenerOf( Table::Row, EventAt::Start ) ) {
+			$this->registerColumnIndicesSource( $collection );
 
-			throw new ScraperError(
-				sprintf( self::USE_EVENT_LISTENER, ...[ ...$placeholders, 'set column names.' ] )
-			);
+			return;
 		}
 
-		$id                                    = $this->getTableId( true );
-		$this->currentTable__columnInfo[ $id ] = Normalize::listWithOffset( $keys, $offset );
+		$values = [ Normalize::case( Table::Row ), Normalize::case( EventAt::Start ), 'set column names.' ];
+
+		$this->throwEventListenerNotUsed( __FUNCTION__, ...$values );
 	}
 
 	/** @return ($current is true ? int|string : (int|string)[]) */
@@ -119,9 +124,8 @@ trait TableExtractor {
 		return $this->discoveredTable__rows;
 	}
 
-	/** @return array<int,string> */
-	public function getItemsIndices(): array {
-		return $this->currentTable__columnInfo[ $this->currentTable__id ][0] ?? [];
+	public function getIndicesSource(): ?CollectUsing {
+		return $this->currentTable__columnInfo[ $this->currentTable__id ?? null ] ?? null;
 	}
 
 	public function getCurrentItemIndex(): ?string {
@@ -142,13 +146,10 @@ trait TableExtractor {
 	}
 
 	public function resetTableHooks(): void {
-		unset(
-			$this->discoveredTable__transformers,
-			$this->discoveredTable__eventListeners,
-			$this->discoveredTable__eventBeingDispatched,
-		);
+		unset( $this->discoveredTable__transformers );
 
-		$this->discoveredTable__eventListenersDispatched = [];
+		$this->discoveredTable__eventBeingDispatched     = null;
+		$this->discoveredTable__eventListenersDispatched = $this->discoveredTable__eventListeners = [];
 	}
 
 	public function resetTableTraced(): void {
@@ -175,6 +176,30 @@ trait TableExtractor {
 		return true;
 	}
 
+	private function hydrateIndicesSourceFromAttribute(): void {
+		$this->getIndicesSource() || $this->registerColumnIndicesSource();
+	}
+
+	/** @param ?CollectUsing $collection */
+	private function registerColumnIndicesSource( ?CollectUsing $collection = null ): void {
+		$collection ??= $this->collectableFromAttribute();
+
+		$collection && ( $this->currentTable__columnInfo[ $this->currentTable__id ] = $collection );
+	}
+
+	private function tableColumnsExistInBody( string|DOMElement $node ): bool {
+		return match ( true ) {
+			$node instanceof DOMElement => ! ! $node->getElementsByTagName( 'td' )->length,
+			default                     => str_contains( $node, '<td' ) && str_contains( $node, '</td>' ),
+		};
+	}
+
+	private function shouldSkipTableColumnIn( int $position ): bool {
+		$offsetPositions = $this->getIndicesSource()->offsets ?? [];
+
+		return $offsetPositions && in_array( $position, $offsetPositions, true );
+	}
+
 	private function getCurrentIterationColumnCount(): ?int {
 		$countUptoCurrent = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
 
@@ -182,35 +207,37 @@ trait TableExtractor {
 			return null;
 		}
 
-		if ( ! $column = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? null ) {
+		if ( ! $column = $this->getIndicesSource() ) {
 			return $countUptoCurrent;
 		}
 
-		$offsetCount = count( $column[1] );
+		$offsetCount = count( $column->offsets ?? [] );
 
 		return $countUptoCurrent > $offsetCount ? $countUptoCurrent - $offsetCount : $countUptoCurrent;
 	}
 
-	/** @return ?Closure(TableTraced): void */
-	private function getEventListener( TableTraced $event ): ?Closure {
+	/** @return ?array<Closure(TableTraced): void> */
+	private function getEventListenersFor( TableTraced $event ): ?array {
 		[$nodeName, $when] = $event->scope();
 
 		return $this->discoveredTable__eventListeners[ $nodeName ][ $when ] ?? null;
 	}
 
-	/** @param Closure(TableTraced): void $listenTo */
-	private function tryListeningToDispatchedEvent( TableTraced $event, Closure $listenTo ): void {
+	/** @param array<Closure(TableTraced): void> $listeners */
+	private function tryListeningToDispatchedEvent( TableTraced $event, array $listeners ): void {
 		try {
 			$this->discoveredTable__eventBeingDispatched = $event;
 
-			$listenTo( $event );
+			foreach ( $listeners as $listenTo ) {
+				$listenTo( $event );
+			}
 		} finally {
 			unset( $this->discoveredTable__eventBeingDispatched );
 		}
 	}
 
 	private function dispatchEvent( TableTraced $event ): void {
-		$listener            = $this->getEventListener( $event );
+		$listeners           = $this->getEventListenersFor( $event );
 		$id                  = $this->currentTable__id;
 		[$tagName, $eventAt] = $event->scope();
 		$whenDispatched      = $this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] ?? [
@@ -221,7 +248,7 @@ trait TableExtractor {
 			],
 		];
 
-		if ( ! $listener ) {
+		if ( ! $listeners ) {
 			$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
 			return;
@@ -230,7 +257,7 @@ trait TableExtractor {
 		$whenDispatched[1][ $eventAt ]                                      = true;
 		$this->discoveredTable__eventListenersDispatched[ $id ][ $tagName ] = $whenDispatched;
 
-		$this->tryListeningToDispatchedEvent( $event, $listener );
+		$this->tryListeningToDispatchedEvent( $event, $listeners );
 	}
 
 	private function dispatchEventForTable( int|string $id, string|DOMElement $body ): void {
@@ -241,8 +268,8 @@ trait TableExtractor {
 		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::Start, $body, $this ) );
 	}
 
-	private function isInvokedByEventListenerOf( Table $structure, EventAt $when ): bool {
-		return $this->discoveredTable__eventBeingDispatched?->isTargeted( $when, $structure ) ?? false;
+	private function isInvokedByEventListenerOf( Table $structure, EventAt $eventAt ): bool {
+		return $this->discoveredTable__eventBeingDispatched?->isTargeted( $eventAt, $structure ) ?? false;
 	}
 
 	/** @return array{0:?bool,1:?array<string,bool>} **0:** Whether event was stopped, **1:** EventAt */
@@ -253,14 +280,13 @@ trait TableExtractor {
 		return $listeners[ $id ][ $structure->value ] ?? [ null, null ];
 	}
 
-	/** @return array{0:array<int,string>,1:array<int,int>,2:?int,3:int,4:Transformer<static,TColumnReturn>} */
+	/** @return array{0:array<int,string>,1:?int,2:int,3:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
-		$columns = $this->currentTable__columnInfo[ $this->currentTable__id ] ?? [];
+		$columns = $this->getIndicesSource();
 
 		return [
-			/* columnNames  */ $columns[0] ?? [],
-			/* offset       */ $columns[1] ?? [],
-			/* lastPosition */ $columns[2] ?? null,
+			$columnNames = $columns->items ?? [],
+			/* lastPosition */ array_key_last( $columnNames ),
 			/* skippedNodes */ $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
 			/* transformer  */ $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem(),
 		];
@@ -275,23 +301,22 @@ trait TableExtractor {
 		];
 	}
 
-	/**
-	 * @return array{
-	 *   0 :  bool,
-	 *   1 :  int,
-	 *   2 :? Transformer<static, CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>
-	 * }
-	 */
+	/** @return array{0:bool,1:bool,2:int} */
 	private function useCurrentTableBodyDetails(): array {
 		return [
 			/* headInspected */ false,
+			/* bodyStarted   */ false,
 			/* position      */ $this->currentIteration__rowCount[ $this->currentTable__id ] = 0,
-			/* transformer   */ $this->discoveredTable__transformers[ Table::Row->value ] ?? null,
 		];
 	}
 
-	private function shouldTraceTableStructure( Table $target ): bool {
-		return ! in_array( $target, $this->discoveredTable__excludedStructures, strict: true );
+	/** @return ?Transformer<static,CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>> */
+	private function getTransformerOf( Table $structure ): ?Transformer {
+		return $this->discoveredTable__transformers[ $structure->value ] ?? null;
+	}
+
+	private function shouldTraceTableStructure( Table $structure ): bool {
+		return ! in_array( $structure, $this->discoveredTable__excludedStructures, strict: true );
 	}
 
 	private function hasColumnReachedAtLastPosition( int $currentPosition, ?int $lastPosition ): bool {
@@ -353,5 +378,11 @@ trait TableExtractor {
 	private function registerCurrentIterationTableColumn( ?string $name, int $count ): void {
 		$this->currentIteration__columnCount[ $this->currentTable__id ] = $count;
 		$name && $this->currentIteration__columnName                    = $name;
+	}
+
+	private function throwEventListenerNotUsed( string $methodName, string ...$placeholders ): never {
+		$method = static::class . '::' . $methodName;
+
+		throw new ScraperError( sprintf( TableTracer::USE_EVENT_LISTENER, $method, ...$placeholders ) );
 	}
 }

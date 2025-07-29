@@ -23,11 +23,27 @@ trait ScraperSource {
 		);
 	}
 
-	/** @param ReflectionClass<static> $reflection */
-	final protected function sourceFromAttribute( ReflectionClass $reflection ): static {
-		( $attribute = ( $reflection->getAttributes( ScrapeFrom::class )[0] ?? null ) )
-			&& ( $this->scraperSource = $attribute->newInstance() );
+	/**
+	 * Registers scraper source via the class attribute.
+	 *
+	 * However, this will never override an already existing scraper source instance.
+	 * Usually, this might happen with constructor injection & using setter method.
+	 *
+	 * @see ScraperSource::setScraperSource()
+	 */
+	final protected function sourceFromAttribute(): static {
+		if ( $this->scraperSource ?? false ) {
+			return $this;
+		}
+
+		$attribute = ( new ReflectionClass( static::class ) )->getAttributes( ScrapeFrom::class )[0] ?? null;
+
+		$attribute && ( $this->scraperSource = $attribute->newInstance() );
 
 		return $this;
+	}
+
+	final protected function setScraperSource( ScrapeFrom $source ): void {
+		$this->scraperSource = $source;
 	}
 }

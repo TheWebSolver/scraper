@@ -3,6 +3,7 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Helper;
 
+use UnitEnum;
 use BackedEnum;
 
 class Normalize {
@@ -124,5 +125,9 @@ class Normalize {
 		);
 
 		return [ $matched, $tableColumns ];
+	}
+
+	public static function case( UnitEnum $enumCase ): string {
+		return $enumCase::class . '::' . $enumCase->name;
 	}
 }

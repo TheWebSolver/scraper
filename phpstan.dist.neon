@@ -8,9 +8,6 @@ parameters:
 		- Src/
 		- Tests/
 	ignoreErrors:
-		- # SplFixedArray is created with a list, so this shouldn't be a problem.
-			identifier: argument.type
-			message: '#^Parameter \#1 .*? of method .*?setItemsIndices\(\) expects list\<string\>\, array\<int\, string\|null\> given\.$#'
 		-
 			identifier: generics.noParent
 			message: '#^Enum .*? has \@implements tag\, but does not implement any interface\.$#'
@@ -18,11 +15,8 @@ parameters:
 			path: Src/Traits/Table/TableExtractor.php
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
-				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array\<int, string\>, array\<int, int\>, int\|null, int, .*?Transformer\<.*?, string\>\} but returns array\{array\<int, string\>, array\<int, int\>, int\|null, 0, .*?Transformer\<.*?, string\>\|.*?MarshallItem\}\.$#'
-		- # Ignore DOMNodeList->getIterator() not being Iterator.
-			path: Src/Traits/Table/HtmlTableFromNode.php
-			identifier: return.type
-			message: '#^Method .*?::getChildNodesIteratorFrom\(\) should return Iterator\<int, DOMNode\> but returns Traversable\<int, DOMNode\>.$#'
+				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array.*?\} but returns array\{.*?MarshallItem\}\.$#'
+				- '#^Method .*?getTransformerOf\(\) should return .*?.$#'
 		-
 			path: Src/Traits/Table/HtmlTableFromString.php
 			identifier: argument.type
@@ -31,10 +25,6 @@ parameters:
 				- '#^Parameter \#1 \$elementList of method .*?\:\:inferTableDataFrom\(\) expects iterable\<\(int\|string\), array\{string, string, string, string, string\}\|DOMNode\>, iterable\<int, DOMNode\|string\>\|non\-empty\-list\<array\{string, string, string, string, string\}\> given\.$#'
 				# $element is a valid DOMElement. PHPStan cannot narrow down type from TableExtractor::isTableColumnStructure().
 				- '#^Parameter \#1 \$element of method .*?:\:registerCurrentTableColumn\(\) expects array\{string, string, string, string, string\}\|DOMElement\|string, array\{string, string, string, string, string\}\|DOMNode given\.$#'
-		- # Ignore default transformers used.
-			path: Src/AccentedSingleTableScraper.php
-			identifier: return.type
-			message: '#^Method .*?AccentedSingleTableScraper\:\:getInjectedOrDefaultTransformers\(\) should return array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>, .*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn>} but returns array\{.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn\>\|.*?MarshallTableRow\<mixed\>, .*?TranslitAccentedIndexableItem\|.*?Transformer\<contravariant static\(.*?AccentedSingleTableScraper\<TColumnReturn\>\), TColumnReturn>\|.*?MarshallItem\}\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/MarshallTableRow.php
 			identifier: return.type
@@ -44,3 +34,7 @@ parameters:
 			identifier: return.type
 			count: 1
 			message: '#^Method .*?Normalize\:\:nodeToMatchedArray\(\) should return array\{int\|false, list\<array\{string, string, string\}\|string\>\} but returns array\{int\<0, max\>\|false, array\<array\<string\>\|string\>\}\.$#'
+		- # Ignore uninitialized property using reflection.
+			path: Src/Attributes/CollectUsing.php
+			count: 1
+			message: '#^Property .*?CollectUsing\:\:\$enumClass .*? is not nullable nor uninitialized.$#'

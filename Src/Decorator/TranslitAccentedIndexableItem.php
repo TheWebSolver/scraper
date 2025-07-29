@@ -18,7 +18,7 @@ class TranslitAccentedIndexableItem extends TranslitAccentedItem implements Tran
 			return false;
 		}
 
-		$targetNames = $scope->indicesWithAccentedCharacters() ?: $scope->getItemsIndices();
+		$targetNames = $scope->indicesWithAccentedCharacters() ?: ( $scope->getIndicesSource()->items ?? [] );
 		$name        = $scope->getCurrentItemIndex() ?? throw new InvalidSource(
 			sprintf( 'Accented item\'s index not found in scoped class: "%s".', $scope::class )
 		);

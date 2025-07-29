@@ -3,10 +3,12 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test;
 
+use UnitEnum;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 
 class NormalizeTest extends TestCase {
@@ -72,6 +74,21 @@ class NormalizeTest extends TestCase {
 			[ [ '3', '4', '7' ], [ 0, 1, 2, 5, 6 ], [ 3 => '3', 4 => '4', 7 => '7' ] ],
 			[ [ Table::Row, Table::Column ], [ 0, 1, 2 ], [ 3 => Table::Row, 4 => Table::Column ] ],
 			[ [ 'one', 'three' ], [ 0, 2, 4, 5, 7 ], [ 1 => 'one', 3 => 'three' ], [ 0, 2 ] ],
+		];
+	}
+
+	#[Test]
+	#[DataProvider( 'provideEnumCaseInstances' )]
+	public function itNormalizesCaseToFullyQualifiedCaseName( UnitEnum $enumCase, string $expected ): void {
+		$this->assertSame( $expected, Normalize::case( $enumCase ) );
+	}
+
+	/** @return mixed[] */
+	public static function provideEnumCaseInstances(): array {
+		return [
+			[ Table::Caption, Table::class . '::Caption' ],
+			[ EventAt::End, EventAt::class . '::End' ],
+			[ Collectable::Three, Collectable::class . '::Three' ],
 		];
 	}
 }

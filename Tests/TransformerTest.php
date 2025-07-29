@@ -7,6 +7,7 @@ use DOMElement;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Error\ValidationFail;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -41,7 +42,7 @@ class TransformerTest extends TestCase {
 
 		$base->expects( $this->once() )
 			->method( 'transform' )
-			->willReturn( 'Develôper' );
+			->willReturn( 'Devel&ocirc;per' );
 
 		$this->assertSame(
 			'Develôper',
@@ -62,7 +63,7 @@ class TransformerTest extends TestCase {
 	/**
 	 * @param class-string<TranslitAccentedItem<AccentedCharacter>|TranslitAccentedIndexableItem> $transformer
 	 * @param class-string<AccentedIndexableItem|AccentedCharacter>                               $scopedClass
-	 * @param ?array{0:string[],1:?string}                                                        $indices
+	 * @param ?array{0:non-empty-list<string>,1:?string}                                          $indices
 	 */
 	#[Test]
 	#[DataProvider( 'provideTranslitSupportedScopes' )]
@@ -90,15 +91,13 @@ class TransformerTest extends TestCase {
 			->willReturn( [ 'ô' => 'o' ] );
 
 		if ( $indices ) {
-			[$keys, $key] = $indices;
-
 			$scope->expects( $this->once() )
-				->method( 'getItemsIndices' )
-				->willReturn( $keys );
+				->method( 'getIndicesSource' )
+				->willReturn( CollectUsing::listOf( ...$indices ) );
 
 			$scope->expects( $this->once() )
 				->method( 'getCurrentItemIndex' )
-				->willReturn( $key );
+				->willReturn( $indices[1] );
 		}
 
 		if ( $throws ) {
@@ -148,8 +147,8 @@ class TransformerTest extends TestCase {
 			);
 
 		$validator->expects( $this->once() )
-			->method( 'getItemsIndices' )
-			->willReturn( [ 'firstIndex', 'secondIndex' ] );
+			->method( 'getIndicesSource' )
+			->willReturn( CollectUsing::listOf( [ 'firstIndex', 'secondIndex' ] ) );
 
 		$validator->expects( $this->once() )
 			->method( 'getCurrentItemIndex' )
@@ -159,5 +158,15 @@ class TransformerTest extends TestCase {
 
 		// @phpstan-ignore-next-line argument.type -- Generics not required for mocking.
 		$this->assertSame( 'Developer', $validatorProxy->transform( 'Devel&ocirc;per', $validator ) );
+	}
+
+	#[Test]
+	public function itThrowsExceptionIfProvidedArrayIsNotNormalizedArray(): void {
+		$stub = $this->createStub( DOMElement::class );
+
+		$this->expectException( InvalidSource::class );
+		$this->expectExceptionMessage( sprintf( MarshallItem::INVALID_ARRAY, $stub::class ) );
+
+		( new MarshallItem() )->transform( [ 'Must have a value in 3rd index' ], $stub );
 	}
 }

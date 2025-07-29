@@ -86,7 +86,7 @@ trait HtmlTableFromString {
 	public function inferTableDataFrom( iterable $elementList ): array {
 		$data = [];
 
-		[$keys, $offset, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
+		[$keys, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
 
 		foreach ( $elementList as $currentIndex => $column ) {
 			if ( ! $this->isTableColumnStructure( $column ) ) {
@@ -97,7 +97,7 @@ trait HtmlTableFromString {
 
 			$currentPosition = $currentIndex - $skippedNodes;
 
-			if ( false !== ( $offset[ $currentPosition ] ?? false ) ) {
+			if ( $this->shouldSkipTableColumnIn( $currentPosition ) ) {
 				continue;
 			}
 
@@ -171,11 +171,7 @@ trait HtmlTableFromString {
 
 		[$rowFound, $tableRows] = Normalize::nodeToMatchedArray( $tbody[2], Table::Row, all: true );
 
-		if ( ! $rowFound ) {
-			return null;
-		}
-
-		return [ $tbody[0], $tableRows ];
+		return $rowFound && $this->tableColumnsExistInBody( $tbody[0] ) ? [ $tbody[0], $tableRows ] : null;
 	}
 
 	private function get64bitHash( string $string ): string {
@@ -190,10 +186,10 @@ trait HtmlTableFromString {
 		return $matched && ! empty( $table ) ? $table : null;
 	}
 
-	private function isValidStructureIfTraceable( Table $target, string $node ): bool {
-		return $this->shouldTraceTableStructure( $target )
-			&& str_contains( $node, "<{$target->value}" )
-			&& str_contains( $node, "</{$target->value}>" );
+	private function isValidStructureIfTraceable( Table $structure, string $node ): bool {
+		return $this->shouldTraceTableStructure( $structure )
+			&& str_contains( $node, "<{$structure->value}" )
+			&& str_contains( $node, "</{$structure->value}>" );
 	}
 
 	/**
@@ -224,38 +220,34 @@ trait HtmlTableFromString {
 	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
 	 */
 	private function bodyStructureIteratorFrom( array $body ): Iterator {
-		[$headInspected, $position, $transformer] = $this->useCurrentTableBodyDetails();
-		$bodyStarted                              = false;
+		[$headInspected, $bodyStarted, $position] = $this->useCurrentTableBodyDetails();
 		[$tbodyNode, $rows]                       = $body;
 
-		while ( false !== ( $row = current( $rows ) ) ) {
+		foreach ( $rows as $row ) {
 			[$node, $attribute, $content] = $row;
 			[$columnsFound, $columns]     = Normalize::tableColumnsFrom( $content );
 
 			// ‼️No columns found‼️ Should never have happened in the first place. I mean,
 			// why would there be no table columns in the middle of the table row 🤔?
 			if ( ! $columnsFound || empty( $columns ) ) {
-				next( $rows );
-
 				continue;
 			}
 
 			$isHead        = ! $headInspected && $this->inspectFirstRowForHeadStructure( $columns );
 			$headInspected = true;
 
-			// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
-			// Advance table body to next <tr> if first row is collected as head.
 			if ( $isHead ) {
 				// We can only determine whether first row contains table heads after it is inferred.
 				// We'll simply dispatch the ending event here to notify subscribers, if any.
 				$this->dispatchEvent( new TableTraced( Table::THead, EventAt::End, $node, $this ) );
 
-				next( $rows );
-
+				// Contents of <tr> as head MUST NOT BE COLLECTED as table column also.
+				// Advance table body to next <tr> if first row is collected as head.
 				continue;
 			}
 
 			if ( ! $bodyStarted ) {
+				$this->hydrateIndicesSourceFromAttribute();
 				$this->dispatchEvent( $event = new TableTraced( Table::Row, EventAt::Start, $tbodyNode, $this ) );
 
 				// Although not recommended, it is entirely possible to stop inferring further table rows.
@@ -267,7 +259,7 @@ trait HtmlTableFromString {
 				$bodyStarted = true;
 			}
 
-			$content = $transformer?->transform( $columns, $this ) ?? $columns;
+			$content = $this->getTransformerOf( Table::Row )?->transform( $columns, $this ) ?? $columns;
 
 			match ( true ) {
 				$content instanceof CollectionSet => yield $content->key => $content->value,
@@ -276,9 +268,7 @@ trait HtmlTableFromString {
 			};
 
 			$this->registerCurrentIterationTableRow( ++$position );
-
-			next( $rows );
-		}//end while
+		}//end foreach
 
 		$this->dispatchEvent( new TableTraced( Table::Row, EventAt::End, $tbodyNode, $this ) );
 	}
