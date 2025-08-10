@@ -75,6 +75,23 @@ final readonly class CollectUsing {
 	}
 
 	/**
+	 * @param string|BackedEnum<string> $indexKey
+	 * @throws InvalidSource When given name does not exist in already collected items.
+	 */
+	public function indexKeyAs( BackedEnum|string $indexKey ): self {
+		$indexKey = $indexKey instanceof BackedEnum ? $indexKey->value : $indexKey;
+
+		in_array( $indexKey, $this->items, true ) || throw InvalidSource::nonCollectableItem(
+			reason: "because index-key must be one of the value in items list. \"{$indexKey}\" does not exist in list of",
+			names: $this->items
+		);
+
+		return ( $reflection = new ReflectionClass( $this ) )
+			->newInstanceWithoutConstructor()
+			->withProperties( [ ...get_object_vars( $this ), ...compact( 'indexKey' ) ], $reflection );
+	}
+
+	/**
 	 * Gets new instance after re-computing offset between subset of items already registered as collectables.
 	 *
 	 * @param BackedEnum<string>|string ...$caseOrValue

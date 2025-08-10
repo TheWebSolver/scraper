@@ -361,6 +361,19 @@ class CollectUsingTest extends TestCase {
 			[ [], [ 'throws exceptions->' ], 'because given list is empty. Provide at-least one value.' ],
 		];
 	}
+
+	#[Test]
+	public function itGetsNewInstanceWithUpdatedIndexKey(): void {
+		$collection = new CollectUsing( Collectable::class, Collectable::One );
+
+		foreach ( [ Collectable::Zero, '0' ] as $index ) {
+			$this->assertSame( '0', $collection->indexKeyAs( $index )->indexKey );
+		}
+
+		$this->expectExceptionMessage( 'must be one of the value in items list. "5" does not exist' );
+
+		$collection->indexKeyAs( '5' );
+	}
 }
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
