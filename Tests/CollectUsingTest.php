@@ -307,11 +307,11 @@ class CollectUsingTest extends TestCase {
 			],
 			[
 				[ [ '1', null, '9' ], '2', false ],
-				[ 'exception->', 'is->', 'thrown->', 'because index-key must be one of the value in the given list. "2" does not exist in list of values: ["1", "{{NULL}}", "9"].' ],
+				[ 'exception->', 'is->', 'thrown->', 'because index-key must be one of the value in items list. "2" does not exist in list of values: ["1", "{{NULL}}", "9"].' ],
 			],
 			[
 				[ [ '1', null ], '2', true ],
-				[ 'exception->', 'is->', 'thrown->', 'because index-key must be one of the value in the given list. "2" does not exist in list of values: ["1", "{{NULL}}"].' ],
+				[ 'exception->', 'is->', 'thrown->', 'because index-key must be one of the value in items list. "2" does not exist in list of values: ["1", "{{NULL}}"].' ],
 			],
 		];
 		// phpcs:enable
@@ -370,7 +370,7 @@ class CollectUsingTest extends TestCase {
 			$this->assertSame( '0', $collection->indexKeyAs( $index )->indexKey );
 		}
 
-		$this->expectExceptionMessage( 'must be one of the value in items list. "5" does not exist' );
+		$this->expectExceptionMessage( 'index-key must be one of the value in items list. "5" does not exist' );
 
 		$collection->indexKeyAs( '5' );
 	}

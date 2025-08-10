@@ -37,7 +37,7 @@ final readonly class CollectUsing {
 		);
 
 		[$this->all, $this->items, $this->offsets] = $this->computeFor( ...$subsetCaseOrValueOrOffset );
-		$this->indexKey                            = $indexKey->value ?? null;
+		$this->indexKey                            = $indexKey?->value;
 	}
 
 	/**
@@ -54,41 +54,27 @@ final readonly class CollectUsing {
 	public static function listOf( array $names, ?string $indexKey = null, bool $compute = false ): self {
 		! ! $names || throw InvalidSource::nonCollectableItem( 'because given list is empty. Provide at-least one' );
 
-		$indexKey && ! in_array( $indexKey, $names, true ) && throw InvalidSource::nonCollectableItem(
-			reason: "because index-key must be one of the value in the given list. \"{$indexKey}\" does not exist in list of",
-			names: self::mapNullToString( ...$names )
-		);
+		$indexKey && self::validateIndexKey( $indexKey, ...$names );
 
 		! $compute && in_array( null, $names, true ) && throw InvalidSource::nonCollectableItem(
 			reason: 'because when computation is disabled, "null" (offset) must not be passed as',
 			names: self::mapNullToString( ...$names )
 		);
 
-		$_this    = ( $reflection = new ReflectionClass( __CLASS__ ) )->newInstanceWithoutConstructor();
-		$computed = $compute ? $_this->findOffsetsIn( ...$names ) : [ $names, $names, [] ];
-		$props    = get_object_vars( $_this );
+		$_this                   = ( new ReflectionClass( __CLASS__ ) )->newInstanceWithoutConstructor();
+		[$all, $items, $offsets] = $compute ? $_this->findOffsetsIn( ...$names ) : [ $names, $names, [] ];
 
-		[$props['all'], $props['items'], $props['offsets']] = $computed;
-
-		// phpcs:ignore -- We know what we are doing with array. Its OK!
-		return $_this->withProperties( [ ...$props, ...compact( 'indexKey' ) ], $reflection );
+		return $_this->withProperties( compact( 'all', 'items', 'offsets', 'indexKey' ) );
 	}
 
 	/**
-	 * @param string|BackedEnum<string> $indexKey
+	 * @param string|BackedEnum<string> $value
 	 * @throws InvalidSource When given name does not exist in already collected items.
 	 */
-	public function indexKeyAs( BackedEnum|string $indexKey ): self {
-		$indexKey = $indexKey instanceof BackedEnum ? $indexKey->value : $indexKey;
-
-		in_array( $indexKey, $this->items, true ) || throw InvalidSource::nonCollectableItem(
-			reason: "because index-key must be one of the value in items list. \"{$indexKey}\" does not exist in list of",
-			names: $this->items
+	public function indexKeyAs( BackedEnum|string $value ): self {
+		return $this->withUpdatedProperties(
+			[ 'indexKey' => self::validateIndexKey( $this->toString( $value, validate: false ), ...$this->items ) ]
 		);
-
-		return ( $reflection = new ReflectionClass( $this ) )
-			->newInstanceWithoutConstructor()
-			->withProperties( [ ...get_object_vars( $this ), ...compact( 'indexKey' ) ], $reflection );
 	}
 
 	/**
@@ -102,11 +88,9 @@ final readonly class CollectUsing {
 			return $this;
 		}
 
-		$reflection                          = new ReflectionClass( __CLASS__ );
-		$props                               = get_object_vars( $this );
-		[$props['items'], $props['offsets']] = $this->recomputationOf( ...$caseOrValue );
+		[$items, $offsets] = $this->recomputationOf( ...$caseOrValue );
 
-		return $reflection->newInstanceWithoutConstructor()->withProperties( $props, $reflection );
+		return $this->withUpdatedProperties( compact( 'items', 'offsets' ) );
 	}
 
 	/**
@@ -140,32 +124,32 @@ final readonly class CollectUsing {
 		return $this->enumClass ?? null;
 	}
 
-	/**
-	 * @param array<string,mixed>     $props
-	 * @param ReflectionClass<object> $reflection
-	 */
-	private function withProperties( array $props, ReflectionClass $reflection ): self {
-		if ( ! $this->enum() ) {
-			unset( $props['enumClass'] ); // Not required for statically instantiated collection.
-		}
-
-		foreach ( $props as $name => $value ) {
-			$reflection->getProperty( $name )->setValue( $this, $value );
+	/** @param array<string,mixed> $nameValuePair */
+	private function withProperties( array $nameValuePair ): self {
+		foreach ( $nameValuePair as $property => $value ) {
+			$this->{$property} = $value;
 		}
 
 		return $this;
+	}
+
+	/** @param array<string,mixed> $updatedValues */
+	private function withUpdatedProperties( array $updatedValues ): self {
+		return ( new ReflectionClass( $this ) )
+			->newInstanceWithoutConstructor()
+			->withProperties( [ ...get_object_vars( $this ), ...$updatedValues ] );
 	}
 
 	/**
 	 * @param BackedEnum<string>|string $caseOrValue
 	 * @throws InvalidSource When given item is string and cannot instantiate any enum case.
 	 */
-	private function toString( BackedEnum|string $caseOrValue ): string {
+	private function toString( BackedEnum|string $caseOrValue, bool $validate = true ): string {
 		if ( $caseOrValue instanceof BackedEnum ) {
 			return $caseOrValue->value;
 		}
 
-		return ( ! $enum = $this->enum() ) || $enum::tryFrom( $caseOrValue )
+		return ! $validate || ( ! $enum = $this->enum() ) || $enum::tryFrom( $caseOrValue )
 			? $caseOrValue
 			: throw InvalidSource::nonCollectableItem(
 				reason: "for enum \"$enum\". Cannot translate to corresponding case from given",
@@ -234,5 +218,12 @@ final readonly class CollectUsing {
 
 	private function pre( string $re = '' ): string {
 		return "during {$re}computation" . ( ( $enum = $this->enum() ) ? " with enum \"{$enum}\"" : '' );
+	}
+
+	private static function validateIndexKey( string $key, ?string ...$items ): string {
+		return in_array( $key, $items, true ) ? $key : throw InvalidSource::nonCollectableItem(
+			reason: "because index-key must be one of the value in items list. \"{$key}\" does not exist in list of",
+			names: self::mapNullToString( ...$items )
+		);
 	}
 }
