@@ -7,13 +7,14 @@ use ArrayObject;
 
 /**
  * @template TInferredColumn
+ * @template TTracer of TableTracer<TInferredColumn>
  * @template-extends Scrapable<array-key,ArrayObject<array-key,TInferredColumn>>
  */
 interface ScrapeTraceableTable extends Scrapable {
 	/**
 	 * Gets the tracer to infer table data after content is scraped.
 	 *
-	 * @return TableTracer<TInferredColumn>
+	 * @return TTracer
 	 */
 	public function getTableTracer(): TableTracer;
 }

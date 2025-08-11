@@ -11,11 +11,12 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 
 /**
  * @template TInferredColumn
+ * @template TTracer of TableTracer<TInferredColumn>
  * @template-extends ScrapingService<TInferredColumn>
- * @template-implements ScrapeTraceableTable<TInferredColumn>
+ * @template-implements ScrapeTraceableTable<TInferredColumn,TTracer>
  */
 abstract class TableScrapingService extends ScrapingService implements ScrapeTraceableTable {
-	/** @param TableTracer<TInferredColumn> $tracer */
+	/** @param TTracer $tracer */
 	public function __construct( protected TableTracer $tracer ) {
 		$tracer->withAllTables( false );
 
