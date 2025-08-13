@@ -38,7 +38,7 @@ trait ScraperSource {
 
 		$attribute = ( new ReflectionClass( static::class ) )->getAttributes( ScrapeFrom::class )[0] ?? null;
 
-		$attribute && ( $this->scraperSource = $attribute->newInstance() );
+		$attribute && $this->setScraperSource( $attribute->newInstance() );
 
 		return $this;
 	}
