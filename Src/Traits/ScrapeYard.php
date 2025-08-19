@@ -23,7 +23,8 @@ trait ScrapeYard {
 	}
 
 	public function scrape(): string {
-		return file_get_contents( $url = $this->getSourceUrl() ) ?: $this->notFound( $url );
+		return file_get_contents( $url = $this->getSourceUrl(), context: $this->getStreamContext() )
+			?: $this->notFound( $url );
 	}
 
 	public function fromCache(): string {
@@ -39,6 +40,24 @@ trait ScrapeYard {
 				$this->getScraperSource()->url,
 				( $e = error_get_last() ) ? "Reason: {$e['message']}." : ''
 			);
+	}
+
+	/**
+	 * Creates stream context for scraping data.
+	 *
+	 * @return resource
+	 * @see file_get_contents
+	 * @see ScrapeYard::fromCache()
+	 */
+	protected function getStreamContext() {
+		return stream_context_create(
+			[
+				'http' => [
+					'user_agent' => 'DataScraper/1.0 (PHP; file_get_contents)',
+					'header'     => 'Accent-Language: en-US,en',
+				],
+			],
+		);
 	}
 
 	private function notFound( string $source ): never {
