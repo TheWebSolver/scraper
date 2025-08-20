@@ -27,9 +27,4 @@ class Factory {
 	protected function scraper(): ScrapeTraceableTable {
 		return $this->scraper;
 	}
-
-	/** Cache path not required for factory. So, it returns empty string. */
-	final protected function defaultCachePath(): string {
-		return '';
-	}
 }

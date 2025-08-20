@@ -7,7 +7,6 @@ use Closure;
 use Iterator;
 use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Scraper\Traits\CachePath;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
@@ -17,8 +16,6 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
  * @template TTracer of TableTracer<TTracedItem>
  */
 trait TableDatasetIterator {
-	use CachePath;
-
 	/** Gets the scraper for scraping and caching traced table dataset. */
 	abstract protected function scraper(): ScrapeTraceableTable;
 
