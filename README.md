@@ -1,6 +1,6 @@
 ## Welcome
 
-TheWebSolver Container is a simple and straight-forward PHP package to scrape web content.
+TheWebSolver Scraper is a simple and straight-forward PHP package to scrape web content.
 
 ## Installation (via Composer)
 
