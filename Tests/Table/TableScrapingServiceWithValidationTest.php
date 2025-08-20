@@ -7,13 +7,11 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
-use TheWebSolver\Codegarage\Scraper\Proxy\ItemValidatorProxy;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithAccents;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithAccents;
@@ -23,12 +21,8 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 	#[Test]
 	#[DataProvider( 'provideValidatableTableTracers' )]
 	public function itValidatesScrapedValue( TableTracer $tracer, ?string $data = null, ?string $failed = null ): void {
-		$service = new TableScrapingService( $tracer );
-
-		// @phpstan-ignore-next-line
-		$service->getTableTracer()->addTransformer( Table::Column, new ItemValidatorProxy( new StripTags() ) );
-
-		$iterator = $service->parse( $data ?? TableScrapingServiceTest::getTableContent() );
+		$service  = new TableScrapingService( $tracer );
+		$iterator = $service->parse( $data ?? $service->fromCache() );
 
 		$failed && $this->expectExceptionMessage( sprintf( 'Failed validation of "%s".', $failed ) );
 

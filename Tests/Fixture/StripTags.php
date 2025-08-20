@@ -4,9 +4,9 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test\Fixture;
 
 use DOMElement;
-use TheWebSolver\Codegarage\Scraper\Decorator\HtmlEntityDecode;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
+use TheWebSolver\Codegarage\Scraper\Decorator\HtmlEntityDecode;
 
 /**
  * @template TScope of object
@@ -17,6 +17,10 @@ class StripTags implements Transformer {
 	public function transform( string|array|DOMElement $el, object $scope ): string {
 		$base = new HtmlEntityDecode( new MarshallItem() );
 
-		return trim( strip_tags( explode( '[', $base->transform( $el, $scope ), 2 )[0] ) );
+		return self::from( $base->transform( $el, $scope ) );
+	}
+
+	public static function from( string $value ): string {
+		return trim( strip_tags( explode( '[', $value, 2 )[0] ) );
 	}
 }

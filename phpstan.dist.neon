@@ -38,3 +38,7 @@ parameters:
 			path: Src/Attributes/CollectUsing.php
 			count: 1
 			message: '#^Property .*?CollectUsing\:\:\$enumClass .*? is not nullable nor uninitialized.$#'
+		-
+			path: Src/Service/TableScrapingService.php
+			identifier: argument.type
+			message: '#^Parameter \#2 \$transformer of method .*?TableTracer.*?addTransformer\(\) expects .*?TableTracer.*?, .*?ItemValidatorProxy given.$#'

@@ -10,7 +10,6 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
-use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
@@ -22,17 +21,11 @@ use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithAccents;
 
 class TableScrapingServiceTest extends TestCase {
-	public static function getTableContent(): string {
-		$path = DOMDocumentFactoryTest::RESOURCE_PATH;
-
-		return file_get_contents( "{$path}single-table.html" ) ?: '';
-	}
-
 	#[Test]
 	public function itScrapesTableUsingTableTracerAndYieldsDataset(): void {
 		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracer ) {
 			$service     = new TableScrapingService( new $tracer() );
-			$iterator    = $service->parse( $this->getTableContent() );
+			$iterator    = $service->parse( $service->fromCache() );
 			$johnJob     = StringTableTracer::class === $tracer ? 'PHP Devel&ocirc;per' : 'PHP Develôper';
 			$johnAddress = StringTableTracer::class === $tracer
 				? '<a href="/location" title="Developer location">Ktm</a>'
@@ -77,7 +70,7 @@ class TableScrapingServiceTest extends TestCase {
 				}
 			);
 
-			$iterator = $service->parse( $this->getTableContent() );
+			$iterator = $service->parse( $service->fromCache() );
 			$johnDoe  = $iterator->current()->getArrayCopy();
 
 			if ( NodeTableTracer::class === $tracer ) {
@@ -123,7 +116,7 @@ class TableScrapingServiceTest extends TestCase {
 				}
 			)->addTransformer( Table::Head, $stripTags )->addTransformer( Table::Column, $stripTags );
 
-			$iterator = $service->parse( $this->getTableContent() );
+			$iterator = $service->parse( $service->fromCache() );
 
 			$this->assertSame(
 				[
@@ -163,7 +156,7 @@ class TableScrapingServiceTest extends TestCase {
 
 			$accentedTracer->addTransformer( Table::Column, $transformer )->setAccentOperationType( $action );
 
-			$iterator = $service->parse( $this->getTableContent() );
+			$iterator = $service->parse( $service->fromCache() );
 
 			$this->assertSame( $expectedTitle, $iterator->current()->getArrayCopy()['title'] );
 		}
@@ -188,7 +181,7 @@ class TableScrapingServiceTest extends TestCase {
 	#[DataProvider( 'provideDatasetKeysWithAllEnumCases' )]
 	public function itScrapesAndUsesAllEnumCasesAsDatasetKeys( TableTracer $tracer, array $expected ): void {
 		$service  = new TableScrapingService( $tracer );
-		$iterator = $service->parse( $this->getTableContent() );
+		$iterator = $service->parse( $service->fromCache() );
 
 		$this->assertSame( $expected, $iterator->current()->getArrayCopy(), $tracer::class );
 	}
@@ -225,7 +218,7 @@ class TableScrapingServiceTest extends TestCase {
 	#[DataProvider( 'providePartialDatasetKeys' )]
 	public function itScrapesAndUsesPartialEnumCasesAsDatasetKeys( TableTracer $tracer, array $expected ): void {
 		$service  = new TableScrapingService( $tracer );
-		$iterator = $service->parse( $this->getTableContent() );
+		$iterator = $service->parse( $service->fromCache() );
 
 		$this->assertSame( $expected, $iterator->current()->getArrayCopy(), $tracer::class );
 	}
