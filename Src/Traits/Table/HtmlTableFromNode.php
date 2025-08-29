@@ -60,9 +60,16 @@ trait HtmlTableFromNode {
 
 	/** @param iterable<array-key,string|DOMNode> $elementList */
 	public function inferTableDataFrom( iterable $elementList ): array {
-		$data = [];
+		[$source, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
+		$spannedValues                         = $this->getSpannedRowColumnsValue();
+		$spannedPositions                      = $spannedValues ? array_keys( $spannedValues ) : [];
+		$indexKeys                             = $source->items ?? [];
+		$lastPosition                          = array_key_last( $indexKeys );
+		$remainingPositions                    = $dataset = [];
 
-		[$keys, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
+		if ( $this->getCurrentTableDatasetCount() ) {
+			[$dataset, $remainingPositions] = $this->fromSpannedRowColumnsIn( $spannedPositions, $indexKeys );
+		}
 
 		foreach ( $elementList as $currentIndex => $node ) {
 			if ( ! $this->isTableColumnStructure( $node ) ) {
@@ -73,25 +80,31 @@ trait HtmlTableFromNode {
 
 			$this->assertCurrentColumnIsDOMElement( $node );
 
-			$currentPosition = $currentIndex - $skippedNodes;
+			$actualPosition  = $currentIndex - $skippedNodes;
+			$currentPosition = $remainingPositions ? array_shift( $remainingPositions ) : $actualPosition;
 
-			if ( $this->shouldSkipTableColumnIn( $currentPosition ) ) {
+			if ( $this->shouldSkipTableColumnIn( $currentPosition, $source->offsets ?? [] ) ) {
 				continue;
 			}
 
 			if ( $this->hasColumnReachedAtLastPosition( $currentPosition, $lastPosition ) ) {
+				$remainingPositions = [];
+
 				break;
 			}
 
-			$this->registerCurrentIterationTableColumn( $keys[ $currentPosition ] ?? null, $currentPosition + 1 );
+			$this->registerCurrentIterationTableColumn( $indexKeys[ $currentPosition ] ?? null, $currentPosition + 1 );
 
-			$this->registerCurrentTableColumn( $node, $transformer, $data )
+			$this->registerCurrentTableColumn( $node, $transformer, $dataset, $currentPosition )
 				&& $this->findTableStructureIn( $node, minChildNodesCount: 1 );
 
 			unset( $this->currentIteration__columnName );
 		}//end foreach
 
-		return $data;
+		$this->sortCurrentRowDatasetBy( $indexKeys, $dataset );
+		$this->registerColumnCountWithMaxValueOf( $spannedPositions );
+
+		return $this->withEmptyItemsIn( $remainingPositions, $indexKeys, $dataset );
 	}
 
 	private function inferChildNodesFromTable( DOMElement $element ): bool {
@@ -260,11 +273,17 @@ trait HtmlTableFromNode {
 
 			$content = $this->getTransformerOf( Table::Row )?->transform( $row, $this ) ?? $row->childNodes;
 
-			match ( true ) {
-				$content instanceof CollectionSet => yield $content->key => $content->value,
-				$content instanceof ArrayObject   => yield $content,
-				default                           => yield new ArrayObject( $this->inferTableDataFrom( $content ) ),
-			};
+			if ( $content instanceof CollectionSet ) {
+				$this->registerCurrentTableDatasetCount( $content->value->count() );
+
+				yield $content->key => $content->value;
+			} else {
+				$dataset = $content instanceof ArrayObject ? $content : new ArrayObject( $this->inferTableDataFrom( $content ) );
+
+				$this->registerCurrentTableDatasetCount( $dataset->count() );
+
+				yield $dataset;
+			}
 
 			$this->registerCurrentIterationTableRow( ++$position );
 		}//end foreach

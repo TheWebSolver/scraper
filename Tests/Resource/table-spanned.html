@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<div class="container">
+			<table>
+				<tbody>
+					<tr>
+						<th>Issuing network</th>
+						<th>IIN ranges</th>
+						<th>Active</th>
+						<th>Length</th>
+						<th>Validation</th>
+					</tr>
+					<tr>
+						<td>American Express</td>
+						<td>34, 37</td>
+						<td>Yes</td>
+						<td>15</td>
+						<td rowspan="2">Luhn algorithm</td>
+					</tr>
+					<tr>
+						<td>Bankcard</td>
+						<td>5610, 560221-560225</td>
+						<td>No</td>
+						<td>16</td>
+					</tr>
+					<tr>
+						<td>Diners Club</td>
+						<td></td>
+						<td>Yes</td>
+						<td>15</td>
+						<td>No Validation</td>
+					</tr>
+					<tr>
+						<td>Diners Club International</td>
+						<td>30, 36, 38, 39</td>
+						<td>Yes</td>
+						<td>14-19</td>
+						<td rowspan="3">Luhn algorithm</td>
+					</tr>
+					<tr>
+						<td rowspan="2">Discover Card</td>
+						<td>6011, 644-649, 65</td>
+						<td rowspan="2">Yes</td>
+						<td>16-19</td>
+					</tr>
+					<tr>
+						<td>622126-622925</td>
+						<!-- <td>Yes</td> -->
+						<td>16-19</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

@@ -11,7 +11,6 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
-use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 
 /** @template TColumnReturn */
 interface TableTracer extends Indexable {

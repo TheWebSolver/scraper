@@ -15,7 +15,7 @@ parameters:
 			path: Src/Traits/Table/TableExtractor.php
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
-				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{array.*?\} but returns array\{.*?MarshallItem\}\.$#'
+				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{.*?\} but returns array\{.*?MarshallItem\}\.$#'
 				- '#^Method .*?getTransformerOf\(\) should return .*?.$#'
 		-
 			path: Src/Traits/Table/HtmlTableFromString.php

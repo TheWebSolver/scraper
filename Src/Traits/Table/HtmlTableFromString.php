@@ -84,9 +84,16 @@ trait HtmlTableFromString {
 
 	/** @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList */
 	public function inferTableDataFrom( iterable $elementList ): array {
-		$data = [];
+		[$source, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
+		$spannedValues                         = $this->getSpannedRowColumnsValue();
+		$spannedPositions                      = $spannedValues ? array_keys( $spannedValues ) : [];
+		$indexKeys                             = $source->items ?? [];
+		$lastPosition                          = array_key_last( $indexKeys );
+		$remainingPositions                    = $dataset = [];
 
-		[$keys, $lastPosition, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
+		if ( $this->getCurrentTableDatasetCount() ) {
+			[$dataset, $remainingPositions] = $this->fromSpannedRowColumnsIn( $spannedPositions, $indexKeys );
+		}
 
 		foreach ( $elementList as $currentIndex => $column ) {
 			if ( ! $this->isTableColumnStructure( $column ) ) {
@@ -95,26 +102,32 @@ trait HtmlTableFromString {
 				continue;
 			}
 
-			$currentPosition = $currentIndex - $skippedNodes;
+			$actualPosition  = $currentIndex - $skippedNodes;
+			$currentPosition = $remainingPositions ? array_shift( $remainingPositions ) : $actualPosition;
 
-			if ( $this->shouldSkipTableColumnIn( $currentPosition ) ) {
+			if ( $this->shouldSkipTableColumnIn( $currentPosition, $source->offsets ?? [] ) ) {
 				continue;
 			}
 
 			if ( $this->hasColumnReachedAtLastPosition( $currentPosition, $lastPosition ) ) {
+				$remainingPositions = [];
+
 				break;
 			}
 
-			$this->registerCurrentIterationTableColumn( $keys[ $currentPosition ] ?? null, $currentPosition + 1 );
+			$this->registerCurrentIterationTableColumn( $indexKeys[ $currentPosition ] ?? null, $currentPosition + 1 );
 
 			// Value of $column depends on row transformer return. Default is normalized array.
 			// Nested table structure discovery is not supported.
-			$this->registerCurrentTableColumn( $column, $transformer, $data );
+			$this->registerCurrentTableColumn( $column, $transformer, $dataset, $currentPosition );
 
 			unset( $this->currentIteration__columnName );
 		}//end foreach
 
-		return $data;
+		$this->sortCurrentRowDatasetBy( $indexKeys, $dataset );
+		$this->registerColumnCountWithMaxValueOf( $spannedPositions );
+
+		return $this->withEmptyItemsIn( $remainingPositions, $indexKeys, $dataset );
 	}
 
 	private function captionStructureContentFrom( string $table ): void {
@@ -261,11 +274,17 @@ trait HtmlTableFromString {
 
 			$content = $this->getTransformerOf( Table::Row )?->transform( $columns, $this ) ?? $columns;
 
-			match ( true ) {
-				$content instanceof CollectionSet => yield $content->key => $content->value,
-				$content instanceof ArrayObject   => yield $content,
-				default                           => yield new ArrayObject( $this->inferTableDataFrom( $content ) ),
-			};
+			if ( $content instanceof CollectionSet ) {
+				$this->registerCurrentTableDatasetCount( $content->value->count() );
+
+				yield $content->key => $content->value;
+			} else {
+				$dataset = $content instanceof ArrayObject ? $content : new ArrayObject( $this->inferTableDataFrom( $content ) );
+
+				$this->registerCurrentTableDatasetCount( $dataset->count() );
+
+				yield $dataset;
+			}
 
 			$this->registerCurrentIterationTableRow( ++$position );
 		}//end foreach

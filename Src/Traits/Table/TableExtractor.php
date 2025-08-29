@@ -58,6 +58,10 @@ trait TableExtractor {
 	private int|string $currentTable__id;
 	/** @var CollectUsing[] Column indexes and offset positions */
 	private array $currentTable__columnInfo;
+	/** @var array<array-key,array<int,array{0:int,1:TColumnReturn}>> */
+	private array $currentTable__rowSpan = [];
+	/** @var array<int> */
+	private array $currentTable__datasetCount = [];
 
 	/** @var int[] */
 	private array $currentIteration__rowCount = [];
@@ -187,6 +191,19 @@ trait TableExtractor {
 		$collection && ( $this->currentTable__columnInfo[ $this->currentTable__id ] = $collection );
 	}
 
+	private function registerCurrentTableDatasetCount( int $count ): void {
+		$this->currentTable__datasetCount[ $this->getTableId( true ) ] ??= $count;
+	}
+
+	/** @param TColumnReturn $value */
+	private function registerSpannedRowColumnIn( int $position, int $spanCount, mixed $value ): void {
+		$this->currentTable__rowSpan[ $this->getTableId( true ) ][ $position ] = [ $spanCount, $value ];
+	}
+
+	private function unregisterSpannedRowColumnIn( int $position ): void {
+		unset( $this->currentTable__rowSpan[ $this->getTableId( true ) ][ $position ] );
+	}
+
 	private function tableColumnsExistInBody( string|DOMElement $node ): bool {
 		return match ( true ) {
 			$node instanceof DOMElement => ! ! $node->getElementsByTagName( 'td' )->length,
@@ -194,9 +211,8 @@ trait TableExtractor {
 		};
 	}
 
-	private function shouldSkipTableColumnIn( int $position ): bool {
-		$offsetPositions = $this->getIndicesSource()->offsets ?? [];
-
+	/** @param int[] $offsetPositions */
+	private function shouldSkipTableColumnIn( int $position, array $offsetPositions ): bool {
 		return $offsetPositions && in_array( $position, $offsetPositions, true );
 	}
 
@@ -214,6 +230,17 @@ trait TableExtractor {
 		$offsetCount = count( $column->offsets ?? [] );
 
 		return $countUptoCurrent > $offsetCount ? $countUptoCurrent - $offsetCount : $countUptoCurrent;
+	}
+
+	private function getCurrentTableDatasetCount(): int {
+		return $this->currentTable__datasetCount[ $this->getTableId( true ) ] ?? 0;
+	}
+
+	/** @return ($position is null ? array<int,array{0:int,1:TColumnReturn}> : array{0:int,1:TColumnReturn}) */
+	private function getSpannedRowColumnsValue( ?int $position = null ) {
+		$spanned = $this->currentTable__rowSpan[ $this->getTableId( true ) ] ?? [];
+
+		return null === $position ? $spanned : ( $spanned[ $position ] ?? [] );
 	}
 
 	/** @return ?array<Closure(TableTraced): void> */
@@ -280,13 +307,10 @@ trait TableExtractor {
 		return $listeners[ $id ][ $structure->value ] ?? [ null, null ];
 	}
 
-	/** @return array{0:array<int,string>,1:?int,2:int,3:Transformer<static,TColumnReturn>} */
+	/** @return array{0:?CollectUsing,1:int,2:Transformer<static,TColumnReturn>} */
 	private function useCurrentTableColumnDetails(): array {
-		$columns = $this->getIndicesSource();
-
 		return [
-			$columnNames = $columns->items ?? [],
-			/* lastPosition */ array_key_last( $columnNames ),
+			/* Source       */ $this->getIndicesSource(),
 			/* skippedNodes */ $this->currentIteration__columnCount[ $this->currentTable__id ] = 0,
 			/* transformer  */ $this->discoveredTable__transformers[ Table::Column->value ] ?? new MarshallItem(),
 		];
@@ -337,8 +361,11 @@ trait TableExtractor {
 			return;
 		}
 
-		$tableId                                      = $this->getTableId( current: true );
-		$this->discoveredTable__headNames[ $tableId ] = SplFixedArray::fromArray( $names );
+		$headNames = SplFixedArray::fromArray( $names );
+
+		$this->discoveredTable__headNames[ $this->getTableId( current: true ) ] = $headNames;
+
+		$this->registerCurrentTableDatasetCount( $headNames->count() );
 	}
 
 	private function registerCurrentIterationTableHead( int|false $position ): void {
@@ -349,6 +376,64 @@ trait TableExtractor {
 		}
 
 		$this->currentIteration__headCount = $position + 1;
+	}
+
+	/**
+	 * @param string[]             $indexKeys
+	 * @param array<TColumnReturn> $dataset
+	 */
+	private function sortCurrentRowDatasetBy( array $indexKeys, array &$dataset ): void {
+		if ( ! empty( $indexKeys ) && ( $items = array_flip( $indexKeys ) ) ) {
+			uksort( $dataset, callback: static fn ( string $a, string $b ): int => $items[ $a ] <=> $items[ $b ] );
+		} else {
+			ksort( $dataset, flags: SORT_NUMERIC );
+		}
+	}
+
+	/**
+	 * @param int[]    $positions Columns' position in previously spanned row.
+	 * @param string[] $indexKeys The mappable index keys.
+	 * @return array{0:array<TColumnReturn>,1:int[]} Inserted values and remaining insert positions.
+	 */
+	private function fromSpannedRowColumnsIn( array $positions, array $indexKeys ): array {
+		$insertedValues   = [];
+		$insertPositions  = $positions;
+		$datasetPositions = range( 0, $this->getCurrentTableDatasetCount() - 1 );
+
+		foreach ( $positions as $key => $position ) {
+			if ( ! $spannedRow = $this->getSpannedRowColumnsValue( $position ) ) {
+				continue;
+			}
+
+			[$spanCount, $spannedValue] = $spannedRow;
+
+			if ( 1 < $spanCount ) {
+				$insertedValues[ $indexKeys[ $position ] ?? $position ] = $spannedValue;
+
+				$this->registerCurrentIterationTableColumn( $indexKeys[ $position ] ?? null, $position + 1 );
+				$this->registerSpannedRowColumnIn( $position, --$spanCount, $spannedValue );
+			} else {
+				unset( $insertPositions[ $key ] );
+
+				$this->unregisterSpannedRowColumnIn( $position );
+			}
+		}
+
+		return [ $insertedValues, array_diff( $datasetPositions, $insertPositions ) ];
+	}
+
+	/**
+	 * @param int[]                $remainingPositions
+	 * @param string[]             $indexKeys
+	 * @param array<TColumnReturn> $dataset
+	 * @return array<TColumnReturn>
+	 */
+	private function withEmptyItemsIn( array $remainingPositions, array $indexKeys, array $dataset ): array {
+		foreach ( $remainingPositions as $emptyPosition ) {
+			$dataset[ $indexKeys[ $emptyPosition ] ?? $emptyPosition ] = 'N/A';
+		}
+
+		return $dataset;
 	}
 
 	private function registerCurrentIterationTableRow( int $count ): void {
@@ -364,20 +449,49 @@ trait TableExtractor {
 	private function registerCurrentTableColumn(
 		string|array|DOMElement $element,
 		Transformer $transformer,
-		array &$data
+		array &$data,
+		int $currentPosition
 	): mixed {
-		$count    = $this->getCurrentIterationCount( Table::Column );
-		$position = $count ? $count - 1 : 0;
-		$value    = $transformer->transform( $element, $this );
+		$count     = $this->getCurrentIterationCount( Table::Column );
+		$position  = $count ? $count - 1 : 0;
+		$value     = $transformer->transform( $element, $this );
+		$isValid   = null !== $value && '' !== $value;
+		$spanCount = match ( true ) {
+			$element instanceof DOMElement => (int) $element->getAttribute( 'rowspan' ),
+			is_array( $element )           => $this->extractRowSpanFromColumnString( $element[2] ),
+			default                        => 0,
+		};
 
-		return ( ! is_null( $value ) && '' !== $value )
-			? ( $data[ $this->getCurrentItemIndex() ?? $position ] = $value )
-			: null;
+		if ( $isValid && $spanCount > 1 ) {
+			$this->registerSpannedRowColumnIn( $currentPosition, $spanCount, $value );
+		}
+
+		return $isValid ? ( $data[ $this->getCurrentItemIndex() ?? $position ] = $value ) : null;
+	}
+
+	private function extractRowSpanFromColumnString( string $string ): int {
+		if ( ! str_contains( $string, 'rowspan' ) ) {
+			return 0;
+		}
+
+		$attributes = explode( '=', $string );
+		$position   = array_search( 'rowspan', $attributes, true );
+
+		return isset( $attributes[ $position + 1 ] )
+			? (int) preg_replace( '/[^0-9]/', '', $attributes[ $position + 1 ] )
+			: 0;
 	}
 
 	private function registerCurrentIterationTableColumn( ?string $name, int $count ): void {
 		$this->currentIteration__columnCount[ $this->currentTable__id ] = $count;
 		$name && $this->currentIteration__columnName                    = $name;
+	}
+
+	/** @param int[] $spannedPositions */
+	private function registerColumnCountWithMaxValueOf( array $spannedPositions ): void {
+		$spannedPositions
+			&& ( $max = max( $spannedPositions ) + 1 ) > $this->getCurrentIterationColumnCount()
+			&& $this->registerCurrentIterationTableColumn( name: null, count: $max );
 	}
 
 	private function throwEventListenerNotUsed( string $methodName, string ...$placeholders ): never {

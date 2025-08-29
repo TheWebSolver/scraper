@@ -5,6 +5,7 @@ namespace TheWebSolver\Codegarage\Test\Table;
 
 use Closure;
 use DOMNode;
+use Exception;
 use DOMElement;
 use ArrayObject;
 use DOMDocument;
@@ -24,7 +25,9 @@ use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
+use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallTableRow;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracer;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\HtmlTableFromString;
 
@@ -259,7 +262,7 @@ class TableExtractorTest extends TestCase {
 		$stringTracer->withAllTables( true );
 	}
 
-	#[Test]
+	/** NOTE: Conflicts with column count as well as with spanned row support. */
 	public function itOnlyTracesTableColumnsThatIsValidatedAsATableColumnStructure(): void {
 		$stringTracer = new class() extends NodeTableTracer {
 			protected function isTableColumnStructure( mixed $node ): bool {
@@ -634,5 +637,80 @@ class TableExtractorTest extends TestCase {
 	): void {
 		self::assertSame( $key, $tracer->getCurrentItemIndex() );
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCount( Table::Column ) );
+	}
+
+	#[Test]
+	public function itInsertsSpannedRowsToRespectiveColumnPosition(): void {
+		$indexKeys   = [ 'Card Name', 'ID Range', 'Needs Validation', 'Length', 'Validator' ];
+		$transformer = new class() extends MarshallItem {
+			public function transform( string|array|DOMElement $element, object $scope ): string {
+				$value   = parent::transform( $element, $scope );
+				$content = is_string( $element ) ? $element : ( is_array( $element ) ? $element[3] : $element->textContent );
+
+				[$count, $columnData] = match ( $content ) {
+					// @phpstan-ignore-next-line -- Exception must never be thrown as all case must match.
+					default => throw new Exception( "Unmatched element content with spanned row: $content" ),
+
+					'American Express', 'Bankcard', 'Diners Club', 'Diners Club International', 'Discover Card' => [ 1, $content ],
+					'34, 37', '5610, 560221-560225', '', '30, 36, 38, 39', '6011, 644-649, 65', '622126-622925' => [ 2, $content ],
+					'Yes', 'No'                                                                                 => [ 3, $content ],
+					'15', '16', '14-19', '16-19'                                                                => [ 4, $content ],
+					'Luhn algorithm', 'No Validation'                                                           => [ 5, $content ]
+				};
+
+				// @phpstan-ignore-next-line
+				TestCase::assertSame( $count, $scope->getCurrentIterationCount( Table::Column ), $columnData );
+
+				return $value ? $value : 'N/A';
+			}
+		};
+
+		foreach ( [ new NodeTableTracer(), new StringTableTracer() ] as $tracer ) {
+			$tracer
+				->addEventListener( Table::Row, static fn( $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( $indexKeys ) ) )
+				->addTransformer( Table::Column, $transformer )
+				->addTransformer( Table::Row, new MarshallTableRow( 'Fails if could not verify count [%1$s] "%2$s"' ) ) // @phpstan-ignore-line
+				->inferTableFrom( file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . '/table-spanned.html' ) ?: '' );
+
+			$iterator = $tracer->getTableData()[ $tracer->getTableId( true ) ];
+
+			$americanExpress = $iterator->current()->getArrayCopy();
+
+			$this->assertSame( $indexKeys, array_keys( $americanExpress ) );
+			$this->assertSame(
+				[ 'American Express', '34, 37', 'Yes', '15', 'Luhn algorithm' ],
+				array_values( $americanExpress )
+			);
+
+			$iterator->next();
+			$this->assertSame(
+				[ 'Bankcard', '5610, 560221-560225', 'No', '16', 'Luhn algorithm' ],
+				array_values( $iterator->current()->getArrayCopy() )
+			);
+
+			$iterator->next();
+			$this->assertSame(
+				[ 'Diners Club', 'N/A', 'Yes', '15', 'No Validation' ],
+				array_values( $iterator->current()->getArrayCopy() )
+			);
+
+			$iterator->next();
+			$this->assertSame(
+				[ 'Diners Club International', '30, 36, 38, 39', 'Yes', '14-19', 'Luhn algorithm' ],
+				array_values( $iterator->current()->getArrayCopy() )
+			);
+
+			$iterator->next();
+			$this->assertSame(
+				[ 'Discover Card', '6011, 644-649, 65', 'Yes', '16-19', 'Luhn algorithm' ],
+				array_values( $iterator->current()->getArrayCopy() )
+			);
+
+			$iterator->next();
+			$this->assertSame(
+				[ 'Discover Card', '622126-622925', 'Yes', '16-19', 'Luhn algorithm' ],
+				array_values( $iterator->current()->getArrayCopy() )
+			);
+		}//end foreach
 	}
 }
