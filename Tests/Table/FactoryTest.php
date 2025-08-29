@@ -38,10 +38,8 @@ class FactoryTest extends TestCase {
 
 			$iterator->next();
 
-			$loremAddress = StringTableTracer::class === $tracer ? '<!-- internal value --> Bkt' : 'Bkt';
-
 			$this->assertSame(
-				[ 'Lorem Ipsum', 'JS Developer', $loremAddress,'19' ],
+				[ 'Lorem Ipsum', 'JS Developer', 'Bkt','19' ],
 				$iterator->current()->getArrayCopy(),
 				$tracer
 			);

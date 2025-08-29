@@ -119,7 +119,7 @@ class Normalize {
 	public static function tableColumnsFrom( string $string ): array {
 		$matched = preg_match_all(
 			pattern: '/<(th|td)(.*?)>(.*?)<\/(th|td)>/',
-			subject: $string,
+			subject: preg_replace( '/<!--.*?-->/s', '', $string ) ?? '',
 			matches: $tableColumns,
 			flags: PREG_SET_ORDER
 		);
