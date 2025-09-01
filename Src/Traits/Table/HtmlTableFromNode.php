@@ -15,6 +15,7 @@ use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\DOMDocumentFactory;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
 /** @template TColumnReturn */
@@ -35,76 +36,43 @@ trait HtmlTableFromNode {
 		$this->inferChildNodesFromTable( $source );
 	}
 
-	/** @param DOMNodeList<DOMNode> $elementList */
-	public function inferTableHeadFrom( iterable $elementList ): void {
-		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
+	/** @return array{isValid:bool,isAllowed:bool,content:?string} */
+	protected function useCurrentIterationValidatedHead( mixed $node ): array {
+		$isAllowed = true;
 
-		foreach ( $elementList as $currentIndex => $node ) {
-			if ( ! AssertDOMElement::isValid( $node, Table::Head ) ) {
-				$this->tickCurrentHeadIterationSkippedHeadNode( $node );
-
-				++$skippedNodes;
-
-				continue;
-			}
-
-			$position = $currentIndex - $skippedNodes;
-
-			$this->registerCurrentIterationTableHead( $position );
-
-			$names[] = $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
+		if ( $isValid = AssertDOMElement::isValid( $node, Table::Head ) ) {
+			return [ ...compact( 'isValid', 'isAllowed' ), ...[ 'content' => trim( $node->textContent ) ] ];
 		}
 
-		$this->registerCurrentTableHead( $names );
+		$isAllowed = $node instanceof DOMNode && XML_COMMENT_NODE === $node->nodeType;
+
+		return [ ...compact( 'isValid', 'isAllowed' ), ...[ 'content' => null ] ];
 	}
 
-	/** @param iterable<array-key,string|DOMNode> $elementList */
-	public function inferTableDataFrom( iterable $elementList ): array {
-		[$source, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
-		$spannedValues                         = $this->getSpannedRowColumnsValue();
-		$spannedPositions                      = $spannedValues ? array_keys( $spannedValues ) : [];
-		$indexKeys                             = $source->items ?? [];
-		$lastPosition                          = array_key_last( $indexKeys );
-		$remainingPositions                    = $dataset = [];
+	/** @param Transformer<static,string> $transformer */
+	protected function transformCurrentIterationTableHead( mixed $node, Transformer $transformer ): string {
+		return $transformer->transform( $this->assertThingIsValidNode( $node ), $this );
+	}
 
-		if ( $this->getCurrentTableDatasetCount() ) {
-			[$dataset, $remainingPositions] = $this->fromSpannedRowColumnsIn( $spannedPositions, $indexKeys );
-		}
+	protected function getTagnameFrom( mixed $thing ): mixed {
+		return $thing instanceof DOMElement ? $thing->tagName : null;
+	}
 
-		foreach ( $elementList as $currentIndex => $node ) {
-			if ( ! $this->isTableColumnStructure( $node ) ) {
-				++$skippedNodes;
+	/**
+	 * @param Transformer<static,TColumnReturn> $transformer
+	 * @return array{0:?TColumnReturn,1:int}
+	 */
+	private function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): array {
+		$column = $this->assertThingIsValidNode( $node );
 
-				continue;
-			}
+		return [ $transformer->transform( $column, $this ), (int) ( $column->getAttribute( 'rowspan' ) ?: 1 ) ];
+	}
 
-			$this->assertCurrentColumnIsDOMElement( $node );
+	/** @param ?TColumnReturn $value */
+	protected function afterCurrentTableColumnRegistered( mixed $column, mixed $value ): void {
+		$column = $this->assertThingIsValidNode( $column );
 
-			$actualPosition  = $currentIndex - $skippedNodes;
-			$currentPosition = $remainingPositions ? array_shift( $remainingPositions ) : $actualPosition;
-
-			if ( $this->shouldSkipTableColumnIn( $currentPosition, $source->offsets ?? [] ) ) {
-				continue;
-			}
-
-			if ( $this->hasColumnReachedAtLastPosition( $currentPosition, $lastPosition ) ) {
-				$remainingPositions = [];
-
-				break;
-			}
-
-			$this->registerCurrentIterationTableColumn( $indexKeys[ $currentPosition ] ?? null, $currentPosition + 1 );
-
-			$this->registerCurrentTableColumn( $node, $transformer, $dataset, $currentPosition )
-				&& $this->findTableStructureIn( $node, minChildNodesCount: 1 );
-
-			unset( $this->currentIteration__columnName );
-		}//end foreach
-
-		$this->sortCurrentRowDatasetBy( $indexKeys, $dataset );
-		$this->registerColumnCountWithMaxValueOf( $spannedPositions );
-
-		return $this->withEmptyItemsIn( $remainingPositions, $indexKeys, $dataset );
+		$value && $this->findTableStructureIn( node: $column, minChildNodesCount: 1 );
 	}
 
 	private function inferChildNodesFromTable( DOMElement $element ): bool {
@@ -146,7 +114,7 @@ trait HtmlTableFromNode {
 		}
 	}
 
-	private function findTableStructureIn( DOMNode $node, int $minChildNodesCount = 0 ): void {
+	private function findTableStructureIn( DOMElement $node, int $minChildNodesCount = 0 ): void {
 		( ! $this->getTableId() || $this->shouldPerform__allTableDiscovery )
 			&& ( ( $nodes = $node->childNodes )->length > $minChildNodesCount )
 			&& $this->inferTableFromDOMNodeList( $nodes );
@@ -155,20 +123,6 @@ trait HtmlTableFromNode {
 	/** @phpstan-assert-if-true =DOMElement $node */
 	private function isTableRowStructure( DOMNode $node ): bool {
 		return $node->childNodes->length && AssertDOMElement::isValid( $node, Table::Row );
-	}
-
-	/**
-	 * @phpstan-assert DOMElement $node
-	 * @throws InvalidSource When $node is not a DOMElement.
-	 */
-	private function assertCurrentColumnIsDOMElement( mixed $node ): void {
-		$node instanceof DOMElement || throw new InvalidSource(
-			sprintf(
-				'Unsupported node type: "%1$s" provided when using trait "%2$s".',
-				get_debug_type( $node ),
-				HtmlTableFromNode::class
-			)
-		);
 	}
 
 	private function ensureTableWithChildNodesStructure( DOMElement $element ): ?DOMElement {
@@ -184,7 +138,7 @@ trait HtmlTableFromNode {
 	private function captionStructureContentFrom( DOMElement $node ): void {
 		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::Start, $node, $this ) );
 
-		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
+		$transformer = $this->discoveredTable__transformers[ Table::Caption->value ] ?? null;
 		$content     = $transformer?->transform( $node, $this ) ?? trim( $node->textContent );
 
 		$this->discoveredTable__captions[ $this->currentTable__id ] = $content;
@@ -271,7 +225,8 @@ trait HtmlTableFromNode {
 				continue;
 			}
 
-			$content = $this->getTransformerOf( Table::Row )?->transform( $row, $this ) ?? $row->childNodes;
+			$transformer = $this->discoveredTable__transformers[ Table::Row->value ] ?? null;
+			$content     = $transformer?->transform( $row, $this ) ?? $row->childNodes;
 
 			if ( $content instanceof CollectionSet ) {
 				$this->registerCurrentTableDatasetCount( $content->value->count() );
@@ -303,6 +258,10 @@ trait HtmlTableFromNode {
 			&& $this->isTargetedTable( $node );
 	}
 
+	private function tableColumnsExistInBody( DOMElement $body ): bool {
+		return ! ! $body->getElementsByTagName( 'td' )->length;
+	}
+
 	/**
 	 * @return DOMElement|DOMNodeList<DOMNode>
 	 * @throws InvalidSource When source invalid.
@@ -317,5 +276,10 @@ trait HtmlTableFromNode {
 		);
 
 		return $source;
+	}
+
+	/** @phpstan-assert DOMElement $node */
+	private function assertThingIsValidNode( mixed $node ): DOMElement {
+		return $node instanceof DOMElement ? $node : $this->throwUnsupportedNodeType( $node, HtmlTableFromNode::class );
 	}
 }

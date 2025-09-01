@@ -3,7 +3,6 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Traits\Table;
 
-use DOMNode;
 use Iterator;
 use DOMElement;
 use ArrayObject;
@@ -14,6 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
 /** @template TColumnReturn */
@@ -57,78 +57,51 @@ trait HtmlTableFromString {
 		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $table, $this ) );
 	}
 
-	/** @param iterable<array-key,array{0:string,1:string,2:string,3:string,4:string}> $elementList */
-	public function inferTableHeadFrom( iterable $elementList ): void {
-		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
+	/** @return array{isValid:bool,isAllowed:bool,content:?string} */
+	protected function useCurrentIterationValidatedHead( mixed $node ): array {
+		$isValid = $isAllowed = false;
 
-		foreach ( $elementList as $currentIndex => $head ) {
-			[$node, $nodeName, $attribute, $content] = $head;
-
-			if ( Table::Head->value !== $nodeName ) {
-				$this->tickCurrentHeadIterationSkippedHeadNode();
-
-				++$skippedNodes;
-
-				continue;
-			}
-
-			$position = $currentIndex - $skippedNodes;
-
-			$this->registerCurrentIterationTableHead( $position );
-
-			$names[] = $transformer?->transform( $head, $this ) ?? trim( $content );
+		if ( ! is_array( $node ) ) {
+			return [ ...compact( 'isValid', 'isAllowed' ), ...[ 'content' => null ] ];
 		}
 
-		$this->registerCurrentTableHead( $names );
+		$isValid = $isAllowed = Table::Head->value === ( $node[1] ?? false );
+		$content = is_string( $value = $node[3] ?? null ) ? ( trim( $value ) ?: null ) : null;
+
+		return compact( 'isValid', 'isAllowed', 'content' );
 	}
 
-	/** @param iterable<array-key,DOMNode|array{0:string,1:string,2:string,3:string,4:string}> $elementList */
-	public function inferTableDataFrom( iterable $elementList ): array {
-		[$source, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
-		$spannedValues                         = $this->getSpannedRowColumnsValue();
-		$spannedPositions                      = $spannedValues ? array_keys( $spannedValues ) : [];
-		$indexKeys                             = $source->items ?? [];
-		$lastPosition                          = array_key_last( $indexKeys );
-		$remainingPositions                    = $dataset = [];
-
-		if ( $this->getCurrentTableDatasetCount() ) {
-			[$dataset, $remainingPositions] = $this->fromSpannedRowColumnsIn( $spannedPositions, $indexKeys );
-		}
-
-		foreach ( $elementList as $currentIndex => $column ) {
-			if ( ! $this->isTableColumnStructure( $column ) ) {
-				++$skippedNodes;
-
-				continue;
-			}
-
-			$actualPosition  = $currentIndex - $skippedNodes;
-			$currentPosition = $remainingPositions ? array_shift( $remainingPositions ) : $actualPosition;
-
-			if ( $this->shouldSkipTableColumnIn( $currentPosition, $source->offsets ?? [] ) ) {
-				continue;
-			}
-
-			if ( $this->hasColumnReachedAtLastPosition( $currentPosition, $lastPosition ) ) {
-				$remainingPositions = [];
-
-				break;
-			}
-
-			$this->registerCurrentIterationTableColumn( $indexKeys[ $currentPosition ] ?? null, $currentPosition + 1 );
-
-			// Value of $column depends on row transformer return. Default is normalized array.
-			// Nested table structure discovery is not supported.
-			$this->registerCurrentTableColumn( $column, $transformer, $dataset, $currentPosition );
-
-			unset( $this->currentIteration__columnName );
-		}//end foreach
-
-		$this->sortCurrentRowDatasetBy( $indexKeys, $dataset );
-		$this->registerColumnCountWithMaxValueOf( $spannedPositions );
-
-		return $this->withEmptyItemsIn( $remainingPositions, $indexKeys, $dataset );
+	/** @param Transformer<static,string> $transformer */
+	protected function transformCurrentIterationTableHead( mixed $node, Transformer $transformer ): string {
+		return $transformer->transform( $this->assertThingIsValidNode( $node ), $this );
 	}
+
+	protected function getTagnameFrom( mixed $thing ): mixed {
+		return match ( true ) {
+			is_array( $thing )  => $thing[1] ?? null,
+			is_string( $thing ) => $thing,
+			default             => null
+		};
+	}
+
+	/**
+	 * @param Transformer<static,TColumnReturn> $transformer
+	 * @return array{0:?TColumnReturn,1:int}
+	 */
+	protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): array {
+		$column    = $this->assertThingIsValidNode( $node );
+		$spanCount = $column[2] ?? null;
+		$rowSpan   = is_string( $spanCount ) ? (int) $this->extractRowSpanFromColumn( $spanCount ) : 0;
+
+		return [ $transformer->transform( $column, $this ), $rowSpan ];
+	}
+
+	/**
+	 * Nested table structure discovery inside column is not supported when this trait is used.
+	 *
+	 * @param ?TColumnReturn $value
+	 */
+	protected function afterCurrentTableColumnRegistered( mixed $column, mixed $value ): void {}
 
 	private function captionStructureContentFrom( string $table ): void {
 		[$matched, $caption] = Normalize::nodeToMatchedArray( $table, Table::Caption );
@@ -139,7 +112,7 @@ trait HtmlTableFromString {
 
 		$this->dispatchEvent( new TableTraced( Table::Caption, EventAt::Start, $caption[0], $this ) );
 
-		$transformer = $this->discoveredTable__transformers['caption'] ?? null;
+		$transformer = $this->discoveredTable__transformers[ Table::Caption->value ] ?? null;
 		$content     = $transformer?->transform( $caption, $this ) ?? trim( $caption[2] );
 
 		$this->discoveredTable__captions[ $this->currentTable__id ] = $content;
@@ -272,7 +245,8 @@ trait HtmlTableFromString {
 				$bodyStarted = true;
 			}
 
-			$content = $this->getTransformerOf( Table::Row )?->transform( $columns, $this ) ?? $columns;
+			$transformer = $this->discoveredTable__transformers[ Table::Row->value ] ?? null;
+			$content     = $transformer?->transform( $columns, $this ) ?? $columns;
 
 			if ( $content instanceof CollectionSet ) {
 				$this->registerCurrentTableDatasetCount( $content->value->count() );
@@ -292,11 +266,28 @@ trait HtmlTableFromString {
 		$this->dispatchEvent( new TableTraced( Table::Row, EventAt::End, $tbodyNode, $this ) );
 	}
 
+	private function extractRowSpanFromColumn( string $node ): int {
+		if ( ! str_contains( $node, 'rowspan' ) ) {
+			return 0;
+		}
+
+		$attributes = explode( '=', $node );
+		$position   = array_search( 'rowspan', $attributes, true );
+
+		return isset( $attributes[ $position + 1 ] )
+			? (int) preg_replace( '/[^0-9]/', '', $attributes[ $position + 1 ] )
+			: 0;
+	}
+
 	/** @param array{0:string,1:string,2:string,3:string,4:string}[] $row */
 	private function inspectFirstRowForHeadStructure( array $row ): bool {
 		$this->inferTableHeadFrom( $row );
 
 		return $this->currentIteration__allTableHeads;
+	}
+
+	private function tableColumnsExistInBody( string $body ): bool {
+		return str_contains( $body, '<td' ) && str_contains( $body, '</td>' );
 	}
 
 	/**
@@ -314,5 +305,17 @@ trait HtmlTableFromString {
 				HtmlTableFromString::class
 			)
 		);
+	}
+
+	/**
+	 * @return string|non-empty-list<mixed>
+	 * @phpstan-assert string|non-empty-list<mixed> $node
+	 */
+	private function assertThingIsValidNode( mixed $node ): string|array {
+		is_string( $node )
+			|| ( is_array( $node ) && array_is_list( $node ) && ! empty( $node ) )
+			|| $this->throwUnsupportedNodeType( $node, HtmlTableFromString::class );
+
+		return $node;
 	}
 }

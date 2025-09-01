@@ -16,6 +16,7 @@ use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
+use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
@@ -60,7 +61,7 @@ trait TableExtractor {
 	private array $currentTable__columnInfo;
 	/** @var array<array-key,array<int,array{0:int,1:TColumnReturn}>> */
 	private array $currentTable__rowSpan = [];
-	/** @var array<int> */
+	/** @var int[] */
 	private array $currentTable__datasetCount = [];
 
 	/** @var int[] */
@@ -157,20 +158,89 @@ trait TableExtractor {
 	}
 
 	public function resetTableTraced(): void {
-			$this->discoveredTable__excludedStructures = [];
-			$this->discoveredTable__captions           = [];
-			$this->discoveredTable__headNames          = [];
-			$this->discoveredTable__rows               = [];
+		$this->discoveredTable__excludedStructures = [];
+		$this->discoveredTable__captions           = [];
+		$this->discoveredTable__headNames          = [];
+		$this->discoveredTable__rows               = [];
+		$this->currentTable__rowSpan               = [];
+		$this->currentTable__datasetCount          = [];
+		$this->currentIteration__columnCount       = [];
+		$this->currentIteration__rowCount          = [];
 	}
 
-	/** Accepts either text content, extracted array or converted DOMElement from default Table Row Marshaller. */
+	abstract protected function transformCurrentIterationTableHead( mixed $node, Transformer $transformer ): string;
+
+	public function inferTableHeadFrom( iterable $elementList ): void {
+		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
+
+		foreach ( $elementList as $currentIndex => $head ) {
+			if ( is_null( $content = $this->tickCurrentHeadIterationSkippedHeadNode( $head ) ) ) {
+				++$skippedNodes;
+
+				continue;
+			}
+
+			$this->registerCurrentIterationTableHeadPosition( $currentIndex - $skippedNodes );
+
+			$names[] = $transformer ? $this->transformCurrentIterationTableHead( $head, $transformer ) : $content;
+		}
+
+		$this->registerCurrentTableHead( $names );
+	}
+
+	abstract protected function afterCurrentTableColumnRegistered( mixed $column, mixed $value ): void;
+
+	public function inferTableDataFrom( iterable $elementList ): array {
+		[$source, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
+		$spannedValues                         = $this->getSpannedRowColumnsValue();
+		$spannedPositions                      = $spannedValues ? array_keys( $spannedValues ) : [];
+		$indexKeys                             = $source->items ?? [];
+		$lastPosition                          = array_key_last( $indexKeys );
+		$remainingPositions                    = $dataset = [];
+
+		if ( $this->getCurrentTableDatasetCount() ) {
+			[$dataset, $remainingPositions] = $this->fromSpannedRowColumnsIn( $spannedPositions, $indexKeys );
+		}
+
+		foreach ( $elementList as $currentIndex => $column ) {
+			if ( ! $this->isTableColumnStructure( $column ) ) {
+				++$skippedNodes;
+
+				continue;
+			}
+
+			$actualPosition  = $currentIndex - $skippedNodes;
+			$currentPosition = $remainingPositions ? array_shift( $remainingPositions ) : $actualPosition;
+
+			if ( $this->shouldSkipTableColumnIn( $currentPosition, $source->offsets ?? [] ) ) {
+				continue;
+			}
+
+			if ( $this->hasColumnReachedAtLastPosition( $currentPosition, $lastPosition ) ) {
+				$remainingPositions = [];
+
+				break;
+			}
+
+			$this->registerCurrentIterationTableColumn( $indexKeys[ $currentPosition ] ?? null, $currentPosition + 1 );
+			$this->afterCurrentTableColumnRegistered(
+				$column,
+				$this->registerCurrentTableColumn( $column, $transformer, $dataset, $currentPosition )
+			);
+
+			unset( $this->currentIteration__columnName );
+		}//end foreach
+
+		$this->sortCurrentRowDatasetBy( $indexKeys, $dataset );
+		$this->registerColumnCountWithMaxValueOf( $spannedPositions );
+
+		return $this->withEmptyItemsIn( $remainingPositions, $indexKeys, $dataset );
+	}
+
+	abstract protected function getTagnameFrom( mixed $node ): mixed;
+
 	protected function isTableColumnStructure( mixed $node ): bool {
-		$nodeName = match ( true ) {
-			$node instanceof DOMElement => $node->tagName,
-			is_array( $node )           => $node[1] ?? null,
-			is_string( $node )          => $node,
-			default                     => null
-		};
+		$nodeName = $this->getTagnameFrom( $node );
 
 		return ( $nodeName && ( Table::Head->value === $nodeName || Table::Column->value === $nodeName ) );
 	}
@@ -202,13 +272,6 @@ trait TableExtractor {
 
 	private function unregisterSpannedRowColumnIn( int $position ): void {
 		unset( $this->currentTable__rowSpan[ $this->getTableId( true ) ][ $position ] );
-	}
-
-	private function tableColumnsExistInBody( string|DOMElement $node ): bool {
-		return match ( true ) {
-			$node instanceof DOMElement => ! ! $node->getElementsByTagName( 'td' )->length,
-			default                     => str_contains( $node, '<td' ) && str_contains( $node, '</td>' ),
-		};
 	}
 
 	/** @param int[] $offsetPositions */
@@ -334,11 +397,6 @@ trait TableExtractor {
 		];
 	}
 
-	/** @return ?Transformer<static,CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>> */
-	private function getTransformerOf( Table $structure ): ?Transformer {
-		return $this->discoveredTable__transformers[ $structure->value ] ?? null;
-	}
-
 	private function shouldTraceTableStructure( Table $structure ): bool {
 		return ! in_array( $structure, $this->discoveredTable__excludedStructures, strict: true );
 	}
@@ -347,15 +405,22 @@ trait TableExtractor {
 		return null !== $lastPosition && $currentPosition > $lastPosition;
 	}
 
-	private function tickCurrentHeadIterationSkippedHeadNode( mixed $node = null ): void {
-		$this->currentIteration__allTableHeads
-			&& ( $this->currentIteration__allTableHeads = $node instanceof DOMNode
-				&& XML_COMMENT_NODE === $node->nodeType );
+	/** @return array{isValid:bool,isAllowed:bool,content:?string} */
+	abstract protected function useCurrentIterationValidatedHead( mixed $node ): array;
+
+	private function tickCurrentHeadIterationSkippedHeadNode( mixed $node ): ?string {
+		$currentHead = $this->useCurrentIterationValidatedHead( $node );
+
+		! $currentHead['isValid']
+			&& $this->currentIteration__allTableHeads
+			&& ( $this->currentIteration__allTableHeads = $currentHead['isAllowed'] );
+
+		return $currentHead['content'];
 	}
 
 	/** @param list<string> $names */
 	private function registerCurrentTableHead( array $names ): void {
-		$this->registerCurrentIterationTableHead( false );
+		$this->registerCurrentIterationTableHeadPosition( false );
 
 		if ( ! $this->currentIteration__allTableHeads || ! $names ) {
 			return;
@@ -368,7 +433,7 @@ trait TableExtractor {
 		$this->registerCurrentTableDatasetCount( $headNames->count() );
 	}
 
-	private function registerCurrentIterationTableHead( int|false $position ): void {
+	private function registerCurrentIterationTableHeadPosition( int|false $position ): void {
 		if ( false === $position ) {
 			unset( $this->currentIteration__headCount );
 
@@ -440,46 +505,31 @@ trait TableExtractor {
 		$this->currentIteration__rowCount[ $this->currentTable__id ] = $count;
 	}
 
+	/** @return array{0:?TColumnReturn,1:int} */
+	abstract protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): array;
+
 	/**
-	 * @param string|array{0:string,1:string,2:string,3:string,4:string}|DOMElement $element
-	 * @param Transformer<static,TColumnReturn>                                     $transformer
-	 * @param array<array-key,TColumnReturn>                                        $data
+	 * @param Transformer<static,TColumnReturn> $transformer
+	 * @param array<array-key,TColumnReturn>    $data
 	 * @return ?TColumnReturn
 	 */
 	private function registerCurrentTableColumn(
-		string|array|DOMElement $element,
+		mixed $column,
 		Transformer $transformer,
 		array &$data,
 		int $currentPosition
 	): mixed {
-		$count     = $this->getCurrentIterationCount( Table::Column );
-		$position  = $count ? $count - 1 : 0;
-		$value     = $transformer->transform( $element, $this );
-		$isValid   = null !== $value && '' !== $value;
-		$spanCount = match ( true ) {
-			$element instanceof DOMElement => (int) $element->getAttribute( 'rowspan' ),
-			is_array( $element )           => $this->extractRowSpanFromColumnString( $element[2] ),
-			default                        => 0,
-		};
+		[$value, $spanCount] = $this->transformCurrentIterationTableColumn( $column, $transformer );
+
+		$count    = $this->getCurrentIterationCount( Table::Column );
+		$position = $count ? $count - 1 : 0;
+		$isValid  = null !== $value && '' !== $value;
 
 		if ( $isValid && $spanCount > 1 ) {
 			$this->registerSpannedRowColumnIn( $currentPosition, $spanCount, $value );
 		}
 
 		return $isValid ? ( $data[ $this->getCurrentItemIndex() ?? $position ] = $value ) : null;
-	}
-
-	private function extractRowSpanFromColumnString( string $string ): int {
-		if ( ! str_contains( $string, 'rowspan' ) ) {
-			return 0;
-		}
-
-		$attributes = explode( '=', $string );
-		$position   = array_search( 'rowspan', $attributes, true );
-
-		return isset( $attributes[ $position + 1 ] )
-			? (int) preg_replace( '/[^0-9]/', '', $attributes[ $position + 1 ] )
-			: 0;
 	}
 
 	private function registerCurrentIterationTableColumn( ?string $name, int $count ): void {
@@ -498,5 +548,11 @@ trait TableExtractor {
 		$method = static::class . '::' . $methodName;
 
 		throw new ScraperError( sprintf( TableTracer::USE_EVENT_LISTENER, $method, ...$placeholders ) );
+	}
+
+	private function throwUnsupportedNodeType( mixed $type, string $exhibit ): never {
+		throw new InvalidSource(
+			sprintf( 'Unsupported type: "%1$s" provided when using trait "%2$s".', get_debug_type( $type ), $exhibit )
+		);
 	}
 }

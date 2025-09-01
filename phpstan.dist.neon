@@ -16,15 +16,6 @@ parameters:
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
 				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{.*?\} but returns array\{.*?MarshallItem\}\.$#'
-				- '#^Method .*?getTransformerOf\(\) should return .*?.$#'
-		-
-			path: Src/Traits/Table/HtmlTableFromString.php
-			identifier: argument.type
-			messages:
-				# Ignore row transformer return. Either returns CollectionSet, ArrayObject, or normalized array.
-				- '#^Parameter \#1 \$elementList of method .*?\:\:inferTableDataFrom\(\) expects iterable\<\(int\|string\), array\{string, string, string, string, string\}\|DOMNode\>, iterable\<int, DOMNode\|string\>\|non\-empty\-list\<array\{string, string, string, string, string\}\> given\.$#'
-				# $element is a valid DOMElement. PHPStan cannot narrow down type from TableExtractor::isTableColumnStructure().
-				- '#^Parameter \#1 \$element of method .*?:\:registerCurrentTableColumn\(\) expects array\{string, string, string, string, string\}\|DOMElement\|string, array\{string, string, string, string, string\}\|DOMNode given\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/MarshallTableRow.php
 			identifier: return.type
