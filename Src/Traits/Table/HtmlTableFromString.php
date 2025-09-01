@@ -8,6 +8,8 @@ use DOMElement;
 use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
+use TheWebSolver\Codegarage\Scraper\Data\TableCell;
+use TheWebSolver\Codegarage\Scraper\Data\TableHead;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
@@ -57,18 +59,13 @@ trait HtmlTableFromString {
 		$this->dispatchEvent( new TableTraced( Table::TBody, EventAt::End, $table, $this ) );
 	}
 
-	/** @return array{isValid:bool,isAllowed:bool,content:?string} */
-	protected function useCurrentIterationValidatedHead( mixed $node ): array {
-		$isValid = $isAllowed = false;
-
-		if ( ! is_array( $node ) ) {
-			return [ ...compact( 'isValid', 'isAllowed' ), ...[ 'content' => null ] ];
+	protected function useCurrentIterationValidatedHead( mixed $node ): TableHead {
+		if ( is_array( $node ) ) {
+			$isValid = $isAllowed = Table::Head->value === ( $node[1] ?? false );
+			$value   = is_string( $value = $node[3] ?? null ) ? ( trim( $value ) ?: null ) : null;
 		}
 
-		$isValid = $isAllowed = Table::Head->value === ( $node[1] ?? false );
-		$content = is_string( $value = $node[3] ?? null ) ? ( trim( $value ) ?: null ) : null;
-
-		return compact( 'isValid', 'isAllowed', 'content' );
+		return new TableHead( $isValid ?? false, $isAllowed ?? false, $value ?? null );
 	}
 
 	/** @param Transformer<static,string> $transformer */
@@ -86,14 +83,18 @@ trait HtmlTableFromString {
 
 	/**
 	 * @param Transformer<static,TColumnReturn> $transformer
-	 * @return array{0:?TColumnReturn,1:int}
+	 * @return TableCell<TColumnReturn>
 	 */
-	protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): array {
-		$column    = $this->assertThingIsValidNode( $node );
-		$spanCount = $column[2] ?? null;
-		$rowSpan   = is_string( $spanCount ) ? (int) $this->extractRowSpanFromColumn( $spanCount ) : 0;
-
-		return [ $transformer->transform( $column, $this ), $rowSpan ];
+	protected function transformCurrentIterationTableColumn(
+		mixed $node,
+		Transformer $transformer,
+		int $position
+	): TableCell {
+		return new TableCell(
+			position: $position,
+			value: $transformer->transform( $column = $this->assertThingIsValidNode( $node ), $this ),
+			rowSpan: is_string( $count = $column[2] ?? null ) ? (int) $this->extractRowSpanFromColumn( $count ) : 0
+		);
 	}
 
 	/**

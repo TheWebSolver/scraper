@@ -12,6 +12,8 @@ use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
+use TheWebSolver\Codegarage\Scraper\Data\TableCell;
+use TheWebSolver\Codegarage\Scraper\Data\TableHead;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
@@ -59,8 +61,8 @@ trait TableExtractor {
 	private int|string $currentTable__id;
 	/** @var CollectUsing[] Column indexes and offset positions */
 	private array $currentTable__columnInfo;
-	/** @var array<array-key,array<int,array{0:int,1:TColumnReturn}>> */
-	private array $currentTable__rowSpan = [];
+	/** @var array<array-key,array<int,TableCell<TColumnReturn>>> */
+	private array $currentTable__extendedColumns = [];
 	/** @var int[] */
 	private array $currentTable__datasetCount = [];
 
@@ -162,7 +164,7 @@ trait TableExtractor {
 		$this->discoveredTable__captions           = [];
 		$this->discoveredTable__headNames          = [];
 		$this->discoveredTable__rows               = [];
-		$this->currentTable__rowSpan               = [];
+		$this->currentTable__extendedColumns       = [];
 		$this->currentTable__datasetCount          = [];
 		$this->currentIteration__columnCount       = [];
 		$this->currentIteration__rowCount          = [];
@@ -171,7 +173,7 @@ trait TableExtractor {
 	abstract protected function transformCurrentIterationTableHead( mixed $node, Transformer $transformer ): string;
 
 	public function inferTableHeadFrom( iterable $elementList ): void {
-		[$names, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
+		[$dataset, $skippedNodes, $transformer] = $this->useCurrentTableHeadDetails();
 
 		foreach ( $elementList as $currentIndex => $head ) {
 			if ( is_null( $content = $this->tickCurrentHeadIterationSkippedHeadNode( $head ) ) ) {
@@ -180,19 +182,19 @@ trait TableExtractor {
 				continue;
 			}
 
-			$this->registerCurrentIterationTableHeadPosition( $currentIndex - $skippedNodes );
+			$this->registerCurrentIterationTableHeadCount( $currentIndex - $skippedNodes );
 
-			$names[] = $transformer ? $this->transformCurrentIterationTableHead( $head, $transformer ) : $content;
+			$dataset[] = $transformer ? $this->transformCurrentIterationTableHead( $head, $transformer ) : $content;
 		}
 
-		$this->registerCurrentTableHead( $names );
+		$this->registerCurrentTableHead( $dataset );
 	}
 
 	abstract protected function afterCurrentTableColumnRegistered( mixed $column, mixed $value ): void;
 
 	public function inferTableDataFrom( iterable $elementList ): array {
 		[$source, $skippedNodes, $transformer] = $this->useCurrentTableColumnDetails();
-		$spannedValues                         = $this->getSpannedRowColumnsValue();
+		$spannedValues                         = $this->getSpannedRowColumnsValues();
 		$spannedPositions                      = $spannedValues ? array_keys( $spannedValues ) : [];
 		$indexKeys                             = $source->items ?? [];
 		$lastPosition                          = array_key_last( $indexKeys );
@@ -222,10 +224,10 @@ trait TableExtractor {
 				break;
 			}
 
-			$this->registerCurrentIterationTableColumn( $indexKeys[ $currentPosition ] ?? null, $currentPosition + 1 );
+			$this->registerCurrentTableColumnCount( $currentPosition, $indexKeys[ $currentPosition ] ?? null );
 			$this->afterCurrentTableColumnRegistered(
 				$column,
-				$this->registerCurrentTableColumn( $column, $transformer, $dataset, $currentPosition )
+				$this->registerCurrentTableColumn( $column, $transformer, $dataset )
 			);
 
 			unset( $this->currentIteration__columnName );
@@ -265,13 +267,13 @@ trait TableExtractor {
 		$this->currentTable__datasetCount[ $this->getTableId( true ) ] ??= $count;
 	}
 
-	/** @param TColumnReturn $value */
-	private function registerSpannedRowColumnIn( int $position, int $spanCount, mixed $value ): void {
-		$this->currentTable__rowSpan[ $this->getTableId( true ) ][ $position ] = [ $spanCount, $value ];
+	/** @param TableCell<TColumnReturn> $cell */
+	private function registerExtendableTableColumn( TableCell $cell ): void {
+		$this->currentTable__extendedColumns[ $this->getTableId( true ) ][ $cell->position ] = $cell;
 	}
 
 	private function unregisterSpannedRowColumnIn( int $position ): void {
-		unset( $this->currentTable__rowSpan[ $this->getTableId( true ) ][ $position ] );
+		unset( $this->currentTable__extendedColumns[ $this->getTableId( true ) ][ $position ] );
 	}
 
 	/** @param int[] $offsetPositions */
@@ -299,11 +301,11 @@ trait TableExtractor {
 		return $this->currentTable__datasetCount[ $this->getTableId( true ) ] ?? 0;
 	}
 
-	/** @return ($position is null ? array<int,array{0:int,1:TColumnReturn}> : array{0:int,1:TColumnReturn}) */
-	private function getSpannedRowColumnsValue( ?int $position = null ) {
-		$spanned = $this->currentTable__rowSpan[ $this->getTableId( true ) ] ?? [];
+	/** @return ($position is null ? array<int,TableCell<TColumnReturn>> : TableCell<TColumnReturn>) */
+	private function getSpannedRowColumnsValues( ?int $position = null ) {
+		$spannedColumns = $this->currentTable__extendedColumns[ $this->getTableId( true ) ] ?? [];
 
-		return null === $position ? $spanned : ( $spanned[ $position ] ?? [] );
+		return null === $position ? $spannedColumns : ( $spannedColumns[ $position ] ?? [] );
 	}
 
 	/** @return ?array<Closure(TableTraced): void> */
@@ -405,22 +407,21 @@ trait TableExtractor {
 		return null !== $lastPosition && $currentPosition > $lastPosition;
 	}
 
-	/** @return array{isValid:bool,isAllowed:bool,content:?string} */
-	abstract protected function useCurrentIterationValidatedHead( mixed $node ): array;
+	abstract protected function useCurrentIterationValidatedHead( mixed $node ): TableHead;
 
 	private function tickCurrentHeadIterationSkippedHeadNode( mixed $node ): ?string {
-		$currentHead = $this->useCurrentIterationValidatedHead( $node );
+		$head = $this->useCurrentIterationValidatedHead( $node );
 
-		! $currentHead['isValid']
+		! $head->isValid
 			&& $this->currentIteration__allTableHeads
-			&& ( $this->currentIteration__allTableHeads = $currentHead['isAllowed'] );
+			&& ( $this->currentIteration__allTableHeads = $head->isAllowed );
 
-		return $currentHead['content'];
+		return $head->value;
 	}
 
 	/** @param list<string> $names */
 	private function registerCurrentTableHead( array $names ): void {
-		$this->registerCurrentIterationTableHeadPosition( false );
+		$this->registerCurrentIterationTableHeadCount( false );
 
 		if ( ! $this->currentIteration__allTableHeads || ! $names ) {
 			return;
@@ -433,7 +434,7 @@ trait TableExtractor {
 		$this->registerCurrentTableDatasetCount( $headNames->count() );
 	}
 
-	private function registerCurrentIterationTableHeadPosition( int|false $position ): void {
+	private function registerCurrentIterationTableHeadCount( int|false $position ): void {
 		if ( false === $position ) {
 			unset( $this->currentIteration__headCount );
 
@@ -466,17 +467,15 @@ trait TableExtractor {
 		$datasetPositions = range( 0, $this->getCurrentTableDatasetCount() - 1 );
 
 		foreach ( $positions as $key => $position ) {
-			if ( ! $spannedRow = $this->getSpannedRowColumnsValue( $position ) ) {
+			if ( ! $cell = $this->getSpannedRowColumnsValues( $position ) ) {
 				continue;
 			}
 
-			[$spanCount, $spannedValue] = $spannedRow;
+			if ( $cell->isExtendable() ) {
+				$insertedValues[ $indexKeys[ $position ] ?? $position ] = $cell->value;
 
-			if ( 1 < $spanCount ) {
-				$insertedValues[ $indexKeys[ $position ] ?? $position ] = $spannedValue;
-
-				$this->registerCurrentIterationTableColumn( $indexKeys[ $position ] ?? null, $position + 1 );
-				$this->registerSpannedRowColumnIn( $position, --$spanCount, $spannedValue );
+				$this->registerCurrentTableColumnCount( $position, $indexKeys[ $position ] ?? null );
+				$this->registerExtendableTableColumn( $cell->extended() );
 			} else {
 				unset( $insertPositions[ $key ] );
 
@@ -505,43 +504,38 @@ trait TableExtractor {
 		$this->currentIteration__rowCount[ $this->currentTable__id ] = $count;
 	}
 
-	/** @return array{0:?TColumnReturn,1:int} */
-	abstract protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): array;
+	abstract protected function transformCurrentIterationTableColumn(
+		mixed $node,
+		Transformer $transformer,
+		int $position
+	): TableCell;
 
 	/**
 	 * @param Transformer<static,TColumnReturn> $transformer
 	 * @param array<array-key,TColumnReturn>    $data
 	 * @return ?TColumnReturn
 	 */
-	private function registerCurrentTableColumn(
-		mixed $column,
-		Transformer $transformer,
-		array &$data,
-		int $currentPosition
-	): mixed {
-		[$value, $spanCount] = $this->transformCurrentIterationTableColumn( $column, $transformer );
+	private function registerCurrentTableColumn( mixed $column, Transformer $transformer, array &$data ): mixed {
+		$position = ( $count = $this->getCurrentIterationCount( Table::Column ) ) ? $count - 1 : 0;
+		$cell     = $this->transformCurrentIterationTableColumn( $column, $transformer, $position );
 
-		$count    = $this->getCurrentIterationCount( Table::Column );
-		$position = $count ? $count - 1 : 0;
-		$isValid  = null !== $value && '' !== $value;
-
-		if ( $isValid && $spanCount > 1 ) {
-			$this->registerSpannedRowColumnIn( $currentPosition, $spanCount, $value );
+		if ( ( $valueValid = $cell->hasValue() ) && $cell->isExtendable() ) {
+			$this->registerExtendableTableColumn( $cell );
 		}
 
-		return $isValid ? ( $data[ $this->getCurrentItemIndex() ?? $position ] = $value ) : null;
+		return $valueValid ? ( $data[ $this->getCurrentItemIndex() ?? $position ] = $cell->value ) : null;
 	}
 
-	private function registerCurrentIterationTableColumn( ?string $name, int $count ): void {
-		$this->currentIteration__columnCount[ $this->currentTable__id ] = $count;
-		$name && $this->currentIteration__columnName                    = $name;
+	private function registerCurrentTableColumnCount( int $position, ?string $indexedBy = null ): void {
+		$this->currentIteration__columnCount[ $this->currentTable__id ] = $position + 1;
+		$indexedBy && $this->currentIteration__columnName               = $indexedBy;
 	}
 
 	/** @param int[] $spannedPositions */
 	private function registerColumnCountWithMaxValueOf( array $spannedPositions ): void {
 		$spannedPositions
-			&& ( $max = max( $spannedPositions ) + 1 ) > $this->getCurrentIterationColumnCount()
-			&& $this->registerCurrentIterationTableColumn( name: null, count: $max );
+			&& ( ( $max = max( $spannedPositions ) ) + 1 ) > $this->getCurrentIterationColumnCount()
+			&& $this->registerCurrentTableColumnCount( $max );
 	}
 
 	private function throwEventListenerNotUsed( string $methodName, string ...$placeholders ): never {

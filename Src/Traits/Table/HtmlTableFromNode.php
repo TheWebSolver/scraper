@@ -10,6 +10,8 @@ use ArrayObject;
 use DOMNodeList;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
+use TheWebSolver\Codegarage\Scraper\Data\TableCell;
+use TheWebSolver\Codegarage\Scraper\Data\TableHead;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
@@ -36,17 +38,14 @@ trait HtmlTableFromNode {
 		$this->inferChildNodesFromTable( $source );
 	}
 
-	/** @return array{isValid:bool,isAllowed:bool,content:?string} */
-	protected function useCurrentIterationValidatedHead( mixed $node ): array {
-		$isAllowed = true;
-
+	protected function useCurrentIterationValidatedHead( mixed $node ): TableHead {
 		if ( $isValid = AssertDOMElement::isValid( $node, Table::Head ) ) {
-			return [ ...compact( 'isValid', 'isAllowed' ), ...[ 'content' => trim( $node->textContent ) ] ];
+			return new TableHead( $isValid, isAllowed: true, value: trim( $node->textContent ) );
 		}
 
 		$isAllowed = $node instanceof DOMNode && XML_COMMENT_NODE === $node->nodeType;
 
-		return [ ...compact( 'isValid', 'isAllowed' ), ...[ 'content' => null ] ];
+		return new TableHead( $isValid, $isAllowed, value: null );
 	}
 
 	/** @param Transformer<static,string> $transformer */
@@ -60,12 +59,18 @@ trait HtmlTableFromNode {
 
 	/**
 	 * @param Transformer<static,TColumnReturn> $transformer
-	 * @return array{0:?TColumnReturn,1:int}
+	 * @return TableCell<TColumnReturn>
 	 */
-	private function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): array {
-		$column = $this->assertThingIsValidNode( $node );
-
-		return [ $transformer->transform( $column, $this ), (int) ( $column->getAttribute( 'rowspan' ) ?: 1 ) ];
+	protected function transformCurrentIterationTableColumn(
+		mixed $node,
+		Transformer $transformer,
+		int $position
+	): TableCell {
+		return new TableCell(
+			position: $position,
+			value: $transformer->transform( $column = $this->assertThingIsValidNode( $node ), $this ),
+			rowSpan: (int) ( $column->getAttribute( 'rowspan' ) ?: 1 )
+		);
 	}
 
 	/** @param ?TColumnReturn $value */
