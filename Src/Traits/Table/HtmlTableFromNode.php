@@ -69,7 +69,7 @@ trait HtmlTableFromNode {
 		return new TableCell(
 			position: $position,
 			value: $transformer->transform( $column = $this->assertThingIsValidNode( $node ), $this ),
-			rowSpan: (int) ( $column->getAttribute( 'rowspan' ) ?: 1 )
+			rowspan: (int) ( $column->getAttribute( 'rowspan' ) ?: 1 )
 		);
 	}
 

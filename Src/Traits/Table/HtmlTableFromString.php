@@ -93,7 +93,7 @@ trait HtmlTableFromString {
 		return new TableCell(
 			position: $position,
 			value: $transformer->transform( $column = $this->assertThingIsValidNode( $node ), $this ),
-			rowSpan: is_string( $count = $column[2] ?? null ) ? (int) $this->extractRowSpanFromColumn( $count ) : 0
+			rowspan: is_string( $count = $column[2] ?? null ) ? (int) $this->extractRowSpanFromColumn( $count ) : 0
 		);
 	}
 
