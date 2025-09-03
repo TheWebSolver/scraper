@@ -33,3 +33,7 @@ parameters:
 			path: Src/Service/TableScrapingService.php
 			identifier: argument.type
 			message: '#^Parameter \#2 \$transformer of method .*?TableTracer.*?addTransformer\(\) expects .*?TableTracer.*?, .*?ItemValidatorProxy given.$#'
+		-
+			path: Src/Data/TableCell.php
+			identifier: missingType.generics
+			message: '#^Method .*?TableCell\:\:.*?\(\) return type with generic class .*?TableCell does not specify its types\: TValue$#'

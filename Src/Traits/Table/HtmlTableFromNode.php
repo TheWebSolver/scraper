@@ -61,13 +61,9 @@ trait HtmlTableFromNode {
 	 * @param Transformer<static,TColumnReturn> $transformer
 	 * @return TableCell<TColumnReturn>
 	 */
-	protected function transformCurrentIterationTableColumn(
-		mixed $node,
-		Transformer $transformer,
-		int $position
-	): TableCell {
+	protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): TableCell {
 		return new TableCell(
-			position: $position,
+			position: 0,
 			value: $transformer->transform( $column = $this->assertThingIsValidNode( $node ), $this ),
 			rowspan: (int) ( $column->getAttribute( 'rowspan' ) ?: 1 )
 		);

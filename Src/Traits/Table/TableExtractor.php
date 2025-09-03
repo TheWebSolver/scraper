@@ -471,11 +471,11 @@ trait TableExtractor {
 				continue;
 			}
 
-			if ( $cell->isExtendable() ) {
+			if ( $cell->shouldExtendToNextRow() ) {
 				$insertedValues[ $indexKeys[ $position ] ?? $position ] = $cell->value;
 
 				$this->registerCurrentTableColumnCount( $position, $indexKeys[ $position ] ?? null );
-				$this->registerExtendableTableColumn( $cell->extended() );
+				$this->registerExtendableTableColumn( $cell->withRemainingRowExtension() );
 			} else {
 				unset( $insertPositions[ $key ] );
 
@@ -504,11 +504,7 @@ trait TableExtractor {
 		$this->currentIteration__rowCount[ $this->currentTable__id ] = $count;
 	}
 
-	abstract protected function transformCurrentIterationTableColumn(
-		mixed $node,
-		Transformer $transformer,
-		int $position
-	): TableCell;
+	abstract protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): TableCell;
 
 	/**
 	 * @param Transformer<static,TColumnReturn> $transformer
@@ -517,10 +513,10 @@ trait TableExtractor {
 	 */
 	private function registerCurrentTableColumn( mixed $column, Transformer $transformer, array &$data ): mixed {
 		$position = ( $count = $this->getCurrentIterationCount( Table::Column ) ) ? $count - 1 : 0;
-		$cell     = $this->transformCurrentIterationTableColumn( $column, $transformer, $position );
+		$cell     = $this->transformCurrentIterationTableColumn( $column, $transformer );
 
-		if ( ( $valueValid = $cell->hasValue() ) && $cell->isExtendable() ) {
-			$this->registerExtendableTableColumn( $cell );
+		if ( ( $valueValid = $cell->hasValidValue() ) && $cell->shouldExtendToNextRow() ) {
+			$this->registerExtendableTableColumn( $cell->withPositionAt( $position ) );
 		}
 
 		return $valueValid ? ( $data[ $this->getCurrentItemIndex() ?? $position ] = $cell->value ) : null;

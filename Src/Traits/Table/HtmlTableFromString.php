@@ -85,13 +85,9 @@ trait HtmlTableFromString {
 	 * @param Transformer<static,TColumnReturn> $transformer
 	 * @return TableCell<TColumnReturn>
 	 */
-	protected function transformCurrentIterationTableColumn(
-		mixed $node,
-		Transformer $transformer,
-		int $position
-	): TableCell {
+	protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): TableCell {
 		return new TableCell(
-			position: $position,
+			position: 0,
 			value: $transformer->transform( $column = $this->assertThingIsValidNode( $node ), $this ),
 			rowspan: is_string( $count = $column[2] ?? null ) ? (int) $this->extractRowSpanFromColumn( $count ) : 0
 		);
