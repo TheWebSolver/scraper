@@ -46,6 +46,7 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 
 	public function flush(): void {
 		parent::flush();
+		$this->getTableTracer()->resetTableTraced();
 		$this->getTableTracer()->resetTableHooks();
 	}
 
@@ -53,15 +54,11 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->tracer->inferTableFrom( $content, $normalize );
 
-		$iterator = $this->tracer->getTableData()[ $this->tracer->getTableId( current: true ) ]
+		return $this->tracer->getTableData()[ $this->tracer->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg(
 				'Table Dataset Iterator not found in class: "%s". Maybe this is used again after reset?',
 				static::class
 			);
-
-		$this->tracer->resetTableTraced();
-
-		return $iterator;
 	}
 
 	protected function hydrateWithDefaultTransformers( TableTraced $event ): void {
