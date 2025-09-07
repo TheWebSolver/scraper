@@ -84,9 +84,7 @@ trait HtmlTableFromNode {
 		}
 
 		[$bodyNode, $captionNode, $headNode] = $tableStructure;
-
-		$splId = spl_object_id( $element );
-		$id    = $splId * spl_object_id( $bodyNode );
+		$id                                  = spl_object_id( $element ) * spl_object_id( $bodyNode );
 
 		$this->dispatchEventForTable( $id, $bodyNode );
 
@@ -109,7 +107,7 @@ trait HtmlTableFromNode {
 				continue;
 			}
 
-			if ( $this->discoveredTargetedTable( $node ) ) {
+			if ( $this->targetIsCurrentTable( $node ) ) {
 				break;
 			}
 		}
@@ -133,7 +131,11 @@ trait HtmlTableFromNode {
 			return null;
 		}
 
-		return $this->isTargetedTable( $element ) && $element->childNodes->length ? $element : null;
+		if ( $isTarget = $this->isTargetedTable( $element ) ) {
+			$this->registerTargetedTable( $element );
+		}
+
+		return $isTarget && $element->childNodes->length ? $element : null;
 	}
 
 	private function captionStructureContentFrom( DOMElement $node ): void {
@@ -251,12 +253,6 @@ trait HtmlTableFromNode {
 		$this->inferTableHeadFrom( $row->childNodes );
 
 		return $this->currentIteration__allTableHeads;
-	}
-
-	private function discoveredTargetedTable( mixed $node ): bool {
-		return ! $this->shouldPerform__allTableDiscovery
-			&& AssertDOMElement::isValid( $node )
-			&& $this->isTargetedTable( $node );
 	}
 
 	private function tableColumnsExistInBody( DOMElement $body ): bool {

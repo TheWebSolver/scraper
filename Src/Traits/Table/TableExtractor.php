@@ -30,6 +30,7 @@ trait TableExtractor {
 	use CollectorSource;
 
 	private bool $shouldPerform__allTableDiscovery = false;
+	private mixed $tracedElements__targetedTable   = null;
 
 	/**
 	 * @var array{
@@ -160,6 +161,7 @@ trait TableExtractor {
 	}
 
 	public function resetTableTraced(): void {
+		$this->tracedElements__targetedTable       = null;
 		$this->discoveredTable__excludedStructures = [];
 		$this->discoveredTable__captions           = [];
 		$this->discoveredTable__headNames          = [];
@@ -250,6 +252,17 @@ trait TableExtractor {
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- To be used by exhibiting class.
 	protected function isTargetedTable( string|DOMElement $node ): bool {
 		return true;
+	}
+
+	private function registerTargetedTable( mixed $element ): void {
+		$this->tracedElements__targetedTable = $element;
+	}
+
+	private function targetIsCurrentTable( mixed $element, bool $inAllTables = false ): bool {
+		$currentTableIsTargeted = $this->tracedElements__targetedTable === $element;
+
+		return ( $inAllTables && $currentTableIsTargeted )
+			|| ( ! $this->shouldPerform__allTableDiscovery && $currentTableIsTargeted );
 	}
 
 	private function hydrateIndicesSourceFromAttribute(): void {
