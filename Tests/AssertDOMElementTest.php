@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\Depends;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
+use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 class AssertDOMElementTest extends TestCase {
 	private DOMDocument $dom;
@@ -79,5 +80,18 @@ class AssertDOMElementTest extends TestCase {
 			[ 'content <span>skip</span><!--skip--><div>div value</div>', 'div', 'div value' ],
 			[ '<span>skip</span><!-- NO <pre> TAG HERE --><div></div>', 'pre', null ],
 		];
+	}
+
+	#[Test]
+	public function itEnsuresGivenElementIsDOMElement(): void {
+		$element = new DOMElement( 'div', 'test' );
+
+		$this->assertTrue( AssertDOMElement::isValid( $element ) );
+		$this->assertTrue( AssertDOMElement::isValid( $element, 'div' ) );
+		$this->assertFalse( AssertDOMElement::isValid( $element, 'section' ) );
+		$this->assertFalse( AssertDOMElement::isValid( 'not an element' ) );
+
+		$this->expectException( InvalidSource::class );
+		AssertDOMElement::instance( 'not a dom element instance' );
 	}
 }

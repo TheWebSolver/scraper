@@ -6,6 +6,7 @@ namespace TheWebSolver\Codegarage\Scraper;
 use Iterator;
 use BackedEnum;
 use DOMElement;
+use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 class AssertDOMElement {
 	public static function hasId( DOMElement $element, string $id ): bool {
@@ -24,6 +25,18 @@ class AssertDOMElement {
 	public static function isValid( mixed $node, string|BackedEnum $type = '' ): bool {
 		return $node instanceof DOMElement
 			&& ( ! $type || ( $type instanceof BackedEnum ? $type->value : $type ) === $node->tagName );
+	}
+
+	/**
+	 * @param string|BackedEnum<T> $type
+	 * @throws InvalidSource When given $node is not DOMElement.
+	 * @phpstan-assert =DOMElement $node
+	 * @template T of string|int
+	 */
+	public static function instance( mixed $node, string|BackedEnum $type = '' ): void {
+		self::isValid( $node, $type ) || throw new InvalidSource(
+			sprintf( 'Given node is not a DOMElement. Given type: "%s".', get_debug_type( $node ) )
+		);
 	}
 
 	/**
