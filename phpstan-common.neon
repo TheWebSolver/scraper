@@ -1,0 +1,5 @@
+parameters:
+	ignoreErrors:
+		-
+			identifier: argument.type
+			message: '#^Parameter \#2 \$transformer of method .*?TableTracer\<.*?\>\:\:addTransformer\(\) expects .*?Transformer\<contravariant .*?, .*?\>, .*? given.$#'

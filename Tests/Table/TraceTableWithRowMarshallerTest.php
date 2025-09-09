@@ -29,12 +29,10 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 		TableTracer $tracer,
 		string $invalidCountMsg = ''
 	): void {
-		$service = new TableScrapingService( $tracer );
-
-		/** @var MarshallTableRow<string> */
+		$service    = new TableScrapingService( $tracer );
 		$marshaller = new MarshallTableRow( $invalidCountMsg );
 
-		$service->getTableTracer()->addTransformer( Table::Row, $marshaller );
+		$service->getTableTracer()->addTransformer( Table::Row, $marshaller ); // @phpstan-ignore-line
 
 		$iterator = $service->parse( self::TABLE_INVALID_COUNT );
 
@@ -58,12 +56,10 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 
 		foreach ( $keyValue as [$key, $value] ) {
 			// Needs new $tracer() each time coz fixture resets table once $service->parse() is invoked.
-			$service = new TableScrapingService( new $tracer() );
-
-			/** @var MarshallTableRow<string> */
+			$service    = new TableScrapingService( new $tracer() );
 			$marshaller = new MarshallTableRow( Indexable::INVALID_COUNT, $key );
 
-			$service->getTableTracer()->addTransformer( Table::Row, $marshaller );
+			$service->getTableTracer()->addTransformer( Table::Row, $marshaller ); // @phpstan-ignore-line
 
 			$iterator = $service->parse( $content );
 

@@ -32,8 +32,7 @@ interface TableTracer extends Indexable {
 	/**
 	 * Registers transformer for the targeted table structure.
 	 *
-	 * @param Transformer<contravariant static,TReturn> $transformer
-	 * @template TReturn
+	 * @param Transformer<contravariant static<TColumnReturn>,TColumnReturn> $transformer
 	 */
 	public function addTransformer( Table $structure, Transformer $transformer ): static;
 

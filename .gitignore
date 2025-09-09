@@ -9,3 +9,4 @@
 !phpcs.xml.dist
 !phpunit.xml.dist
 !phpstan.dist.neon
+!phpstan-common.neon
