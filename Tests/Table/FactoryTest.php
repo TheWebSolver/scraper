@@ -6,7 +6,7 @@ namespace TheWebSolver\Codegarage\Test;
 use Exception;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use TheWebSolver\Codegarage\Scraper\Factory;
+use TheWebSolver\Codegarage\Scraper\TableFactory;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
@@ -15,16 +15,12 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
-use TheWebSolver\Codegarage\Scraper\Traits\Table\TableDatasetIterator;
 
 class FactoryTest extends TestCase {
 	#[Test]
 	public function itTracesTableDataFromCache(): void {
 		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracer ) {
-			$service = new #[ScrapeFrom( 'cache', 'file', 'single-table.html' )] class( new $tracer() ) extends TableScrapingService {};
-			$factory = new factory( $service ); // @phpstan-ignore-line
-
-			$iterator    = $factory->generate();
+			$iterator    = ( new SingleTableFactory( new $tracer() ) )->generateRowIterator();
 			$johnJob     = StringTableTracer::class === $tracer ? 'PHP Devel&ocirc;per' : 'PHP Develôper';
 			$johnAddress = StringTableTracer::class === $tracer
 				? '<a href="/location" title="Developer location">Ktm</a>'
@@ -51,17 +47,18 @@ class FactoryTest extends TestCase {
 	}
 
 	#[Test]
-	public function itMocksActionsPerformedByTableDatasetIterator(): void {
-		$stub    = $this->createStub( ScrapeTraceableTable::class );
-		$factory = new class( $stub ) extends Factory {
-			/** @use TableDatasetIterator<mixed,TableTracer<mixed>> */
-			use TableDatasetIterator {
-				TableDatasetIterator::getIterableDataset as public;
-			}
-		};
-
+	public function itMocksActionsPerformedByGenerateRowIterator(): void {
 		$serviceMock = $this->createMockForIntersectionOfInterfaces( [ ScrapeTraceableTable::class, AccentedCharacter::class ] );
 		$file        = DOMDocumentFactoryTest::RESOURCE_PATH . 'single-table.html';
+		$factory     = new /** @template-extends TableFactory<string,TableTracer<string>> */
+		class( $serviceMock ) extends TableFactory { // @phpstan-ignore-line argument.type -- Mock Object.
+			/** @param ScrapeTraceableTable<string,TableTracer<string>> $serviceMock */
+			public function __construct( private ScrapeTraceableTable $serviceMock ) {}
+
+			public function scraper(): ScrapeTraceableTable {
+				return $this->serviceMock;
+			}
+		};
 
 		// Called twice:
 		// 1: when ignoreCache is false,
@@ -89,7 +86,7 @@ class FactoryTest extends TestCase {
 			->method( 'getAccentOperationType' )
 			->willReturn( AccentedCharacter::ACTION_TRANSLIT );
 
-		( new $factory( $serviceMock ) )->getIterableDataset(
+		( new $factory( $serviceMock ) )->generateRowIterator(
 			actions: [ 'beforeScrape' => static fn() => throw new Exception( 'must never be thrown' ) ]
 		);
 
@@ -112,6 +109,23 @@ class FactoryTest extends TestCase {
 			},
 		];
 
-		$scraperWithActions->getIterableDataset( $actions, ignoreCache: true );
+		$scraperWithActions->generateRowIterator( $actions, ignoreCache: true );
+	}
+}
+
+// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
+
+/** @template-extends TableFactory<string,TableTracer<string>> */
+class SingleTableFactory extends TableFactory {
+	/** @var ScrapeTraceableTable<string,TableTracer<string>> */
+	private ScrapeTraceableTable $service;
+
+	/** @param TableTracer<string> $tracer */
+	public function __construct( TableTracer $tracer ) {
+		$this->service = new #[ScrapeFrom( 'cache', 'file', 'single-table.html' )] class( $tracer ) extends TableScrapingService {};
+	}
+
+	public function scraper(): ScrapeTraceableTable {
+		return $this->service;
 	}
 }
