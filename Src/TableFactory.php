@@ -30,33 +30,38 @@ abstract class TableFactory {
 	 * @throws ScraperError When scraping fails or when caching fails after scraping the content.
 	 */
 	public function generateRowIterator( ?array $actions = null, bool $ignoreCache = false ): Iterator {
-		if ( null !== ( $iterator = $this->fromCacheOrInvalidate( $ignoreCache ) ) ) {
+		$scraper = $this->scraper();
+
+		if ( null !== ( $iterator = $this->fromCacheOrInvalidate( $scraper, $ignoreCache ) ) ) {
 			return $iterator;
 		}
 
-		isset( $actions['beforeScrape'] ) && ( $actions['beforeScrape'] )( $this->scraper(), $this );
+		isset( $actions['beforeScrape'] ) && ( $actions['beforeScrape'] )( $scraper, $this );
 
-		$content = $this->scraper()->scrape();
-		$url     = $this->scraper()->getSourceUrl();
+		$content = $scraper->scrape();
+		$url     = $scraper->getSourceUrl();
 
-		isset( $actions['afterScrape'] ) && ( $actions['afterScrape'] )( $url, $this->scraper(), $this );
+		isset( $actions['afterScrape'] ) && ( $actions['afterScrape'] )( $url, $scraper, $this );
 
-		$this->scraper()->toCache( $content );
+		$scraper->toCache( $content );
 
-		isset( $actions['afterCache'] ) && ( $actions['afterCache'] )( $this->scraper(), $this );
+		isset( $actions['afterCache'] ) && ( $actions['afterCache'] )( $scraper, $this );
 
-		return $this->scraper()->parse( $this->scraper()->fromCache() );
+		return $scraper->parse( $scraper->fromCache() );
 	}
 
-	/** @return ?Iterator<array-key,ArrayObject<array-key,TRowItems>> */
-	private function fromCacheOrInvalidate( bool $ignoreCache ): ?Iterator {
+	/**
+	 * @param ScrapeTraceableTable<TRowItems,covariant TTracer> $scraper
+	 * @return ?Iterator<array-key,ArrayObject<array-key,TRowItems>>
+	 */
+	private function fromCacheOrInvalidate( ScrapeTraceableTable $scraper, bool $ignoreCache ): ?Iterator {
 		if ( ! $ignoreCache ) {
-			if ( $this->scraper()->hasCache() ) {
+			if ( $scraper->hasCache() ) {
 				// TODO: maybe add action if scraped data is already cached.
-				return $this->scraper()->parse( $this->scraper()->fromCache() );
+				return $scraper->parse( $scraper->fromCache() );
 			}
 		} else {
-			$this->scraper()->invalidateCache();
+			$scraper->invalidateCache();
 		}
 
 		return null;
