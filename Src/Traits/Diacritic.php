@@ -3,21 +3,20 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Traits;
 
-use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
+use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 
 trait Diacritic {
-	/** @var AccentedCharacter::ACTION_* */
-	private int $accentedCharacterAction;
+	private AccentedChars $accentedCharacterAction;
 
-	public function setAccentOperationType( int $action ): void {
+	public function setAccentOperationType( AccentedChars $action ): void {
 		$this->accentedCharacterAction = $action;
 	}
 
-	public function getAccentOperationType(): ?int {
+	public function getAccentOperationType(): ?AccentedChars {
 		return $this->accentedCharacterAction ?? null;
 	}
 
 	public function getDiacriticsList(): array {
-		return AccentedCharacter::DIACRITIC_MAP;
+		return AccentedChars::DIACRITIC_MAP;
 	}
 }

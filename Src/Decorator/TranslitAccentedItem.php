@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Decorator;
 
 use DOMElement;
+use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 
@@ -32,6 +33,6 @@ class TranslitAccentedItem implements Transformer {
 	 * @param TScope               $scope
 	 */
 	protected function shouldTranslit( object $scope, array $characters ): bool {
-		return ( $scope::ACTION_TRANSLIT === $scope->getAccentOperationType() ) && ! empty( $characters );
+		return ( AccentedChars::Translit === $scope->getAccentOperationType() ) && ! empty( $characters );
 	}
 }

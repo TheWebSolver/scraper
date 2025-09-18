@@ -10,10 +10,10 @@ use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Test\Fixture\StripTags;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
+use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
-use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracer;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithAccents;
@@ -129,13 +129,10 @@ class TableScrapingServiceTest extends TestCase {
 		}//end foreach
 	}
 
-	/**
-	 * @param AccentedCharacter::ACTION_* $action
-	 * @param list<string>                $keys
-	 */
+	/** @param list<string> $keys */
 	#[Test]
 	#[DataProvider( 'provideTranslitArgsToOperateOnAccentedCharacters' )]
-	public function itScrapesAndTranslitAccentedCharacters( int $action, string $expectedTitle, array $keys ): void {
+	public function itScrapesAndTranslitAccentedCharacters( AccentedChars $action, string $expectedTitle, array $keys ): void {
 		$tracerWithAccents = [
 			new #[CollectUsing( DevDetails::class )] class( $keys ) extends StringTableTracerWithAccents {
 				/** @param list<string> $accentedItemIndices */
@@ -163,11 +160,11 @@ class TableScrapingServiceTest extends TestCase {
 	/** @return mixed[] */
 	public static function provideTranslitArgsToOperateOnAccentedCharacters(): array {
 		return [
-			[ AccentedCharacter::ACTION_ESCAPE, 'PHP Develôper', [] ],
-			[ AccentedCharacter::ACTION_TRANSLIT, 'PHP Develôper', [ 'name', 'age' ] ],
-			[ AccentedCharacter::ACTION_ESCAPE, 'PHP Develôper', [ 'title' ] ],
-			[ AccentedCharacter::ACTION_TRANSLIT, 'PHP Developer', [] ],
-			[ AccentedCharacter::ACTION_TRANSLIT, 'PHP Developer', [ 'title', 'address' ] ],
+			[ AccentedChars::Escape, 'PHP Develôper', [] ],
+			[ AccentedChars::Translit, 'PHP Develôper', [ 'name', 'age' ] ],
+			[ AccentedChars::Escape, 'PHP Develôper', [ 'title' ] ],
+			[ AccentedChars::Translit, 'PHP Developer', [] ],
+			[ AccentedChars::Translit, 'PHP Developer', [ 'title', 'address' ] ],
 		];
 	}
 

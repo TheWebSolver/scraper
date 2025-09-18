@@ -7,6 +7,7 @@ use Exception;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\TableFactory;
+use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
@@ -84,7 +85,7 @@ class FactoryTest extends TestCase {
 		// Verify return value with $actions['afterCache'] passed to $scraperWithActions.
 		$serviceMock->expects( $this->once() )
 			->method( 'getAccentOperationType' )
-			->willReturn( AccentedCharacter::ACTION_TRANSLIT );
+			->willReturn( AccentedChars::Translit );
 
 		( new $factory( $serviceMock ) )->generateRowIterator(
 			actions: [ 'beforeScrape' => static fn() => throw new Exception( 'must never be thrown' ) ]
@@ -104,7 +105,7 @@ class FactoryTest extends TestCase {
 			},
 			'afterCache' => static function ( $service, $factory ) use ( $scraperWithActions ) {
 				self::assertInstanceOf( AccentedCharacter::class, $service );
-				self::assertSame( AccentedCharacter::ACTION_TRANSLIT, $service->getAccentOperationType() );
+				self::assertSame( AccentedChars::Translit, $service->getAccentOperationType() );
 				self::assertSame( $scraperWithActions, $factory );
 			},
 		];

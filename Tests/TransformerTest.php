@@ -7,11 +7,12 @@ use DOMElement;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
-use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
+use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Error\ValidationFail;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
+use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 use TheWebSolver\Codegarage\Scraper\Proxy\ItemValidatorProxy;
 use TheWebSolver\Codegarage\Scraper\Decorator\HtmlEntityDecode;
@@ -84,7 +85,7 @@ class TransformerTest extends TestCase {
 
 		$scope->expects( $this->once() )
 			->method( 'getAccentOperationType' )
-			->willReturn( AccentedCharacter::ACTION_TRANSLIT );
+			->willReturn( AccentedChars::Translit );
 
 		$scope->expects( $this->once() )
 			->method( 'getDiacriticsList' )
@@ -133,7 +134,7 @@ class TransformerTest extends TestCase {
 
 		$validator->expects( $this->once() )
 			->method( 'getAccentOperationType' )
-			->willReturn( AccentedCharacter::ACTION_TRANSLIT );
+			->willReturn( AccentedChars::Translit );
 
 		$validator->expects( $this->once() )
 			->method( 'getDiacriticsList' )

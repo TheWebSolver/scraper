@@ -6,6 +6,7 @@ namespace TheWebSolver\Codegarage\Test;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\Traits\Diacritic;
+use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 
 class AccentedCharacterTest extends TestCase {
@@ -16,14 +17,14 @@ class AccentedCharacterTest extends TestCase {
 		};
 
 		$this->assertNull( $handler->getAccentOperationType() );
-		$this->assertSame( AccentedCharacter::DIACRITIC_MAP, $handler->getDiacriticsList() );
+		$this->assertSame( AccentedChars::DIACRITIC_MAP, $handler->getDiacriticsList() );
 
-		$handler->setAccentOperationType( AccentedCharacter::ACTION_ESCAPE );
+		$handler->setAccentOperationType( AccentedChars::Escape );
 
-		$this->assertSame( AccentedCharacter::ACTION_ESCAPE, $handler->getAccentOperationType() );
+		$this->assertSame( AccentedChars::Escape, $handler->getAccentOperationType() );
 
-		$handler->setAccentOperationType( AccentedCharacter::ACTION_TRANSLIT );
+		$handler->setAccentOperationType( AccentedChars::Translit );
 
-		$this->assertSame( AccentedCharacter::ACTION_TRANSLIT, $handler->getAccentOperationType() );
+		$this->assertSame( AccentedChars::Translit, $handler->getAccentOperationType() );
 	}
 }
