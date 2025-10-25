@@ -7,6 +7,7 @@ enum AccentedChars {
 	case Escape;
 	case Translit;
 
+	/** @return non-empty-string */
 	public function action(): string {
 		return match ( $this ) {
 			self::Escape   => 'Escaped',

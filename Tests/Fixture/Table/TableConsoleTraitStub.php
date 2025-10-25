@@ -1,0 +1,56 @@
+<?php
+declare( strict_types = 1 );
+
+namespace TheWebSolver\Codegarage\Test\Fixture\Table;
+
+use TheWebSolver\Codegarage\Scraper\TableFactory;
+use TheWebSolver\Codegarage\Scraper\Enums\FileFormat;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Writable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
+use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
+use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
+use TheWebSolver\Codegarage\Scraper\Integration\Cli\TableConsole as CliTableConsole;
+
+class TableConsoleTraitStub {
+	/** @use CliTableConsole<string> */
+	use CliTableConsole;
+
+	protected function getTableContextForOutput(): string {
+		return 'test';
+	}
+
+	protected function getInputValue(): array {
+		return [
+			'indexKey'    => null,
+			'accent'      => null,
+			'datasetKeys' => null,
+			'extension'   => '',
+			'filename'    => '',
+		];
+	}
+
+	protected function writer( array $content, FileFormat $format ): Writable {
+		return new class() implements Writable {
+			public function write( string $resourcePath, array $options = [] ): int|false {
+				return false;
+			}
+
+			public function getContent(): string|false {
+				return false;
+			}
+		};
+	}
+
+	protected function defaultCachePath(): string {
+		return '';
+	}
+
+	/** @return TableFactory<string,TableTracer<string>> */
+	protected function tableFactory(): TableFactory {
+		return new /** @template-extends TableFactory<string,TableTracer<string>> */ class() extends TableFactory {
+			public function scraper(): ScrapeTraceableTable {
+				return new TableScrapingService( new StringTableTracer(), null );
+			}
+		};
+	}
+}
