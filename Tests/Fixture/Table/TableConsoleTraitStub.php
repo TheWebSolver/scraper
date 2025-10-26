@@ -29,18 +29,6 @@ class TableConsoleTraitStub {
 		];
 	}
 
-	protected function writer( array $content, FileFormat $format ): Writable {
-		return new class() implements Writable {
-			public function write( string $resourcePath, array $options = [] ): int|false {
-				return false;
-			}
-
-			public function getContent(): string|false {
-				return false;
-			}
-		};
-	}
-
 	protected function defaultCachePath(): string {
 		return '';
 	}

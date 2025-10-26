@@ -12,12 +12,11 @@ use TheWebSolver\Codegarage\Scraper\Traits\CachePath;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Writable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 
-/** @template TRowItems */
+/** @template ColumnDataType */
 trait TableConsole {
 	use CachePath;
 
@@ -45,11 +44,10 @@ trait TableConsole {
 
 	private ?CollectUsing $tableRowsCollectionSource = null;
 
-	abstract protected function getTableContextForOutput(): string;
-	/** @param array<ArrayObject<array-key,TRowItems>> $content */
-	abstract protected function writer( array $content, FileFormat $format ): Writable;
-	/** @return TableFactory<TRowItems,TableTracer<TRowItems>> */
+	/** @return TableFactory<ColumnDataType,TableTracer<ColumnDataType>> */
 	abstract protected function tableFactory(): TableFactory;
+	abstract protected function getTableContextForOutput(): string;
+
 	/**
 	 * @return array{
 	 *  indexKey   : ?string,
@@ -102,7 +100,7 @@ trait TableConsole {
 		}
 	}
 
-	/** @return array<ArrayObject<array-key,TRowItems>> */
+	/** @return array<ArrayObject<array-key,ColumnDataType>> */
 	protected function scrapeAndParseTableRows( bool $ignoreCache, ?Closure $outputWriter ): array {
 		$ignoreCache && $this->invalidateScraperCache( $outputWriter );
 
@@ -129,7 +127,7 @@ trait TableConsole {
 
 	/**
 	 * @return array{
-	 *  data : array<ArrayObject<array-key,TRowItems>>,
+	 *  data : array<ArrayObject<array-key,ColumnDataType>>,
 	 *  cache: ?array{path:string,bytes:int|false,content:non-empty-string|false}
 	 * }
 	 */
@@ -137,23 +135,19 @@ trait TableConsole {
 		$data  = $this->scrapeAndParseTableRows( $ignoreCache, $outputWriter );
 		$cache = null;
 
-		if ( $this->isCachingDisabled() ) {
+		if ( empty( $data ) || $this->isCachingDisabled() ) {
 			return compact( 'data', 'cache' );
 		}
 
-		$format         = FileFormat::tryFrom( $this->getInputValue()['extension'] ) ?? FileFormat::Json;
-		$name           = $this->withoutExtension( $this->getInputValue()['filename'] ?: $this->getFileName() );
-		$cache['path']  = $this->getCachePath();
-		$cache['bytes'] = $cache['content'] = false;
+		$format = FileFormat::tryFrom( $this->getInputValue()['extension'] ) ?? FileFormat::Json;
+		$name   = $this->withoutExtension( $this->getInputValue()['filename'] ?: $this->getFileName() );
 
-		if ( ! empty( $data ) ) {
-			$writer = $this
-				->withCachePath( $this->getDirPath(), filename: "{$name}.{$format->value}" )
-				->writer( $data, $format );
+		$this->withCachePath( $this->getDirPath(), filename: "{$name}.{$format->value}" );
 
-			$cache['bytes']   = $writer->write( $this->getCachePath(), $this->getInputValue() );
-			$cache['content'] = $writer->getContent();
-		}
+		$writer           = $format->getWriter( $data );
+		$cache['path']    = $this->getCachePath();
+		$cache['bytes']   = $writer->write( $this->getCachePath(), $this->getInputValue() );
+		$cache['content'] = $writer->getContent();
 
 		return compact( 'data', 'cache' );
 	}
