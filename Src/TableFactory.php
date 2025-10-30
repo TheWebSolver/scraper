@@ -11,22 +11,22 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 
 /**
- * @template TRowItems
- * @template TTracer of TableTracer<TRowItems>
+ * @template TableColumnValue
+ * @template TTracer of TableTracer<TableColumnValue>
  */
 abstract class TableFactory {
-	/** @return ScrapeTraceableTable<TRowItems,covariant TTracer> */
+	/** @return ScrapeTraceableTable<TableColumnValue,covariant TTracer> */
 	abstract public function scraper(): ScrapeTraceableTable;
 
 	/**
 	 * @param array{
-	 *  beforeScrape?: (Closure(ScrapeTraceableTable<TRowItems,covariant TTracer>, static): void),
-	 *  afterScrape ?: (Closure(string, ScrapeTraceableTable<TRowItems,covariant TTracer>, static): void),
-	 *  afterCache  ?: (Closure(ScrapeTraceableTable<TRowItems,covariant TTracer>, static): void)
+	 *  beforeScrape?: (Closure(ScrapeTraceableTable<TableColumnValue,covariant TTracer>, static): void),
+	 *  afterScrape ?: (Closure(string, ScrapeTraceableTable<TableColumnValue,covariant TTracer>, static): void),
+	 *  afterCache  ?: (Closure(ScrapeTraceableTable<TableColumnValue,covariant TTracer>, static): void)
 	 * } $actions Actions are never fired if `$ignoreCache` is `false` & cached file exists.
 	 * @param bool   $ignoreCache Whether to verify if scraped content is already cached or not. However, it
 	 *                            does not prevent scraped content from being cached if not already cached.
-	 * @return Iterator<array-key,ArrayObject<array-key,TRowItems>>
+	 * @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>>
 	 * @throws ScraperError When scraping fails or when caching fails after scraping the content.
 	 */
 	public function generateRowIterator( ?array $actions = null, bool $ignoreCache = false ): Iterator {
@@ -51,8 +51,8 @@ abstract class TableFactory {
 	}
 
 	/**
-	 * @param ScrapeTraceableTable<TRowItems,covariant TTracer> $scraper
-	 * @return ?Iterator<array-key,ArrayObject<array-key,TRowItems>>
+	 * @param ScrapeTraceableTable<TableColumnValue,covariant TTracer> $scraper
+	 * @return ?Iterator<array-key,ArrayObject<array-key,TableColumnValue>>
 	 */
 	private function fromCacheOrInvalidate( ScrapeTraceableTable $scraper, bool $ignoreCache ): ?Iterator {
 		if ( ! $ignoreCache ) {

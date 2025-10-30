@@ -20,9 +20,9 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
-/** @template TColumnReturn */
+/** @template TableColumnValue */
 trait HtmlTableFromNode {
-	/** @use TableExtractor<TColumnReturn> */
+	/** @use TableExtractor<TableColumnValue> */
 	use TableExtractor;
 
 	/** @throws InvalidSource When "table" cannot be resolved in given source. */
@@ -58,8 +58,8 @@ trait HtmlTableFromNode {
 	}
 
 	/**
-	 * @param Transformer<static,TColumnReturn> $transformer
-	 * @return TableCell<TColumnReturn>
+	 * @param Transformer<static,TableColumnValue> $transformer
+	 * @return TableCell<TableColumnValue>
 	 */
 	protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): TableCell {
 		return new TableCell(
@@ -69,7 +69,7 @@ trait HtmlTableFromNode {
 		);
 	}
 
-	/** @param ?TColumnReturn $value */
+	/** @param ?TableColumnValue $value */
 	protected function afterCurrentTableColumnRegistered( mixed $column, mixed $value ): void {
 		$column = $this->assertThingIsValidNode( $column );
 
@@ -187,7 +187,7 @@ trait HtmlTableFromNode {
 
 	/**
 	 * @param DOMElement $body
-	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
+	 * @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>>
 	 */
 	private function bodyStructureIteratorFrom( DOMElement $body ): Iterator {
 		if ( ! ( $rowList = $body->getElementsByTagName( Table::Row->value ) )->length ) {

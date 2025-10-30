@@ -11,8 +11,8 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Traits\ScraperSource;
 
 /**
- * @template TColumnReturn
- * @template-implements Scrapable<array-key,ArrayObject<array-key,TColumnReturn>>
+ * @template ScrapedValue
+ * @template-implements Scrapable<array-key,ArrayObject<array-key,ScrapedValue>>
  */
 abstract class ScrapingService implements Scrapable {
 	use ScrapeYard, ScraperSource;

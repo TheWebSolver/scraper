@@ -12,7 +12,7 @@ use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-/** @template TColumnReturn */
+/** @template TableColumnValue */
 interface TableTracer extends Indexable {
 	/** @placeholder `1:` static::methodName, `2:` Table::caseName, `3`: EventAt::caseName, `4:` reason. */
 	public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s()". Use event listener for "%2$s" and "%3$s" to %4$s';
@@ -32,7 +32,7 @@ interface TableTracer extends Indexable {
 	/**
 	 * Registers transformer for the targeted table structure.
 	 *
-	 * @param Transformer<contravariant static<TColumnReturn>,TColumnReturn> $transformer
+	 * @param Transformer<contravariant static<TableColumnValue>,TableColumnValue> $transformer
 	 */
 	public function addTransformer( Table $structure, Transformer $transformer ): static;
 
@@ -66,7 +66,7 @@ interface TableTracer extends Indexable {
 	 * Infers table columns' content as a dataset from the given element list.
 	 *
 	 * @param iterable<int,TElement> $elementList
-	 * @return array<TColumnReturn>
+	 * @return array<TableColumnValue>
 	 * @throws InvalidSource When TElement is not a valid type.
 	 * @template TElement
 	 */
@@ -96,7 +96,7 @@ interface TableTracer extends Indexable {
 	/**
 	 * Gets traced table columns' content Iterator indexed by respective table ID.
 	 *
-	 * @return array<Iterator<int,ArrayObject<array-key,TColumnReturn>>>
+	 * @return array<Iterator<int,ArrayObject<array-key,TableColumnValue>>>
 	 */
 	public function getTableData(): array;
 

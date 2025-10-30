@@ -6,9 +6,9 @@ namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 use ArrayObject;
 
 /**
- * @template TInferredColumn
- * @template TTracer of TableTracer<TInferredColumn>
- * @template-extends Scrapable<array-key,ArrayObject<array-key,TInferredColumn>>
+ * @template TableColumnValue
+ * @template TTracer of TableTracer<TableColumnValue>
+ * @template-extends Scrapable<array-key,ArrayObject<array-key,TableColumnValue>>
  */
 interface ScrapeTraceableTable extends Scrapable {
 	/**

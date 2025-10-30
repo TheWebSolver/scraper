@@ -4,8 +4,6 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
 use TheWebSolver\Codegarage\Scraper\TableFactory;
-use TheWebSolver\Codegarage\Scraper\Enums\FileFormat;
-use TheWebSolver\Codegarage\Scraper\Interfaces\Writable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;

@@ -25,7 +25,7 @@ use TheWebSolver\Codegarage\Scraper\Traits\CollectorSource;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallItem;
 
-/** @template TColumnReturn */
+/** @template TableColumnValue */
 trait TableExtractor {
 	use CollectorSource;
 
@@ -34,10 +34,10 @@ trait TableExtractor {
 
 	/**
 	 * @var array{
-	 *   tr      ?: Transformer<static, CollectionSet<TColumnReturn>|iterable<int,string|DOMNode>>,
+	 *   tr      ?: Transformer<static, CollectionSet<TableColumnValue>|iterable<int,string|DOMNode>>,
 	 *   caption ?: Transformer<static, string>,
 	 *   th      ?: Transformer<static, string>,
-	 *   td      ?: Transformer<static, TColumnReturn>,
+	 *   td      ?: Transformer<static, TableColumnValue>,
 	 * }
 	 */
 	private array $discoveredTable__transformers;
@@ -56,13 +56,13 @@ trait TableExtractor {
 	private array $discoveredTable__captions = [];
 	/** @var SplFixedArray<string>[] */
 	private array $discoveredTable__headNames = [];
-	/** @var Iterator<array-key,ArrayObject<array-key,TColumnReturn>>[] */
+	/** @var Iterator<array-key,ArrayObject<array-key,TableColumnValue>>[] */
 	private array $discoveredTable__rows = [];
 
 	private int|string $currentTable__id;
 	/** @var CollectUsing[] Column indexes and offset positions */
 	private array $currentTable__columnInfo;
-	/** @var array<array-key,array<int,TableCell<TColumnReturn>>> */
+	/** @var array<array-key,array<int,TableCell<TableColumnValue>>> */
 	private array $currentTable__extendedColumns = [];
 	/** @var int[] */
 	private array $currentTable__datasetCount = [];
@@ -280,7 +280,7 @@ trait TableExtractor {
 		$this->currentTable__datasetCount[ $this->getTableId( true ) ] ??= $count;
 	}
 
-	/** @param TableCell<TColumnReturn> $cell */
+	/** @param TableCell<TableColumnValue> $cell */
 	private function registerExtendableTableColumn( TableCell $cell ): void {
 		$this->currentTable__extendedColumns[ $this->getTableId( true ) ][ $cell->position ] = $cell;
 	}
@@ -314,7 +314,7 @@ trait TableExtractor {
 		return $this->currentTable__datasetCount[ $this->getTableId( true ) ] ?? 0;
 	}
 
-	/** @return ($position is null ? array<int,TableCell<TColumnReturn>> : TableCell<TColumnReturn>) */
+	/** @return ($position is null ? array<int,TableCell<TableColumnValue>> : TableCell<TableColumnValue>) */
 	private function getSpannedRowColumnsValues( ?int $position = null ) {
 		$spannedColumns = $this->currentTable__extendedColumns[ $this->getTableId( true ) ] ?? [];
 
@@ -385,7 +385,7 @@ trait TableExtractor {
 		return $listeners[ $id ][ $structure->value ] ?? [ null, null ];
 	}
 
-	/** @return array{0:?CollectUsing,1:int,2:Transformer<static,TColumnReturn>} */
+	/** @return array{0:?CollectUsing,1:int,2:Transformer<static,TableColumnValue>} */
 	private function useCurrentTableColumnDetails(): array {
 		return [
 			/* Source       */ $this->getIndicesSource(),
@@ -458,8 +458,8 @@ trait TableExtractor {
 	}
 
 	/**
-	 * @param string[]             $indexKeys
-	 * @param array<TColumnReturn> $dataset
+	 * @param string[]                $indexKeys
+	 * @param array<TableColumnValue> $dataset
 	 */
 	private function sortCurrentRowDatasetBy( array $indexKeys, array &$dataset ): void {
 		if ( ! empty( $indexKeys ) && ( $items = array_flip( $indexKeys ) ) ) {
@@ -472,7 +472,7 @@ trait TableExtractor {
 	/**
 	 * @param int[]    $positions Columns' position in previously spanned row.
 	 * @param string[] $indexKeys The mappable index keys.
-	 * @return array{0:array<TColumnReturn>,1:int[]} Inserted values and remaining insert positions.
+	 * @return array{0:array<TableColumnValue>,1:int[]} Inserted values and remaining insert positions.
 	 */
 	private function fromSpannedRowColumnsIn( array $positions, array $indexKeys ): array {
 		$insertedValues   = [];
@@ -500,10 +500,10 @@ trait TableExtractor {
 	}
 
 	/**
-	 * @param int[]                $remainingPositions
-	 * @param string[]             $indexKeys
-	 * @param array<TColumnReturn> $dataset
-	 * @return array<TColumnReturn>
+	 * @param int[]                   $remainingPositions
+	 * @param string[]                $indexKeys
+	 * @param array<TableColumnValue> $dataset
+	 * @return array<TableColumnValue>
 	 */
 	private function withEmptyItemsIn( array $remainingPositions, array $indexKeys, array $dataset ): array {
 		foreach ( $remainingPositions as $emptyPosition ) {
@@ -520,9 +520,9 @@ trait TableExtractor {
 	abstract protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): TableCell;
 
 	/**
-	 * @param Transformer<static,TColumnReturn> $transformer
-	 * @param array<array-key,TColumnReturn>    $data
-	 * @return ?TColumnReturn
+	 * @param Transformer<static,TableColumnValue> $transformer
+	 * @param array<array-key,TableColumnValue>    $data
+	 * @return ?TableColumnValue
 	 */
 	private function registerCurrentTableColumn( mixed $column, Transformer $transformer, array &$data ): mixed {
 		$position = ( $count = $this->getCurrentIterationCount( Table::Column ) ) ? $count - 1 : 0;

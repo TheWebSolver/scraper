@@ -19,10 +19,10 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 
 /**
- * @template TInferredColumn
- * @template TTracer of TableTracer<TInferredColumn>
- * @template-extends ScrapingService<TInferredColumn>
- * @template-implements ScrapeTraceableTable<TInferredColumn,TTracer>
+ * @template TableColumnValue
+ * @template TTracer of TableTracer<TableColumnValue>
+ * @template-extends ScrapingService<TableColumnValue>
+ * @template-implements ScrapeTraceableTable<TableColumnValue,TTracer>
  */
 abstract class TableScrapingService extends ScrapingService implements ScrapeTraceableTable {
 	/** @param TTracer $tracer */
@@ -50,7 +50,7 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 		$this->getTableTracer()->resetTableHooks();
 	}
 
-	/** @return Iterator<array-key,ArrayObject<array-key,TInferredColumn>> */
+	/** @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>> */
 	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
 		$this->tracer->inferTableFrom( $content, $normalize );
 

@@ -34,4 +34,4 @@ parameters:
 		-
 			path: Src/Data/TableCell.php
 			identifier: missingType.generics
-			message: '#^Method .*?TableCell\:\:.*?\(\) return type with generic class .*?TableCell does not specify its types\: TValue$#'
+			message: '#^Method .*?TableCell\:\:.*?\(\) return type with generic class .*?TableCell does not specify its types\: TableCellValue$#'

@@ -16,7 +16,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 
-/** @template ColumnDataType */
+/** @template TableColumnValue */
 trait TableConsole {
 	use CachePath;
 
@@ -44,7 +44,7 @@ trait TableConsole {
 
 	private ?CollectUsing $tableRowsCollectionSource = null;
 
-	/** @return TableFactory<ColumnDataType,TableTracer<ColumnDataType>> */
+	/** @return TableFactory<TableColumnValue,TableTracer<TableColumnValue>> */
 	abstract protected function tableFactory(): TableFactory;
 	abstract protected function getTableContextForOutput(): string;
 
@@ -100,7 +100,7 @@ trait TableConsole {
 		}
 	}
 
-	/** @return array<ArrayObject<array-key,ColumnDataType>> */
+	/** @return array<ArrayObject<array-key,TableColumnValue>> */
 	protected function scrapeAndParseTableRows( bool $ignoreCache, ?Closure $outputWriter ): array {
 		$ignoreCache && $this->invalidateScraperCache( $outputWriter );
 
@@ -127,7 +127,7 @@ trait TableConsole {
 
 	/**
 	 * @return array{
-	 *  data : array<ArrayObject<array-key,ColumnDataType>>,
+	 *  data : array<ArrayObject<array-key,TableColumnValue>>,
 	 *  cache: ?array{path:string,bytes:int|false,content:non-empty-string|false}
 	 * }
 	 */

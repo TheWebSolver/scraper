@@ -3,9 +3,9 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Data;
 
-/** @template TValue */
+/** @template TableCellValue */
 final readonly class TableCell {
-	/** @param TValue $value */
+	/** @param TableCellValue $value */
 	public function __construct( public mixed $value, public int $rowspan, public int $position ) {}
 
 	public function hasValidValue(): bool {

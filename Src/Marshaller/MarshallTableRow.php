@@ -16,10 +16,10 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 
 /**
- * @template TColumnReturn
+ * @template TableColumnValue
  * @template-implements Transformer<
- *   TableTracer<TColumnReturn>,
- *   CollectionSet<TColumnReturn>|ArrayObject<array-key,TColumnReturn>
+ *   TableTracer<TableColumnValue>,
+ *   CollectionSet<TableColumnValue>|ArrayObject<array-key,TableColumnValue>
  * >
  */
 class MarshallTableRow implements Transformer {
@@ -67,7 +67,7 @@ class MarshallTableRow implements Transformer {
 		return $el ?? throw new InvalidSource( sprintf( self::TABLE_ROW_NOT_FOUND, $type ) );
 	}
 
-	/** @param TColumnReturn[] $dataset */
+	/** @param TableColumnValue[] $dataset */
 	private function discoverIndexKeyFrom( array $dataset ): string|int|null {
 		if ( ! $this->indexKey ) {
 			return null;
@@ -78,7 +78,7 @@ class MarshallTableRow implements Transformer {
 		return is_string( $value ) || is_int( $value ) ? $value : null;
 	}
 
-		/** @param TableTracer<TColumnReturn> $tracer */
+		/** @param TableTracer<TableColumnValue> $tracer */
 	private function validateColumnNamesCount( TableTracer $tracer, int $dataCount ): void {
 		if ( ! $this->invalidCountMsg ) {
 			return;

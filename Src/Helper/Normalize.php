@@ -82,7 +82,7 @@ class Normalize {
 	/**
 	 * Returns array with first index as matched or not and second index contains extracted list.
 	 *
-	 * @param string|BackedEnum<TType> $tagName
+	 * @param string|BackedEnum<HTMLTagName> $tagName
 	 * @return (
 	 *   $all is true
 	 *     ? array{0:int|false,1:list<array{0:string,1:string,2:string}>}
@@ -94,7 +94,7 @@ class Normalize {
 	 * - **1:** The attribute part
 	 * - **2:** The content part
 	 *
-	 * @template TType of int|string
+	 * @template HTMLTagName of int|string
 	 */
 	public static function nodeToMatchedArray( string $node, string|BackedEnum $tagName, bool $all = false ): array {
 		$tagName = $tagName instanceof BackedEnum ? $tagName->value : $tagName;

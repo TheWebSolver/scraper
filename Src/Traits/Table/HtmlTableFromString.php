@@ -18,9 +18,9 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
 use TheWebSolver\Codegarage\Scraper\Traits\Table\TableExtractor;
 
-/** @template TColumnReturn */
+/** @template TableColumnValue */
 trait HtmlTableFromString {
-	/** @use TableExtractor<TColumnReturn> */
+	/** @use TableExtractor<TableColumnValue> */
 	use TableExtractor {
 		TableExtractor::withAllTables as private extractWithAllTables;
 	}
@@ -82,8 +82,8 @@ trait HtmlTableFromString {
 	}
 
 	/**
-	 * @param Transformer<static,TColumnReturn> $transformer
-	 * @return TableCell<TColumnReturn>
+	 * @param Transformer<static,TableColumnValue> $transformer
+	 * @return TableCell<TableColumnValue>
 	 */
 	protected function transformCurrentIterationTableColumn( mixed $node, Transformer $transformer ): TableCell {
 		return new TableCell(
@@ -96,7 +96,7 @@ trait HtmlTableFromString {
 	/**
 	 * Nested table structure discovery inside column is not supported when this trait is used.
 	 *
-	 * @param ?TColumnReturn $value
+	 * @param ?TableColumnValue $value
 	 */
 	protected function afterCurrentTableColumnRegistered( mixed $column, mixed $value ): void {}
 
@@ -200,7 +200,7 @@ trait HtmlTableFromString {
 
 	/**
 	 * @param array{0:string,1:list<array{0:string,1:string,2:string}>} $body
-	 * @return Iterator<array-key,ArrayObject<array-key,TColumnReturn>>
+	 * @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>>
 	 */
 	private function bodyStructureIteratorFrom( array $body ): Iterator {
 		[$headInspected, $bodyStarted, $position] = $this->useCurrentTableBodyDetails();

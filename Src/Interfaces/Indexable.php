@@ -35,9 +35,9 @@ interface Indexable {
 	 *
 	 * This may return null after current iteration is complete.
 	 *
-	 * @param ?BackedEnum<T> $type The item type being collected if collection includes multiple item types.
-	 *                             For Eg: `$type` in a table are: `Table::Row`, `Table::Column`.
-	 * @template T of string|int
+	 * @param ?BackedEnum<ItemType> $type The item type being collected if collection includes multiple item types.
+	 *                              For Eg: `$type` in a table are: `Table::Row`, `Table::Column`.
+	 * @template ItemType of string|int
 	 */
 	public function getCurrentIterationCount( ?BackedEnum $type = null ): ?int;
 }
