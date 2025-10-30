@@ -42,7 +42,7 @@ trait TableConsole {
 	/** @placeholder `%s:` context. */
 	public const PARSING_FINISHED = 'Finished parsing %s from fetched content';
 
-	private ?CollectUsing $tableRowsCollectionSource = null;
+	private ?CollectUsing $collectedUsing = null;
 
 	/** @return TableFactory<TableColumnValue,TableTracer<TableColumnValue>> */
 	abstract protected function tableFactory(): TableFactory;
@@ -62,8 +62,8 @@ trait TableConsole {
 	/** @return array{indexKey:?string,datasetKeys:?non-empty-list<string>,accent:?non-empty-string} */
 	protected function getInputDefaultsForOutput(): array {
 		return [
-			'indexKey'    => $this->tableRowsCollectionSource?->indexKey,
-			'datasetKeys' => empty( $items = $this->tableRowsCollectionSource?->items ) ? null : array_values( $items ),
+			'indexKey'    => $this->collectedUsing?->indexKey,
+			'datasetKeys' => empty( $items = $this->collectedUsing?->items ) ? null : array_values( $items ),
 			'accent'      => $this->getAccentableTracer()?->getAccentOperationType()?->action(),
 		];
 	}
@@ -96,7 +96,7 @@ trait TableConsole {
 			// We won't throw exception caused by index & collection keys from the user input.
 			// This behavior and console output must be handled by the CLI package itself.
 		} finally {
-			$event->tracer->setIndicesSource( $this->tableRowsCollectionSource = $collection );
+			$event->tracer->setIndicesSource( $this->collectedUsing = $collection );
 		}
 	}
 
