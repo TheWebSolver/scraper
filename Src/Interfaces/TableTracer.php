@@ -96,7 +96,7 @@ interface TableTracer extends Indexable {
 	/**
 	 * Gets traced table columns' content Iterator indexed by respective table ID.
 	 *
-	 * @return array<Iterator<int,ArrayObject<array-key,TableColumnValue>>>
+	 * @return array<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>>
 	 */
 	public function getTableData(): array;
 
