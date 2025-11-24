@@ -3,12 +3,13 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
+use Iterator;
 use ArrayObject;
 
 /**
  * @template TableColumnValue
  * @template TTracer of TableTracer<TableColumnValue>
- * @template-extends Scrapable<array-key,ArrayObject<array-key,TableColumnValue>>
+ * @template-extends Scrapable<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>>
  */
 interface ScrapeTraceableTable extends Scrapable {
 	/**

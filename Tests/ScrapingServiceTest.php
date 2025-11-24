@@ -11,7 +11,7 @@ use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
 
 class ScrapingServiceTest extends TestCase {
-	/** @var Scrapable<array-key,mixed> */
+	/** @var Scrapable<Iterator<array-key,mixed>> */
 	private Scrapable $service;
 
 	protected function setUp(): void {

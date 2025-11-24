@@ -21,7 +21,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 /**
  * @template TableColumnValue
  * @template TTracer of TableTracer<TableColumnValue>
- * @template-extends ScrapingService<TableColumnValue>
+ * @template-extends ScrapingService<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>>
  * @template-implements ScrapeTraceableTable<TableColumnValue,TTracer>
  */
 abstract class TableScrapingService extends ScrapingService implements ScrapeTraceableTable {

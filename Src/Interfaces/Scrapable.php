@@ -7,10 +7,7 @@ use Iterator;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-/**
- * @template TKey
- * @template TValue
- */
+/** @template ScrapedKeyValue of Iterator */
 interface Scrapable {
 	/**
 	 * Scrapes content from the source.
@@ -23,7 +20,7 @@ interface Scrapable {
 	 * Parses scraped content.
 	 *
 	 * @param string $content The scraped content.
-	 * @return Iterator<TKey,TValue>
+	 * @return ScrapedKeyValue
 	 * @throws InvalidSource When cannot infer expected type from the content.
 	 * @throws ScraperError  When cannot parse the content.
 	 */
