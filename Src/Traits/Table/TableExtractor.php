@@ -465,9 +465,11 @@ trait TableExtractor {
 	 * @return array{0:array<TableColumnValue>,1:int[]} Inserted values and remaining insert positions.
 	 */
 	private function fromSpannedRowColumnsIn( array $positions, array $indexKeys ): array {
-		$insertedValues   = [];
-		$insertPositions  = $positions;
-		$datasetPositions = range( 0, $this->getCurrentTableDatasetCount() - 1 );
+		$insertedValues  = [];
+		$insertPositions = $positions;
+		$lastPosition    = ( $items = $this->getIndicesSource()?->items )
+			? array_key_last( $items )
+			: $this->getCurrentTableDatasetCount() - 1;
 
 		foreach ( $positions as $key => $position ) {
 			if ( ! $cell = $this->getSpannedRowColumnsValues( $position ) ) {
@@ -486,7 +488,7 @@ trait TableExtractor {
 			}
 		}
 
-		return [ $insertedValues, array_diff( $datasetPositions, $insertPositions ) ];
+		return [ $insertedValues, array_diff( range( 0, $lastPosition ), $insertPositions ) ];
 	}
 
 	/**
