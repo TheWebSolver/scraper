@@ -12,6 +12,7 @@ use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
+use TheWebSolver\Codegarage\Scraper\Data\EmptyItem;
 use TheWebSolver\Codegarage\Scraper\Data\TableCell;
 use TheWebSolver\Codegarage\Scraper\Data\TableHead;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
@@ -234,6 +235,11 @@ trait TableExtractor {
 
 			unset( $this->currentIteration__columnName );
 		}//end foreach
+
+		foreach ( $remainingPositions as $emptyItemPosition ) {
+			$this->registerCurrentTableColumnCount( $emptyItemPosition, $indexKeys[ $emptyItemPosition ] ?? null );
+			$this->afterCurrentTableColumnRegistered( new EmptyItem(), $this->registerCurrentTableColumn( new EmptyItem(), $transformer, $dataset ) );
+		}
 
 		$this->sortCurrentRowDatasetBy( $indexKeys, $dataset );
 		$this->registerColumnCountWithMaxValueOf( $spannedPositions );

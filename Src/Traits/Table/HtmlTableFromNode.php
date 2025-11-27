@@ -10,6 +10,7 @@ use ArrayObject;
 use DOMNodeList;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
+use TheWebSolver\Codegarage\Scraper\Data\EmptyItem;
 use TheWebSolver\Codegarage\Scraper\Data\TableCell;
 use TheWebSolver\Codegarage\Scraper\Data\TableHead;
 use TheWebSolver\Codegarage\Scraper\AssertDOMElement;
@@ -277,6 +278,8 @@ trait HtmlTableFromNode {
 
 	/** @phpstan-assert DOMElement $node */
 	private function assertThingIsValidNode( mixed $node ): DOMElement {
+		$node instanceof EmptyItem && $node = new DOMElement( 'td', EmptyItem::class );
+
 		return $node instanceof DOMElement ? $node : $this->throwUnsupportedNodeType( $node, HtmlTableFromNode::class );
 	}
 }

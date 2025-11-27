@@ -13,6 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Data\TableHead;
 use TheWebSolver\Codegarage\Scraper\Helper\Normalize;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Data\CollectionSet;
+use TheWebSolver\Codegarage\Scraper\Data\EmptyItem;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Transformer;
@@ -309,6 +310,8 @@ trait HtmlTableFromString {
 	 * @phpstan-assert string|non-empty-list<mixed> $node
 	 */
 	private function assertThingIsValidNode( mixed $node ): string|array {
+		$node instanceof EmptyItem && $node = EmptyItem::class;
+
 		is_string( $node )
 			|| ( is_array( $node ) && array_is_list( $node ) && ! empty( $node ) )
 			|| $this->throwUnsupportedNodeType( $node, HtmlTableFromString::class );
