@@ -5,33 +5,24 @@ namespace TheWebSolver\Codegarage\Scraper;
 
 use Closure;
 use Iterator;
-use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
-use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
-use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 
-/**
- * @template TableColumnValue
- * @template TTracer of TableTracer<TableColumnValue>
- */
-abstract class TableFactory {
-	/** @return ScrapeTraceableTable<TableColumnValue,covariant TTracer> */
-	abstract public function scraper(): ScrapeTraceableTable;
-
+class Factory {
 	/**
-	 * @param array{
-	 *  beforeScrape?: (Closure(ScrapeTraceableTable<TableColumnValue,covariant TTracer>, static): void),
-	 *  afterScrape ?: (Closure(string, ScrapeTraceableTable<TableColumnValue,covariant TTracer>, static): void),
-	 *  afterCache  ?: (Closure(ScrapeTraceableTable<TableColumnValue,covariant TTracer>, static): void)
+	 * @param Scrapable<Iterator<array-key,ScrapedDataset>> $scraper
+	 * @param null|array{
+	 *  beforeScrape?: (Closure(Scrapable<Iterator<array-key,ScrapedDataset>>, static): void),
+	 *  afterScrape ?: (Closure(string, Scrapable<Iterator<array-key,ScrapedDataset>>, static): void),
+	 *  afterCache  ?: (Closure(Scrapable<Iterator<array-key,ScrapedDataset>>, static): void)
 	 * } $actions Actions are never fired if `$ignoreCache` is `false` & cached file exists.
-	 * @param bool   $ignoreCache Whether to verify if scraped content is already cached or not. However, it
-	 *                            does not prevent scraped content from being cached if not already cached.
-	 * @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>>
+	 * @param bool                                          $ignoreCache Whether to verify if scraped content is already cached or not. However, it
+	 *                                                                   does not prevent scraped content from being cached if not already cached.
+	 * @return Iterator<array-key,ScrapedDataset>
 	 * @throws ScraperError When scraping fails or when caching fails after scraping the content.
+	 * @template ScrapedDataset
 	 */
-	public function generateRowIterator( ?array $actions = null, bool $ignoreCache = false ): Iterator {
-		$scraper = $this->scraper();
-
+	public function generateDataIterator( Scrapable $scraper, ?array $actions = null, bool $ignoreCache = false ): Iterator {
 		if ( null !== ( $iterator = $this->fromCacheOrInvalidate( $scraper, $ignoreCache ) ) ) {
 			return $iterator;
 		}
@@ -47,18 +38,19 @@ abstract class TableFactory {
 
 		isset( $actions['afterCache'] ) && ( $actions['afterCache'] )( $scraper, $this );
 
-		return $scraper->parse( $scraper->fromCache() );
+		return $scraper->parse();
 	}
 
 	/**
-	 * @param ScrapeTraceableTable<TableColumnValue,covariant TTracer> $scraper
-	 * @return ?Iterator<array-key,ArrayObject<array-key,TableColumnValue>>
+	 * @param Scrapable<Iterator<array-key,ScrapedDataset>> $scraper
+	 * @return ?Iterator<array-key,ScrapedDataset>
+	 * @template ScrapedDataset
 	 */
-	private function fromCacheOrInvalidate( ScrapeTraceableTable $scraper, bool $ignoreCache ): ?Iterator {
+	private function fromCacheOrInvalidate( Scrapable $scraper, bool $ignoreCache ): ?Iterator {
 		if ( ! $ignoreCache ) {
 			if ( $scraper->hasCache() ) {
 				// TODO: maybe add action if scraped data is already cached.
-				return $scraper->parse( $scraper->fromCache() );
+				return $scraper->parse();
 			}
 		} else {
 			$scraper->invalidateCache();

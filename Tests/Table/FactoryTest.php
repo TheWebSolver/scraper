@@ -4,9 +4,11 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Test;
 
 use Exception;
+use ArrayObject;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use TheWebSolver\Codegarage\Scraper\TableFactory;
+use PHPUnit\Framework\MockObject\MockObject;
+use TheWebSolver\Codegarage\Scraper\Factory;
 use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
@@ -21,7 +23,8 @@ class FactoryTest extends TestCase {
 	#[Test]
 	public function itTracesTableDataFromCache(): void {
 		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracer ) {
-			$iterator    = ( new SingleTableFactory( new $tracer() ) )->generateRowIterator();
+			$scraper     = new #[ScrapeFrom( 'cache', 'file', 'single-table.html' )] class( new $tracer() ) extends TableScrapingService {};
+			$iterator    = ( new Factory() )->generateDataIterator( $scraper );
 			$johnJob     = StringTableTracer::class === $tracer ? 'PHP Devel&ocirc;per' : 'PHP Develôper';
 			$johnAddress = StringTableTracer::class === $tracer
 				? '<a href="/location" title="Developer location">Ktm</a>'
@@ -48,18 +51,11 @@ class FactoryTest extends TestCase {
 	}
 
 	#[Test]
-	public function itMocksActionsPerformedByGenerateRowIterator(): void {
+	public function itMocksActionsPerformedByGenerateDataIterator(): void {
+		/** @var MockObject&ScrapeTraceableTable<string,TableTracer<string>> */
 		$serviceMock = $this->createMockForIntersectionOfInterfaces( [ ScrapeTraceableTable::class, AccentedCharacter::class ] );
 		$file        = DOMDocumentFactoryTest::RESOURCE_PATH . 'single-table.html';
-		$factory     = new /** @template-extends TableFactory<string,TableTracer<string>> */
-		class( $serviceMock ) extends TableFactory { // @phpstan-ignore-line argument.type -- Mock Object.
-			/** @param ScrapeTraceableTable<string,TableTracer<string>> $serviceMock */
-			public function __construct( private ScrapeTraceableTable $serviceMock ) {}
-
-			public function scraper(): ScrapeTraceableTable {
-				return $this->serviceMock;
-			}
-		};
+		$factory     = new /** @template-extends Factory<ArrayObject<array-key,string>> */ class() extends Factory {};
 
 		// Called twice:
 		// 1: when ignoreCache is false,
@@ -87,7 +83,8 @@ class FactoryTest extends TestCase {
 			->method( 'getAccentOperationType' )
 			->willReturn( AccentedChars::Translit );
 
-		( new $factory( $serviceMock ) )->generateRowIterator(
+		$factory->generateDataIterator(
+			scraper: $serviceMock,
 			actions: [ 'beforeScrape' => static fn() => throw new Exception( 'must never be thrown' ) ]
 		);
 
@@ -110,23 +107,6 @@ class FactoryTest extends TestCase {
 			},
 		];
 
-		$scraperWithActions->generateRowIterator( $actions, ignoreCache: true );
-	}
-}
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
-
-/** @template-extends TableFactory<string,TableTracer<string>> */
-class SingleTableFactory extends TableFactory {
-	/** @var ScrapeTraceableTable<string,TableTracer<string>> */
-	private ScrapeTraceableTable $service;
-
-	/** @param TableTracer<string> $tracer */
-	public function __construct( TableTracer $tracer ) {
-		$this->service = new #[ScrapeFrom( 'cache', 'file', 'single-table.html' )] class( $tracer ) extends TableScrapingService {};
-	}
-
-	public function scraper(): ScrapeTraceableTable {
-		return $this->service;
+		$scraperWithActions->generateDataIterator( $serviceMock, $actions, ignoreCache: true );
 	}
 }

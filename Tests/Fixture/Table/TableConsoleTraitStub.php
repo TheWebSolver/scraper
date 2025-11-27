@@ -3,7 +3,6 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
-use TheWebSolver\Codegarage\Scraper\TableFactory;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
@@ -12,6 +11,11 @@ use TheWebSolver\Codegarage\Scraper\Integration\Cli\TableConsole as CliTableCons
 class TableConsoleTraitStub {
 	/** @use CliTableConsole<string> */
 	use CliTableConsole;
+
+	/** @return ScrapeTraceableTable<string,TableTracer<string>> */
+	public function scraper(): ScrapeTraceableTable {
+		return new TableScrapingService( new StringTableTracer(), null );
+	}
 
 	protected function getTableContextForOutput(): string {
 		return 'test';
@@ -29,14 +33,5 @@ class TableConsoleTraitStub {
 
 	protected function defaultCachePath(): string {
 		return '';
-	}
-
-	/** @return TableFactory<string,TableTracer<string>> */
-	protected function tableFactory(): TableFactory {
-		return new /** @template-extends TableFactory<string,TableTracer<string>> */ class() extends TableFactory {
-			public function scraper(): ScrapeTraceableTable {
-				return new TableScrapingService( new StringTableTracer(), null );
-			}
-		};
 	}
 }

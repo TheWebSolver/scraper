@@ -5,8 +5,8 @@ namespace TheWebSolver\Codegarage\Scraper\Integration\Cli;
 
 use Closure;
 use ArrayObject;
+use TheWebSolver\Codegarage\Scraper\Factory;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Scraper\TableFactory;
 use TheWebSolver\Codegarage\Scraper\Enums\FileFormat;
 use TheWebSolver\Codegarage\Scraper\Traits\CachePath;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
@@ -15,6 +15,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
+use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 
 /** @template TableColumnValue */
 trait TableConsole {
@@ -44,8 +45,8 @@ trait TableConsole {
 
 	private ?CollectUsing $collectedUsing = null;
 
-	/** @return TableFactory<TableColumnValue,TableTracer<TableColumnValue>> */
-	abstract protected function tableFactory(): TableFactory;
+	/** @return ScrapeTraceableTable<TableColumnValue,TableTracer<TableColumnValue>> */
+	abstract protected function scraper(): ScrapeTraceableTable;
 	abstract protected function getTableContextForOutput(): string;
 
 	/**
@@ -59,6 +60,10 @@ trait TableConsole {
 	 */
 	abstract protected function getInputValue(): array;
 
+	protected function tableFactory(): Factory {
+		return new Factory();
+	}
+
 	/** @return array{indexKey:?string,datasetKeys:?non-empty-list<string>,accent:?non-empty-string} */
 	protected function getInputDefaultsForOutput(): array {
 		return [
@@ -69,13 +74,13 @@ trait TableConsole {
 	}
 
 	protected function invalidateScraperCache( ?Closure $writeOutput ): void {
-		$cacheStatusMsg = $this->tableFactory()->scraper()->hasCache()
+		$cacheStatusMsg = $this->scraper()->hasCache()
 			? self::BEFORE_SCRAPE_INVALIDATION['pass']
 			: self::BEFORE_SCRAPE_INVALIDATION['fail'];
 
 		$writeOutput && $writeOutput( $cacheStatusMsg );
 
-		$cacheClearedMsg = $this->tableFactory()->scraper()->invalidateCache()
+		$cacheClearedMsg = $this->scraper()->invalidateCache()
 			? self::AFTER_SCRAPE_INVALIDATION['pass']
 			: self::AFTER_SCRAPE_INVALIDATION['fail'];
 
@@ -109,14 +114,14 @@ trait TableConsole {
 			$outputWriter( sprintf( self::FETCHING_CONTENT, ...$this->getScrapeSource() ) );
 		}
 
-		$scraper = $this->tableFactory()->scraper();
+		$scraper = $this->scraper();
 
 		$this->setAccentOperationTypeFromInput();
 
 		$scraper->getTableTracer()->addEventListener( Table::Row, $this->setIndicesSourceFromInput( ... ) );
 
 		$actions = $this->getScraperActions( $outputWriter );
-		$rows    = iterator_to_array( $this->tableFactory()->generateRowIterator( $actions, $ignoreCache ) );
+		$rows    = iterator_to_array( $this->tableFactory()->generateDataIterator( $scraper, $actions, $ignoreCache ) );
 
 		$outputWriter && $outputWriter( sprintf( self::PARSING_FINISHED, $this->getTableContextForOutput() ) );
 
@@ -154,7 +159,7 @@ trait TableConsole {
 
 	/** @return array{0:string,1:string} */
 	private function getScrapeSource(): array {
-		return ( $scraper = $this->tableFactory()->scraper() )->hasCache()
+		return ( $scraper = $this->scraper() )->hasCache()
 			? [ 'Cache', $scraper->getCachePath() ]
 			: [ 'URL', $scraper->getSourceUrl() ];
 	}
@@ -177,7 +182,7 @@ trait TableConsole {
 	}
 
 	private function getAccentableTracer(): ?AccentedCharacter {
-		return ( $t = $this->tableFactory()->scraper()->getTableTracer() ) instanceof AccentedCharacter ? $t : null;
+		return ( $t = $this->scraper()->getTableTracer() ) instanceof AccentedCharacter ? $t : null;
 	}
 
 	private function setAccentOperationTypeFromInput(): bool {
