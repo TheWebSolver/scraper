@@ -24,7 +24,7 @@ class ScrapingServiceTest extends TestCase {
 				parent::__construct();
 			}
 
-			public function parse( string $content ): Iterator {
+			public function parse(): Iterator {
 				return $this->iterator;
 			}
 

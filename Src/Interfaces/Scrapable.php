@@ -19,12 +19,11 @@ interface Scrapable {
 	/**
 	 * Parses scraped content.
 	 *
-	 * @param string $content The scraped content.
 	 * @return ScrapedKeyValue
 	 * @throws InvalidSource When cannot infer expected type from the content.
 	 * @throws ScraperError  When cannot parse the content.
 	 */
-	public function parse( string $content ): Iterator;
+	public function parse(): Iterator;
 
 	/**
 	 * Caches scraped content to the cache file.

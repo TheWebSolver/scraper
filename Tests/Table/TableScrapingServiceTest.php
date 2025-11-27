@@ -25,7 +25,7 @@ class TableScrapingServiceTest extends TestCase {
 	public function itScrapesTableUsingTableTracerAndYieldsDataset(): void {
 		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracer ) {
 			$service     = new TableScrapingService( new $tracer() );
-			$iterator    = $service->parse( $service->fromCache() );
+			$iterator    = $service->parse();
 			$johnJob     = StringTableTracer::class === $tracer ? 'PHP Devel&ocirc;per' : 'PHP Develôper';
 			$johnAddress = StringTableTracer::class === $tracer
 				? '<a href="/location" title="Developer location">Ktm</a>'
@@ -68,7 +68,7 @@ class TableScrapingServiceTest extends TestCase {
 				}
 			);
 
-			$iterator = $service->parse( $service->fromCache() );
+			$iterator = $service->parse();
 			$johnDoe  = $iterator->current()->getArrayCopy();
 
 			if ( NodeTableTracer::class === $tracer ) {
@@ -114,7 +114,7 @@ class TableScrapingServiceTest extends TestCase {
 				}
 			)->addTransformer( Table::Head, $stripTags )->addTransformer( Table::Column, $stripTags );
 
-			$iterator = $service->parse( $service->fromCache() );
+			$iterator = $service->parse();
 
 			$this->assertSame(
 				[
@@ -151,7 +151,7 @@ class TableScrapingServiceTest extends TestCase {
 
 			$accentedTracer->addTransformer( Table::Column, $transformer )->setAccentOperationType( $action );
 
-			$iterator = $service->parse( $service->fromCache() );
+			$iterator = $service->parse();
 
 			$this->assertSame( $expectedTitle, $iterator->current()->getArrayCopy()['title'] );
 		}
@@ -176,7 +176,7 @@ class TableScrapingServiceTest extends TestCase {
 	#[DataProvider( 'provideDatasetKeysWithAllEnumCases' )]
 	public function itScrapesAndUsesAllEnumCasesAsDatasetKeys( TableTracer $tracer, array $expected ): void {
 		$service  = new TableScrapingService( $tracer );
-		$iterator = $service->parse( $service->fromCache() );
+		$iterator = $service->parse();
 
 		$this->assertSame( $expected, $iterator->current()->getArrayCopy(), $tracer::class );
 	}
@@ -213,7 +213,7 @@ class TableScrapingServiceTest extends TestCase {
 	#[DataProvider( 'providePartialDatasetKeys' )]
 	public function itScrapesAndUsesPartialEnumCasesAsDatasetKeys( TableTracer $tracer, array $expected ): void {
 		$service  = new TableScrapingService( $tracer );
-		$iterator = $service->parse( $service->fromCache() );
+		$iterator = $service->parse();
 
 		$this->assertSame( $expected, $iterator->current()->getArrayCopy(), $tracer::class );
 	}

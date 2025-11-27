@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Test\Fixture\DevDetails;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
+use TheWebSolver\Codegarage\Test\DOMDocumentFactoryTest;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
@@ -17,16 +18,27 @@ use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracerWithAccents;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracerWithAccents;
 
 class TableScrapingServiceWithValidationTest extends TestCase {
+	private const TEST_FILE = 'serviceWithValidation.txt';
+
+	protected function tearDown(): void {
+		file_exists( $testFile = DOMDocumentFactoryTest::RESOURCE_PATH . self::TEST_FILE ) && unlink( $testFile );
+	}
+
 	/** @param TableTracer<string> $tracer */
 	#[Test]
 	#[DataProvider( 'provideValidatableTableTracers' )]
 	public function itValidatesScrapedValue( TableTracer $tracer, ?string $data = null, ?string $failed = null ): void {
-		$service  = new TableScrapingService( $tracer );
-		$iterator = $service->parse( $data ?? $service->fromCache() );
+		$service = new TableScrapingService( $tracer );
+
+		if ( $data ) {
+			$service->withCachePath( DOMDocumentFactoryTest::RESOURCE_PATH, self::TEST_FILE )->toCache( $data );
+		} else {
+			$service->withCachePath( DOMDocumentFactoryTest::RESOURCE_PATH, 'single-table.html' );
+		}
+
+		$iterator = $service->parse();
 
 		$failed && $this->expectExceptionMessage( sprintf( 'Failed validation of "%s".', $failed ) );
-
-		$iterator->current();
 
 		$this->assertTrue( $iterator->valid() );
 	}

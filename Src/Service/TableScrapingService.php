@@ -38,10 +38,10 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 		return $this->tracer;
 	}
 
-	public function parse( string $content ): Iterator {
+	public function parse(): Iterator {
 		$this->getTableTracer()->addEventListener( Table::Row, $this->hydrateWithDefaultTransformers( ... ) );
 
-		yield from $this->currentTableIterator( $content );
+		yield from $this->currentTableIterator();
 	}
 
 	public function flush(): void {
@@ -51,8 +51,8 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 	}
 
 	/** @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>> */
-	protected function currentTableIterator( string $content, bool $normalize = true ): Iterator {
-		$this->tracer->inferTableFrom( $content, $normalize );
+	protected function currentTableIterator( bool $normalize = true ): Iterator {
+		$this->tracer->inferTableFrom( $this->fromCache(), $normalize );
 
 		return $this->tracer->getTableData()[ $this->tracer->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg(

@@ -29,29 +29,26 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 		TableTracer $tracer,
 		string $invalidCountMsg = ''
 	): void {
-		$service    = new TableScrapingService( $tracer );
 		$marshaller = new MarshallTableRow( $invalidCountMsg );
-
-		$service->getTableTracer()->addTransformer( Table::Row, $marshaller ); // @phpstan-ignore-line
-
-		$iterator = $service->parse( self::TABLE_INVALID_COUNT );
 
 		if ( $invalidCountMsg ) {
 			$this->expectException( ScraperError::class );
 			$this->expectExceptionMessage( sprintf( $invalidCountMsg, 4, 'name", "title", "address", "age' ) );
-		} else {
-			$this->assertInstanceOf( Generator::class, $iterator );
-			$this->assertSame( 0, $iterator->key() );
 		}
 
-		$iterator->current();
+		// @phpstan-ignore-next-line
+		$tracer->addTransformer( Table::Row, $marshaller )->inferTableFrom( self::TABLE_INVALID_COUNT, normalize: false );
+
+		$iterator = $tracer->getTableData()[ $tracer->getTableId( true ) ];
+
+		$this->assertInstanceOf( Generator::class, $iterator );
+		$this->assertSame( 0, $iterator->key() );
 	}
 
 	/**  @param TableTracer<string> $tracer */
 	#[Test]
 	#[DataProvider( 'provideTableTracerWithKeys' )]
 	public function itIndexesDatasetWithProvidedKey( TableTracer $tracer ): void {
-		$content  = file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'single-table.html' ) ?: '';
 		$keyValue = [ [ 'name', 'John Doe' ], [ 'age', '22' ] ];
 
 		foreach ( $keyValue as [$key, $value] ) {
@@ -59,9 +56,12 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 			$service    = new TableScrapingService( new $tracer() );
 			$marshaller = new MarshallTableRow( Indexable::INVALID_COUNT, $key );
 
-			$service->getTableTracer()->addTransformer( Table::Row, $marshaller ); // @phpstan-ignore-line
+			$service
+				->withCachePath( DOMDocumentFactoryTest::RESOURCE_PATH, 'single-table.html' )
+				->getTableTracer()
+				->addTransformer( Table::Row, $marshaller ); // @phpstan-ignore-line
 
-			$iterator = $service->parse( $content );
+			$iterator = $service->parse();
 
 			$this->assertSame( $value, $iterator->key(), $tracer::class );
 		}
