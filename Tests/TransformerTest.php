@@ -22,7 +22,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 
 class TransformerTest extends TestCase {
-	/** @param string|non-empty-list<mixed>|DOMElement $item */
+	/** @param string|non-empty-list<string>|DOMElement $item */
 	#[Test]
 	#[DataProvider( 'provideItemMarshallerValues' )]
 	public function itOnlyTransformsDOMElementOrArray(

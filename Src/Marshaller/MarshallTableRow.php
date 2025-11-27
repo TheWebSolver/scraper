@@ -84,7 +84,7 @@ class MarshallTableRow implements Transformer {
 			return;
 		}
 
-		$items       = $tracer->getIndicesSource()?->items ?? [];
+		$items       = $tracer->getIndicesSource()->items ?? [];
 		$actualCount = $items ? array_key_last( $items ) + 1 : $dataCount;
 
 		$tracer->getCurrentIterationCount( Table::Column ) === $actualCount
