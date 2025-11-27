@@ -148,7 +148,7 @@ trait TableExtractor {
 		return match ( $type ) {
 			Table::Head   => $this->currentIteration__headCount ?? null,
 			Table::Row    => $this->currentIteration__rowCount[ $this->currentTable__id ] ?? null,
-			Table::Column => $this->getCurrentIterationColumnCount(),
+			Table::Column => $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null,
 			default       => null,
 		};
 	}
@@ -292,22 +292,6 @@ trait TableExtractor {
 	/** @param int[] $offsetPositions */
 	private function shouldSkipTableColumnIn( int $position, array $offsetPositions ): bool {
 		return $offsetPositions && in_array( $position, $offsetPositions, true );
-	}
-
-	private function getCurrentIterationColumnCount(): ?int {
-		$countUptoCurrent = $this->currentIteration__columnCount[ $this->currentTable__id ] ?? null;
-
-		if ( null === $countUptoCurrent ) {
-			return null;
-		}
-
-		if ( ! $column = $this->getIndicesSource() ) {
-			return $countUptoCurrent;
-		}
-
-		$offsetCount = count( $column->offsets ?? [] );
-
-		return $countUptoCurrent > $offsetCount ? $countUptoCurrent - $offsetCount : $countUptoCurrent;
 	}
 
 	private function getCurrentTableDatasetCount(): int {
@@ -543,7 +527,7 @@ trait TableExtractor {
 	/** @param int[] $spannedPositions */
 	private function registerColumnCountWithMaxValueOf( array $spannedPositions ): void {
 		$spannedPositions
-			&& ( ( $max = max( $spannedPositions ) ) + 1 ) > $this->getCurrentIterationColumnCount()
+			&& ( ( $max = max( $spannedPositions ) ) + 1 ) > $this->getCurrentIterationCount( Table::Column )
 			&& $this->registerCurrentTableColumnCount( $max );
 	}
 
