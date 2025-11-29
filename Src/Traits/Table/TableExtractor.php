@@ -10,6 +10,7 @@ use BackedEnum;
 use DOMElement;
 use ArrayObject;
 use SplFixedArray;
+use LogicException;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Data\EmptyItem;
@@ -43,7 +44,7 @@ trait TableExtractor {
 	 */
 	private array $discoveredTable__transformers;
 	private ?TableTraced $discoveredTable__eventBeingDispatched = null;
-	/** @var array<value-of<Table>,array{Start?:array<Closure(TableTraced): void>,End?:array<Closure(TableTraced): void>}> */
+	/** @var array<value-of<Table>,array{Start?:array<Closure(TableTraced):void>,End?:array<Closure(TableTraced):void>}> */
 	private array $discoveredTable__eventListeners = [];
 	/** @var array<array-key,array<value-of<Table>,array{0:bool,1:array<string,bool>}>> */
 	private array $discoveredTable__eventListenersDispatched = [];
@@ -88,18 +89,24 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function addTransformer( Table $structure, Transformer $transformer ): static {
+	public function addTransformer( Transformer $transformer, ?BackedEnum $structure = null ): static {
+		$this->assertIsTable( $structure, 'adding transformer' );
+
 		$this->discoveredTable__transformers[ $structure->value ] = $transformer;
 
 		return $this;
 	}
 
-	public function hasTransformer( Table $structure ): bool {
+	public function hasTransformer( ?BackedEnum $structure = null ): bool {
+		$this->assertIsTable( $structure, 'checking transformer' );
+
 		return isset( $this->discoveredTable__transformers[ $structure->value ] );
 	}
 
-	public function addEventListener( Table $structure, callable $callback, EventAt $eventAt = EventAt::Start ): static {
-		$this->discoveredTable__eventListeners[ $structure->value ][ $eventAt->name ][] = $callback( ... );
+	public function addEventListener( callable $listener, ?BackedEnum $structure = null, EventAt $eventAt = EventAt::Start ): static {
+		$this->assertIsTable( $structure, 'adding event listener' );
+
+		$this->discoveredTable__eventListeners[ $structure->value ][ $eventAt->name ][] = $listener( ... );
 
 		return $this;
 	}
@@ -133,6 +140,14 @@ trait TableExtractor {
 		return $this->discoveredTable__rows;
 	}
 
+	public function getData(): Iterator {
+		return $this->discoveredTable__rows[ $id = $this->getTableId( true ) ] ?? throw ScraperError::withSourceMsg(
+			'Table Dataset Iterator not found for table ID: "%s". Maybe this is used again after reset?',
+			static::class,
+			$id
+		);
+	}
+
 	public function getIndicesSource(): ?CollectUsing {
 		return $this->currentTable__columnInfo[ $this->currentTable__id ?? null ] ?? null;
 	}
@@ -154,14 +169,14 @@ trait TableExtractor {
 		};
 	}
 
-	public function resetTableHooks(): void {
+	public function resetHooks(): void {
 		unset( $this->discoveredTable__transformers );
 
 		$this->discoveredTable__eventBeingDispatched     = null;
 		$this->discoveredTable__eventListenersDispatched = $this->discoveredTable__eventListeners = [];
 	}
 
-	public function resetTableTraced(): void {
+	public function resetTraced(): void {
 		$this->tracedElements__targetedTable       = null;
 		$this->discoveredTable__excludedStructures = [];
 		$this->discoveredTable__captions           = [];
@@ -327,7 +342,7 @@ trait TableExtractor {
 				$listenTo( $event );
 			}
 		} finally {
-			unset( $this->discoveredTable__eventBeingDispatched );
+			$this->discoveredTable__eventBeingDispatched = null;
 		}
 	}
 
@@ -549,5 +564,14 @@ trait TableExtractor {
 		throw new InvalidSource(
 			sprintf( 'Unsupported type: "%1$s" provided when using trait "%2$s".', get_debug_type( $type ), $exhibit )
 		);
+	}
+
+	/**
+	 * @param ?BackedEnum<string|int> $structure
+	 * @throws LogicException When given structure is not table.
+	 * @phpstan-assert =Table $structure
+	 */
+	private function assertIsTable( ?BackedEnum $structure, string $condition ): void {
+		$structure instanceof Table || throw new LogicException( sprintf( TableTracer::NO_TABLE_STRUCTURE_PROVIDED, $condition ) );
 	}
 }

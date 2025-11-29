@@ -37,7 +37,7 @@ trait HtmlTableFromString {
 	}
 
 	/** @throws InvalidSource When given $source is not a string. */
-	public function inferTableFrom( string|DOMElement $source, bool $normalize = true ): void {
+	public function inferFrom( string|DOMElement $source, bool $normalize = true ): void {
 		$this->validateSourceHasTableStructure( $source );
 
 		$node = $normalize ? Normalize::controlsAndWhitespacesIn( $source ) : $source;

@@ -118,7 +118,7 @@ trait TableConsole {
 
 		$this->setAccentOperationTypeFromInput();
 
-		$scraper->getTableTracer()->addEventListener( Table::Row, $this->setIndicesSourceFromInput( ... ) );
+		$scraper->getTableTracer()->addEventListener( $this->setIndicesSourceFromInput( ... ), Table::Row );
 
 		$actions = $this->getScraperActions( $outputWriter );
 		$rows    = iterator_to_array( $this->tableFactory()->generateDataIterator( $scraper, $actions, $ignoreCache ) );

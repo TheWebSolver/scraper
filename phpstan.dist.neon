@@ -14,6 +14,9 @@ parameters:
 			identifier: generics.noParent
 			message: '#^Enum .*? has \@implements tag\, but does not implement any interface\.$#'
 		-
+			identifier: missingType.generics
+			message: '#^.*? generic interface BackedEnum but does not specify its types\: TBackedValue$#'
+		-
 			path: Src/Traits/Table/TableExtractor.php
 			messages:
 				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'

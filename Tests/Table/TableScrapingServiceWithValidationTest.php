@@ -58,8 +58,8 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				new class() extends StringTableTracerWithAccents implements Validatable {
 					public function __construct() {
 						$this->addEventListener(
-							Table::Row,
-							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) )
+							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) ),
+							Table::Row
 						);
 					}
 
@@ -126,8 +126,8 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 				new class() extends NodeTableTracerWithAccents implements Validatable {
 					public function __construct() {
 						$this->addEventListener(
-							Table::Row,
-							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) )
+							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) ),
+							Table::Row
 						);
 					}
 

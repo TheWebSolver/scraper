@@ -27,7 +27,7 @@ trait HtmlTableFromNode {
 	use TableExtractor;
 
 	/** @throws InvalidSource When "table" cannot be resolved in given source. */
-	public function inferTableFrom( string|DOMElement $source, bool $normalize = true ): void {
+	public function inferFrom( string|DOMElement $source, bool $normalize = true ): void {
 		$source = $this->getValidatedTableSource( $source, $normalize );
 
 		if ( $source instanceof DOMNodeList ) {

@@ -4,18 +4,21 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use Iterator;
-use DOMElement;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
-use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-/** @template TableColumnValue */
-interface TableTracer extends Indexable {
+/**
+ * @template TableColumnValue
+ * @template-extends Traceable<TableColumnValue,ArrayObject<array-key,TableColumnValue>,TableTraced>
+ */
+interface TableTracer extends Traceable, Indexable {
 	/** @placeholder `1:` static::methodName, `2:` Table::caseName, `3`: EventAt::caseName, `4:` reason. */
 	public const USE_EVENT_LISTENER = 'Invalid invocation of "%1$s()". Use event listener for "%2$s" and "%3$s" to %4$s';
+	/** @placeholder `%s:` Condition when table structure is required. */
+	public const NO_TABLE_STRUCTURE_PROVIDED = 'Table structure is required for %s.';
 
 	/**
 	 * Registers whether all tables present in the given source should be traced or not.
@@ -28,30 +31,6 @@ interface TableTracer extends Indexable {
 	 * @no-named-arguments
 	 */
 	public function traceWithout( Table ...$structures ): static;
-
-	/**
-	 * Registers transformer for the targeted table structure.
-	 *
-	 * @param Transformer<contravariant static<TableColumnValue>,TableColumnValue> $transformer
-	 */
-	public function addTransformer( Table $structure, Transformer $transformer ): static;
-
-	/**
-	 * Registers event listener for the targeted table structure and at the given event time.
-	 *
-	 * @param callable(TableTraced): void $callback
-	 */
-	public function addEventListener( Table $structure, callable $callback, EventAt $eventAt = EventAt::Start ): static;
-
-	/**
-	 * Infers table(s) from given HTML content source.
-	 *
-	 * @param string|DOMElement $source    Either a HTML source or a table DOMElement.
-	 * @param bool              $normalize When set to true, whitespaces/tabs/newlines and other
-	 *                                     similar characters and controls must be cleaned.
-	 * @throws InvalidSource When unsupported $source given, or no "table" in $source.
-	 */
-	public function inferTableFrom( string|DOMElement $source, bool $normalize ): void;
 
 	/**
 	 * Infers table head content from the given element list.
@@ -99,25 +78,4 @@ interface TableTracer extends Indexable {
 	 * @return array<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>>
 	 */
 	public function getTableData(): array;
-
-	/**
-	 * Ensures whether transformer has been added for the given table structure.
-	 */
-	public function hasTransformer( Table $structure ): bool;
-
-	/**
-	 * Resets traced table structures' details.
-	 *
-	 * This may only be invoked after retrieving table columns' content Iterator
-	 * and no further tracing is required of any remaining table structures.
-	 */
-	public function resetTableTraced(): void;
-
-	/**
-	 * Resets registered hooks such as event listeners and transformers.
-	 *
-	 * This may only be invoked after an iteration is complete to prevent side-effects
-	 * of hooks not being applied to remaining items of an Iterator being iterated.
-	 */
-	public function resetTableHooks(): void;
 }

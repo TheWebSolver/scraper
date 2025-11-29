@@ -50,7 +50,7 @@ class TableExtractorTest extends TestCase {
 
 		$tracer = new $classname();
 
-		$tracer->inferTableFrom( $element, false );
+		$tracer->inferFrom( $element, false );
 
 		// @phpstan-ignore-next-line -- "null" always throws exception.
 		$this->assertCount( $count, $tracer->getTableId() );
@@ -75,11 +75,19 @@ class TableExtractorTest extends TestCase {
 		];
 	}
 
+	/** @return mixed[] */
+	public static function provideTableTracerFixtures(): array {
+		return [
+			[ StringTableTracer::class ],
+			[ NodeTableTracer::class ],
+		];
+	}
+
 	#[Test]
 	#[DataProvider( 'provideTableStructuresForTracing' )]
 	public function itTracesTableStructureOnlyWhenBodyExists( string $source, bool $hasHead, int $idsCount = 0 ): void {
 		foreach ( [ new StringTableTracer(), new NodeTableTracer() ] as $tracer ) {
-			$tracer->inferTableFrom( $source );
+			$tracer->inferFrom( $source );
 
 			$heads   = $tracer->getTableHead();
 			$columns = $tracer->getTableData();
@@ -112,8 +120,11 @@ class TableExtractorTest extends TestCase {
 		];
 	}
 
+	/** @param class-string<TableTracer<string>> $tracerClass */
 	#[Test]
-	public function itScrapesDataFromTableHeadAndBodyElement(): void {
+	#[DataProvider( 'provideTableTracerFixtures' )]
+	public function itScrapesDataFromTableHeadAndBodyElement( string $tracerClass ): void {
+		$tracer = new $tracerClass();
 		$source = '
 		<table>
 			  <caption>This is a test with Table Head</caption>
@@ -142,48 +153,52 @@ class TableExtractorTest extends TestCase {
 			</table>
 		';
 
-		foreach ( [ new StringTableTracer(), new NodeTableTracer() ] as $tracer ) {
-			$tracer->inferTableFrom( $source );
+		$tracer->inferFrom( $source, true );
 
-			$tableIds = $tracer->getTableId();
-			$heads    = $tracer->getTableHead()[ $tableIds[0] ];
-			$columns  = $tracer->getTableData()[ $tableIds[0] ];
+		$tableIds = $tracer->getTableId();
+		$heads    = $tracer->getTableHead()[ $tableIds[0] ];
 
-			$this->assertCount( 1, $tableIds );
-			$this->assertSame(
-				[ 'Title', 'AnotherTitle' ],
-				$heads->toArray(),
-				'Source has no space character between "Another" and "Title" words. Only tabs.'
-			);
+		$this->assertCount( 1, $tableIds );
+		$this->assertSame(
+			[ 'Title', 'AnotherTitle' ],
+			$heads->toArray(),
+			'Source has no space character between "Another" and "Title" words. Only tabs.'
+		);
 
-			foreach ( $columns as $index => $dataset ) {
-				$value = 0 === $index ? [ 'Heading 1', 'Value One' ] : [ 'Heading 2', 'Value Two' ];
+		foreach ( $tracer->getData() as $index => $dataset ) {
+			$value = 0 === $index ? [ 'Heading 1', 'Value One' ] : [ 'Heading 2', 'Value Two' ];
 
-				$this->assertSame( $value, $dataset->getArrayCopy() );
-			}
-
-			$this->assertSame( 2, (int) ( $index ?? 0 ) + 1 );
-
-			$tracer->resetTableTraced();
-
-			$this->assertCount( 1, $tracer->getTableId(), 'Table ID will not be reset' );
-			$this->assertEmpty( $tracer->getTableData() );
-		}//end foreach
-
-		foreach ( [ new StringTableTracer(), new NodeTableTracer() ] as $tracer ) {
-			$tracer->traceWithout( Table::THead )->inferTableFrom( $source );
-
-			$this->assertEmpty( $tracer->getTableHead() );
-
-			$columns = $tracer->getTableData()[ $tracer->getTableId( true ) ];
-
-			// TODO: maybe use ::flush() and check if head is used as column names when traceWithout is used.
-			$this->assertIsList( $columns->current()->getArrayCopy() );
+			$this->assertSame( $value, $dataset->getArrayCopy() );
 		}
+
+		$this->assertSame( 2, (int) ( $index ?? 0 ) + 1 );
+
+		$tracer->resetTraced();
+
+		$this->assertCount( 1, $tracer->getTableId(), 'Table ID will not be reset' );
+		$this->assertEmpty( $tracer->getTableData() );
+
+		$tracer = new $tracerClass();
+		$tracer->traceWithout( Table::THead )->inferFrom( $source, true );
+
+		$this->assertEmpty( $tracer->getTableHead() );
+
+		// TODO: maybe use ::flush() and check if head is used as column names when traceWithout is used.
+		$this->assertIsList( $tracer->getData()->current()->getArrayCopy() );
+
+		// Cannot get data after reset.
+		$this->expectException( ScraperError::class );
+		$tracer->resetTraced();
+		$tracer->getData();
 	}
 
+	/**
+	 * @param class-string<TableTracer<string>> $tracerClass
+	 * @return class-string<TableTracer<string>>
+	 */
 	#[Test]
-	public function itDoesNotCollectValueIfTransformerReturnsFalsyValue(): void {
+	#[DataProvider( 'provideTableTracerFixtures' )]
+	public function itDoesNotCollectValueIfTransformerReturnsFalsyValue( string $tracerClass ): string {
 		$source = '
 			<table>
 				<thead><tr><th>First</th><th>Last</th></tr></thead>
@@ -210,15 +225,16 @@ class TableExtractorTest extends TestCase {
 			}
 		};
 
-		foreach ( [ new StringTableTracer(), new NodeTableTracer() ] as $tracer ) {
-			$tracer->addTransformer( Table::Column, $validColumn )->inferTableFrom( $source );
+		$tracer = new $tracerClass();
+		$tracer->addTransformer( $validColumn, Table::Column )->inferFrom( $source, true );
 
-			$dataset = $tracer->getTableData()[ $tracer->getTableId()[0] ]->current()->getArrayCopy();
+		$dataset = $tracer->getTableData()[ $tracer->getTableId()[0] ]->current()->getArrayCopy();
 
-			$this->assertCount( 1, $dataset );
-			$this->assertSame( 2, $tracer->getCurrentIterationCount( Table::Column ) );
-			$this->assertSame( 'Value One', reset( $dataset ), 'Skips falsy (empty string) transformed value.' );
-		}
+		$this->assertCount( 1, $dataset );
+		$this->assertSame( 2, $tracer->getCurrentIterationCount( Table::Column ) );
+		$this->assertSame( 'Value One', reset( $dataset ), 'Skips falsy (empty string) transformed value.' );
+
+		return $tracerClass;
 	}
 
 	#[Test]
@@ -229,7 +245,7 @@ class TableExtractorTest extends TestCase {
 			}
 		};
 
-		$nodeTracer->inferTableFrom( $source = $this->getTableContent() );
+		$nodeTracer->inferFrom( $source = $this->getTableContent() );
 
 		$this->assertCount( 1, $tableIds = $nodeTracer->getTableId() );
 		$this->assertSame(
@@ -245,12 +261,12 @@ class TableExtractorTest extends TestCase {
 		};
 
 		$stringTracer->addEventListener(
-			Table::Row,
 			static fn ( TableTraced $e ) => $e->tracer->setIndicesSource(
 				// @phpstan-ignore-next-line
 				CollectUsing::listOf( $e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray() )
-			)
-		)->inferTableFrom( $source );
+			),
+			Table::Row
+		)->inferFrom( $source );
 
 		$tableIds = $stringTracer->getTableId();
 
@@ -281,7 +297,7 @@ class TableExtractorTest extends TestCase {
 		};
 
 		foreach ( [ $stringTracer, $nodeTracer ] as $tracer ) {
-			$tracer->inferTableFrom( $this->getTableContent( 'single-table' ) );
+			$tracer->inferFrom( $this->getTableContent( 'single-table' ) );
 
 			$id = $tracer->getTableId( true );
 
@@ -320,16 +336,50 @@ class TableExtractorTest extends TestCase {
 			[ 'setIndicesSource', [ $collection ], new NodeTableTracer() ],
 			[ 'setIndicesSource', [ $collection ], new StringTableTracer() ],
 			[
-				'inferTableFrom',
+				'inferFrom',
 				[ $table ],
-				( new NodeTableTracer() )->addEventListener( Table::TBody, $listener ),
+				( new NodeTableTracer() )->addEventListener( $listener, Table::TBody ),
 				'setIndicesSource',
 			],
 			[
-				'inferTableFrom',
+				'inferFrom',
 				[ $table ],
-				( new NodeTableTracer() )->addEventListener( Table::THead, $listener, EventAt::End ),
+				( new NodeTableTracer() )->addEventListener( $listener, Table::THead, EventAt::End ),
 				'setIndicesSource',
+			],
+		];
+	}
+
+	/** @param mixed[] $args */
+	#[Test]
+	#[DataProvider( 'provideCasesWhenTableStructureNotProvided' )]
+	public function itThrowsExceptionWhenTableStructureNotProvided( string $condition, string $methodName, array $args ): void {
+		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracerClass ) {
+			$tracer = new $tracerClass();
+			$this->expectException( LogicException::class );
+			$this->expectExceptionMessage( sprintf( TableTracer::NO_TABLE_STRUCTURE_PROVIDED, $condition ) );
+
+			$tracer->{$methodName}( ...$args );
+		}
+	}
+
+	/** @return mixed[] */
+	public static function provideCasesWhenTableStructureNotProvided(): array {
+		return [
+			[
+				'adding transformer',
+				'addTransformer',
+				[ new StripTags(), null ],
+			],
+			[
+				'adding event listener',
+				'addEventListener',
+				[ fn() => null, null, EventAt::Start ],
+			],
+			[
+				'checking transformer',
+				'hasTransformer',
+				[ null ],
 			],
 		];
 	}
@@ -348,11 +398,11 @@ class TableExtractorTest extends TestCase {
 
 		foreach ( [ new StringTableTracer(), $domTracer = new NodeTableTracer() ] as $tracer ) {
 			$tracer
-				->addTransformer( Table::Head, $stripTags )
-				->addTransformer( Table::Column, $stripTags )
-				->addEventListener( Table::Row, $listener )
+				->addTransformer( $stripTags, Table::Head )
+				->addTransformer( $stripTags, Table::Column )
+				->addEventListener( $listener, Table::Row )
 				->withAllTables()
-				->inferTableFrom( $this->getTableContent() );
+				->inferFrom( $this->getTableContent() );
 
 			$ids = $tracer->getTableId();
 
@@ -371,8 +421,8 @@ class TableExtractorTest extends TestCase {
 			);
 
 			$tracer->addEventListener(
-				Table::Row,
-				static fn( TableTraced $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( [ 'finalAddress' ] ) )
+				static fn( TableTraced $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( [ 'finalAddress' ] ) ),
+				Table::Row
 			);
 
 			$devTable->next();
@@ -413,8 +463,10 @@ class TableExtractorTest extends TestCase {
 		);
 	}
 
+	/** @param class-string<TableTracer<string>> $tracerClass */
 	#[Test]
-	public function itValidatesTransformerElementAndScope(): void {
+	#[DataProvider( 'provideTableTracerFixtures' )]
+	public function itValidatesTransformerElementAndScope( string $tracerClass ): void {
 		$source = '
 			<table id="first-table">
 				<caption> This is a <b>Caption</b> content </caption>
@@ -455,15 +507,6 @@ class TableExtractorTest extends TestCase {
 				</tr>
 			</tbody></table>
 		';
-
-		$transformer = new /** @template-implements Transformer<TableTracer<string>,string> */ class() implements Transformer {
-			public function __construct( private ?Closure $asserter = null ) {}
-
-			public function transform( string|array|DOMElement $element, object $tracer ): mixed {
-				// @phpstan-ignore-next-line -- Invocable & returns value based on $this->asserter.
-				return ( $this->asserter )( $element, $tracer );
-			}
-		};
 
 		$captionAsserter = static function ( string|array|DOMElement $el ) {
 			// @phpstan-ignore-next-line -- Always an array if not DOMElement.
@@ -597,26 +640,25 @@ class TableExtractorTest extends TestCase {
 			return $text;
 		};
 
+		$tracer   = new $tracerClass();
 		$listener = static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
 			// @phpstan-ignore-next-line
 			CollectUsing::listOf( $e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray() )
 		);
 
-		foreach ( [ new StringTableTracer(), new NodeTableTracer() ] as $tracer ) {
-			$tracer->withAllTables()
-				->addTransformer( Table::Caption, new $transformer( $captionAsserter ) )
-				->addTransformer( Table::Head, new $transformer( $thAsserter ) )
-				->addTransformer( Table::Row, new $transformer( $trAsserter ) )
-				->addTransformer( Table::Column, new $transformer( $tdAsserter ) )
-				->addEventListener( Table::Row, $listener )
-				->inferTableFrom( $source );
+		$tracer->withAllTables()
+			->addTransformer( structure: Table::Caption, transformer: new TestTransformer( $captionAsserter ) )
+			->addTransformer( structure: Table::Head, transformer: new TestTransformer( $thAsserter ) )
+			->addTransformer( structure: Table::Row, transformer: new TestTransformer( $trAsserter ) )
+			->addTransformer( structure: Table::Column, transformer: new TestTransformer( $tdAsserter ) )
+			->addEventListener( structure: Table::Row, listener: $listener )
+			->inferFrom( $source, true );
 
-			$this->assertSame(
-				// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
-				[ 'text1' => 'This is a', 'bold1' => 'Caption', 'text2' => 'content' ],
-				json_decode( $tracer->getTableCaption()[ $tracer->getTableId()[0] ] ?? '', associative: true )
-			);
-		}
+		$this->assertSame(
+			// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			[ 'text1' => 'This is a', 'bold1' => 'Caption', 'text2' => 'content' ],
+			json_decode( $tracer->getTableCaption()[ $tracer->getTableId()[0] ] ?? '', associative: true )
+		);
 	}
 
 	/** @param TableTracer<string> $tracer */
@@ -639,8 +681,11 @@ class TableExtractorTest extends TestCase {
 		self::assertSame( $expectedPosition + 1, $tracer->getCurrentIterationCount( Table::Column ) );
 	}
 
+	/** @param class-string<TableTracer<string>> $tracerClass */
 	#[Test]
-	public function itInsertsSpannedRowsToRespectiveColumnPosition(): void {
+	#[DataProvider( 'provideTableTracerFixtures' )]
+	public function itInsertsSpannedRowsToRespectiveColumnPosition( string $tracerClass ): void {
+		$tracer      = new $tracerClass();
 		$indexKeys   = [ 'Card Name', 'ID Range', 'Needs Validation', 'Length', 'Validator' ];
 		$transformer = new class() extends MarshallItem {
 			public function transform( string|array|DOMElement $element, object $scope ): string {
@@ -665,52 +710,61 @@ class TableExtractorTest extends TestCase {
 			}
 		};
 
-		foreach ( [ new NodeTableTracer(), new StringTableTracer() ] as $tracer ) {
-			$tracer
-				->addEventListener( Table::Row, static fn( $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( $indexKeys ) ) )
-				->addTransformer( Table::Column, $transformer )
-				->addTransformer( Table::Row, new MarshallTableRow( 'Fails if could not verify count [%1$s] "%2$s"' ) ) // @phpstan-ignore-line
-				->inferTableFrom( file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . '/table-spanned.html' ) ?: '' );
+		$tracer
+			->addEventListener( static fn( $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( $indexKeys ) ), Table::Row )
+			->addTransformer( $transformer, Table::Column )
+			->addTransformer( new MarshallTableRow( 'Fails if could not verify count [%1$s] "%2$s"' ), Table::Row ) // @phpstan-ignore-line
+			->inferFrom( file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . '/table-spanned.html' ) ?: '', true );
 
-			$iterator = $tracer->getTableData()[ $tracer->getTableId( true ) ];
+		$iterator = $tracer->getTableData()[ $tracer->getTableId( true ) ];
 
-			$americanExpress = $iterator->current()->getArrayCopy();
+		$americanExpress = $iterator->current()->getArrayCopy();
 
-			$this->assertSame( $indexKeys, array_keys( $americanExpress ) );
-			$this->assertSame(
-				[ 'American Express', '34, 37', 'Yes', '15', 'Luhn algorithm' ],
-				array_values( $americanExpress )
-			);
+		$this->assertSame( $indexKeys, array_keys( $americanExpress ) );
+		$this->assertSame(
+			[ 'American Express', '34, 37', 'Yes', '15', 'Luhn algorithm' ],
+			array_values( $americanExpress )
+		);
 
-			$iterator->next();
-			$this->assertSame(
-				[ 'Bankcard', '5610, 560221-560225', 'No', '16', 'Luhn algorithm' ],
-				array_values( $iterator->current()->getArrayCopy() )
-			);
+		$iterator->next();
+		$this->assertSame(
+			[ 'Bankcard', '5610, 560221-560225', 'No', '16', 'Luhn algorithm' ],
+			array_values( $iterator->current()->getArrayCopy() )
+		);
 
-			$iterator->next();
-			$this->assertSame(
-				[ 'Diners Club', 'N/A', 'Yes', '15', 'No Validation' ],
-				array_values( $iterator->current()->getArrayCopy() )
-			);
+		$iterator->next();
+		$this->assertSame(
+			[ 'Diners Club', 'N/A', 'Yes', '15', 'No Validation' ],
+			array_values( $iterator->current()->getArrayCopy() )
+		);
 
-			$iterator->next();
-			$this->assertSame(
-				[ 'Diners Club International', '30, 36, 38, 39', 'Yes', '14-19', 'Luhn algorithm' ],
-				array_values( $iterator->current()->getArrayCopy() )
-			);
+		$iterator->next();
+		$this->assertSame(
+			[ 'Diners Club International', '30, 36, 38, 39', 'Yes', '14-19', 'Luhn algorithm' ],
+			array_values( $iterator->current()->getArrayCopy() )
+		);
 
-			$iterator->next();
-			$this->assertSame(
-				[ 'Discover Card', '6011, 644-649, 65', 'Yes', '16-19', 'Luhn algorithm' ],
-				array_values( $iterator->current()->getArrayCopy() )
-			);
+		$iterator->next();
+		$this->assertSame(
+			[ 'Discover Card', '6011, 644-649, 65', 'Yes', '16-19', 'Luhn algorithm' ],
+			array_values( $iterator->current()->getArrayCopy() )
+		);
 
-			$iterator->next();
-			$this->assertSame(
-				[ 'Discover Card', '622126-622925', 'Yes', '16-19', 'Luhn algorithm' ],
-				array_values( $iterator->current()->getArrayCopy() )
-			);
-		}//end foreach
+		$iterator->next();
+		$this->assertSame(
+			[ 'Discover Card', '622126-622925', 'Yes', '16-19', 'Luhn algorithm' ],
+			array_values( $iterator->current()->getArrayCopy() )
+		);
+	}
+}
+
+// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
+/** @template-implements Transformer<TableTracer<string>,string> */
+class TestTransformer implements Transformer {
+	public function __construct( private ?Closure $asserter = null ) {}
+
+	public function transform( string|array|DOMElement $element, object $tracer ): mixed {
+		// @phpstan-ignore-next-line -- Invocable & returns value based on $this->asserter.
+		return ( $this->asserter )( $element, $tracer );
 	}
 }

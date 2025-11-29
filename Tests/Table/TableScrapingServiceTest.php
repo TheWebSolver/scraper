@@ -57,7 +57,6 @@ class TableScrapingServiceTest extends TestCase {
 			$service = new TableScrapingService( new $tracer() );
 
 			$service->getTableTracer()->addEventListener(
-				Table::Row,
 				static function ( TableTraced $event ) {
 					$event->tracer->setIndicesSource(
 						CollectUsing::listOf(
@@ -65,7 +64,8 @@ class TableScrapingServiceTest extends TestCase {
 							$event->tracer->getTableHead()[ $event->tracer->getTableId( current: true ) ]->toArray()
 						)
 					);
-				}
+				},
+				Table::Row
 			);
 
 			$iterator = $service->parse();
@@ -105,14 +105,14 @@ class TableScrapingServiceTest extends TestCase {
 			$service = new TableScrapingService( new $tracer() );
 
 			$service->getTableTracer()->addEventListener(
-				Table::Row,
 				static function ( TableTraced $event ) {
 					$event->tracer->setIndicesSource(
 						// @phpstan-ignore-next-line
 						CollectUsing::listOf( $event->tracer->getTableHead()[ $event->tracer->getTableId( true ) ]->toArray() )
 					);
-				}
-			)->addTransformer( Table::Head, $stripTags )->addTransformer( Table::Column, $stripTags );
+				},
+				Table::Row
+			)->addTransformer( $stripTags, Table::Head )->addTransformer( $stripTags, Table::Column );
 
 			$iterator = $service->parse();
 
@@ -149,7 +149,7 @@ class TableScrapingServiceTest extends TestCase {
 			$service        = new TableScrapingService( $accentedTracer );
 			$transformer    = new TranslitAccentedIndexableItem( new StripTags() );
 
-			$accentedTracer->addTransformer( Table::Column, $transformer )->setAccentOperationType( $action );
+			$accentedTracer->addTransformer( $transformer, Table::Column )->setAccentOperationType( $action );
 
 			$iterator = $service->parse();
 
@@ -241,10 +241,10 @@ class TableScrapingServiceTest extends TestCase {
 				new class() extends StringTableTracerWithAccents {
 					public function __construct() {
 						$this->addEventListener(
-							Table::Row,
 							static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
 								new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )
-							)
+							),
+							Table::Row
 						);
 					}
 				},
@@ -257,10 +257,10 @@ class TableScrapingServiceTest extends TestCase {
 				new class() extends NodeTableTracerWithAccents {
 					public function __construct() {
 						$this->addEventListener(
-							Table::Row,
 							static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
 								new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )
-							)
+							),
+							Table::Row
 						);
 					}
 				},

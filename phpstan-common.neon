@@ -2,4 +2,4 @@ parameters:
 	ignoreErrors:
 		-
 			identifier: argument.type
-			message: '#^Parameter \#2 \$transformer of method .*?TableTracer\<.*?\>\:\:addTransformer\(\) expects .*?Transformer\<contravariant .*?, .*?\>, .*? given.$#'
+			message: '#^Parameter \#1 \$transformer of method .*?Traceable\<.*?\>\:\:addTransformer\(\) expects .*?Transformer\<contravariant .*?, .*?\>, .*? given.$#'

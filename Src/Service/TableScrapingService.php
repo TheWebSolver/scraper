@@ -39,20 +39,20 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 	}
 
 	public function parse(): Iterator {
-		$this->getTableTracer()->addEventListener( Table::Row, $this->hydrateWithDefaultTransformers( ... ) );
+		$this->getTableTracer()->addEventListener( $this->hydrateWithDefaultTransformers( ... ), Table::Row );
 
 		yield from $this->currentTableIterator();
 	}
 
 	public function flush(): void {
 		parent::flush();
-		$this->getTableTracer()->resetTableTraced();
-		$this->getTableTracer()->resetTableHooks();
+		$this->getTableTracer()->resetTraced();
+		$this->getTableTracer()->resetHooks();
 	}
 
 	/** @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>> */
 	protected function currentTableIterator( bool $normalize = true ): Iterator {
-		$this->tracer->inferTableFrom( $this->fromCache(), $normalize );
+		$this->tracer->inferFrom( $this->fromCache(), $normalize );
 
 		return $this->tracer->getTableData()[ $this->tracer->getTableId( current: true ) ]
 			?? ScraperError::withSourceMsg(
@@ -69,7 +69,7 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 				&& $tracer instanceof AccentedIndexableItem
 				&& $tracer instanceof Validatable
 		) {
-			$tracer->addTransformer( Table::Column, new ItemValidatorProxy() );
+			$tracer->addTransformer( new ItemValidatorProxy(), Table::Column );
 		}
 
 		if ( $tracer->hasTransformer( Table::Row ) ) {
@@ -81,6 +81,6 @@ abstract class TableScrapingService extends ScrapingService implements ScrapeTra
 			indexKey: $tracer->getIndicesSource()?->indexKey
 		);
 
-		$tracer->addTransformer( Table::Row, $rowTransformer );
+		$tracer->addTransformer( $rowTransformer, Table::Row );
 	}
 }
