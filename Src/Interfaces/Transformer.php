@@ -15,12 +15,13 @@ interface Transformer {
 	/**
 	 * Transforms given element.
 	 *
-	 * @param string|non-empty-list<mixed>|DOMElement $element Either a scraped string element, a traced DOMElement, or a
-	 *                                                         parsed array from string element using Normalize helpers.
-	 * @param TScope                                  $scope   The scoped class instance where transformer is being used.
+	 * @param string|array<TValue>|DOMElement $element Either a scraped string element, a traced DOMElement, or a
+	 *                                                 parsed array from string element using Normalize helpers.
+	 * @param TScope                          $scope   The scoped class instance where transformer is being used.
 	 * @return TransformedValue
 	 * @throws InvalidSource When given $element type is not supported by the transformer.
 	 * @throws ScraperError  When data could not be transformed.
+	 * @template TValue
 	 */
 	public function transform( string|array|DOMElement $element, object $scope ): mixed;
 }

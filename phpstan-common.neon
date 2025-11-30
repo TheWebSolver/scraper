@@ -1,5 +1,5 @@
 parameters:
 	ignoreErrors:
 		-
-			identifier: argument.type
-			message: '#^Parameter \#1 \$transformer of method .*?Traceable\<.*?\>\:\:addTransformer\(\) expects .*?Transformer\<contravariant .*?, .*?\>, .*? given.$#'
+			identifier: missingType.generics
+			message: '#^.*?\:\:addTransformer\(\) has parameter \$transformer with generic interface .*?Transformer but does not specify its types\: TScope\, TransformedValue$#'

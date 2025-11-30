@@ -18,9 +18,7 @@ parameters:
 			message: '#^.*? generic interface BackedEnum but does not specify its types\: TBackedValue$#'
 		-
 			path: Src/Traits/Table/TableExtractor.php
-			messages:
-				- '#^Property .*?::\$discoveredTable__transformers \(array{.*?}\) does not accept non-empty-array<.*?>.$#'
-				- '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{.*?\} but returns array\{.*?MarshallItem\}\.$#'
+			message: '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{.*?\} but returns array\{.*?MarshallItem\}\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.
 			path: Src/Marshaller/MarshallTableRow.php
 			identifier: return.type
