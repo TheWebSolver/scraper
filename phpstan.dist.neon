@@ -38,3 +38,6 @@ parameters:
 			path: Src/Data/TableCell.php
 			identifier: missingType.generics
 			message: '#^Method .*?TableCell\:\:.*?\(\) return type with generic class .*?TableCell does not specify its types\: TableCellValue$#'
+		-
+			identifier: return.type
+			message: '#^.*? should return .*?Factory\<.*?\> but returns .*?Factory\<mixed\>.$#'

@@ -3,6 +3,7 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test;
 
+use Iterator;
 use Exception;
 use ArrayObject;
 use PHPUnit\Framework\TestCase;
@@ -16,14 +17,15 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Test\Fixture\Table\NodeTableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
 use TheWebSolver\Codegarage\Test\Fixture\Table\StringTableTracer;
-use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
 
 class FactoryTest extends TestCase {
 	#[Test]
 	public function itTracesTableDataFromCache(): void {
 		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracer ) {
-			$scraper     = new #[ScrapeFrom( 'cache', 'file', 'single-table.html' )] class( new $tracer() ) extends TableScrapingService {};
+			$scraper = new #[ScrapeFrom( 'cache', 'file', 'single-table.html' )] class( new $tracer() ) extends TableScrapingService {};
+
+			/** @var Iterator<array-key,ArrayObject<array-key,string>> */
 			$iterator    = ( new Factory() )->generateDataIterator( $scraper );
 			$johnJob     = StringTableTracer::class === $tracer ? 'PHP Devel&ocirc;per' : 'PHP Develôper';
 			$johnAddress = StringTableTracer::class === $tracer
@@ -52,8 +54,8 @@ class FactoryTest extends TestCase {
 
 	#[Test]
 	public function itMocksActionsPerformedByGenerateDataIterator(): void {
-		/** @var MockObject&ScrapeTraceableTable<string,TableTracer<string>> */
-		$serviceMock = $this->createMockForIntersectionOfInterfaces( [ ScrapeTraceableTable::class, AccentedCharacter::class ] );
+		/** @var MockObject&Scrapable<Iterator<array-key,ArrayObject<array-key,string>>,TableTracer<string>> */
+		$serviceMock = $this->createMockForIntersectionOfInterfaces( [ Scrapable::class, AccentedCharacter::class ] );
 		$file        = DOMDocumentFactoryTest::RESOURCE_PATH . 'single-table.html';
 		$factory     = new /** @template-extends Factory<ArrayObject<array-key,string>> */ class() extends Factory {};
 

@@ -56,7 +56,7 @@ class TableScrapingServiceTest extends TestCase {
 		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracer ) {
 			$service = new TableScrapingService( new $tracer() );
 
-			$service->getTableTracer()->addEventListener(
+			$service->getTracer()->addEventListener(
 				static function ( TableTraced $event ) {
 					$event->tracer->setIndicesSource(
 						CollectUsing::listOf(
@@ -104,7 +104,7 @@ class TableScrapingServiceTest extends TestCase {
 		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracer ) {
 			$service = new TableScrapingService( new $tracer() );
 
-			$service->getTableTracer()->addEventListener(
+			$service->getTracer()->addEventListener(
 				static function ( TableTraced $event ) {
 					$event->tracer->setIndicesSource(
 						// @phpstan-ignore-next-line

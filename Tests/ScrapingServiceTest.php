@@ -7,21 +7,24 @@ use Iterator;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Traceable;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
 
 class ScrapingServiceTest extends TestCase {
-	/** @var Scrapable<Iterator<array-key,mixed>> */
+	/** @var Scrapable<Iterator<array-key,mixed>,Traceable<mixed,mixed,object>> */
 	private Scrapable $service;
 
 	protected function setUp(): void {
 		$iterator = $this->createStub( Iterator::class );
+		$tracer   = $this->createStub( Traceable::class );
 
 		// @phpstan-ignore-next-line
-		$this->service = new #[ScrapeFrom( 'scrape service', 'https://scrapeService.test', 'full-content.html' )] class( $iterator )
+		$this->service = new #[ScrapeFrom( 'scrape service', 'https://scrapeService.test', 'full-content.html' )] class( $iterator, $tracer )
 		extends ScrapingService {
-			public function __construct( private Iterator $iterator ) {
-				parent::__construct();
+			/** @param Traceable<mixed,mixed,object> $tracer */
+			public function __construct( private Iterator $iterator, Traceable $tracer ) {
+				parent::__construct( $tracer );
 			}
 
 			public function parse(): Iterator {

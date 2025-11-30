@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Integration\Cli;
 
 use Closure;
+use Iterator;
 use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Factory;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
@@ -12,10 +13,10 @@ use TheWebSolver\Codegarage\Scraper\Traits\CachePath;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Enums\AccentedChars;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Attributes\CollectUsing;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedCharacter;
-use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 
 /** @template TableColumnValue */
 trait TableConsole {
@@ -45,8 +46,8 @@ trait TableConsole {
 
 	private ?CollectUsing $collectedUsing = null;
 
-	/** @return ScrapeTraceableTable<TableColumnValue,TableTracer<TableColumnValue>> */
-	abstract protected function scraper(): ScrapeTraceableTable;
+	/** @return Scrapable<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>,TableTracer<TableColumnValue>> */
+	abstract protected function scraper(): Scrapable;
 	abstract protected function getTableContextForOutput(): string;
 
 	/**
@@ -60,6 +61,7 @@ trait TableConsole {
 	 */
 	abstract protected function getInputValue(): array;
 
+	/** @return Factory<ArrayObject<array-key,TableColumnValue>> */
 	protected function tableFactory(): Factory {
 		return new Factory();
 	}
@@ -118,7 +120,7 @@ trait TableConsole {
 
 		$this->setAccentOperationTypeFromInput();
 
-		$scraper->getTableTracer()->addEventListener( $this->setIndicesSourceFromInput( ... ), Table::Row );
+		$scraper->getTracer()->addEventListener( $this->setIndicesSourceFromInput( ... ), Table::Row );
 
 		$actions = $this->getScraperActions( $outputWriter );
 		$rows    = iterator_to_array( $this->tableFactory()->generateDataIterator( $scraper, $actions, $ignoreCache ) );
@@ -182,7 +184,7 @@ trait TableConsole {
 	}
 
 	private function getAccentableTracer(): ?AccentedCharacter {
-		return ( $t = $this->scraper()->getTableTracer() ) instanceof AccentedCharacter ? $t : null;
+		return ( $t = $this->scraper()->getTracer() ) instanceof AccentedCharacter ? $t : null;
 	}
 
 	private function setAccentOperationTypeFromInput(): bool {

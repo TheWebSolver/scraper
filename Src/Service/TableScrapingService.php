@@ -7,58 +7,37 @@ use Iterator;
 use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
-use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Indexable;
-use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
 use TheWebSolver\Codegarage\Scraper\Proxy\ItemValidatorProxy;
 use TheWebSolver\Codegarage\Scraper\Marshaller\MarshallTableRow;
-use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 
 /**
  * @template TableColumnValue
  * @template TTracer of TableTracer<TableColumnValue>
- * @template-extends ScrapingService<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>>
- * @template-implements ScrapeTraceableTable<TableColumnValue,TTracer>
+ * @template-extends ScrapingService<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>,TTracer>
  */
-abstract class TableScrapingService extends ScrapingService implements ScrapeTraceableTable {
-	/** @param TTracer $tracer */
-	public function __construct( protected TableTracer $tracer, ?ScrapeFrom $scrapeFrom = null ) {
-		$scrapeFrom && $this->setScraperSource( $scrapeFrom );
-
-		$tracer->withAllTables( false );
-
-		parent::__construct();
-	}
-
-	public function getTableTracer(): TableTracer {
-		return $this->tracer;
-	}
-
+abstract class TableScrapingService extends ScrapingService {
 	public function parse(): Iterator {
-		$this->getTableTracer()->addEventListener( $this->hydrateWithDefaultTransformers( ... ), Table::Row );
+		$this->getTracer()->addEventListener( $this->hydrateWithDefaultTransformers( ... ), Table::Row );
 
 		yield from $this->currentTableIterator();
 	}
 
 	public function flush(): void {
 		parent::flush();
-		$this->getTableTracer()->resetTraced();
-		$this->getTableTracer()->resetHooks();
+		$this->getTracer()->resetTraced();
+		$this->getTracer()->resetHooks();
 	}
 
 	/** @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>> */
 	protected function currentTableIterator( bool $normalize = true ): Iterator {
-		$this->tracer->inferFrom( $this->fromCache(), $normalize );
+		$this->getTracer()->withAllTables( false )->inferFrom( $this->fromCache(), $normalize );
 
-		return $this->tracer->getTableData()[ $this->tracer->getTableId( current: true ) ]
-			?? ScraperError::withSourceMsg(
-				'Table Dataset Iterator not found in class: "%s". Maybe this is used again after reset?',
-				static::class
-			);
+		return $this->getTracer()->getData();
 	}
 
 	protected function hydrateWithDefaultTransformers( TableTraced $event ): void {

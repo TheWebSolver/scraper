@@ -8,19 +8,20 @@ use Iterator;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 
+/** @template ScrapedDataset */
 class Factory {
 	/**
-	 * @param Scrapable<Iterator<array-key,ScrapedDataset>> $scraper
+	 * @param Scraper     $scraper
 	 * @param null|array{
-	 *  beforeScrape?: (Closure(Scrapable<Iterator<array-key,ScrapedDataset>>, static): void),
-	 *  afterScrape ?: (Closure(string, Scrapable<Iterator<array-key,ScrapedDataset>>, static): void),
-	 *  afterCache  ?: (Closure(Scrapable<Iterator<array-key,ScrapedDataset>>, static): void)
+	 *  beforeScrape?: (Closure(Scraper, static): void),
+	 *  afterScrape ?: (Closure(string, Scraper, static): void),
+	 *  afterCache  ?: (Closure(Scraper, static): void)
 	 * } $actions Actions are never fired if `$ignoreCache` is `false` & cached file exists.
-	 * @param bool                                          $ignoreCache Whether to verify if scraped content is already cached or not. However, it
-	 *                                                                   does not prevent scraped content from being cached if not already cached.
+	 * @param bool        $ignoreCache Whether to verify if scraped content is already cached or not. However, it
+	 *                                 does not prevent scraped content from being cached if not already cached.
 	 * @return Iterator<array-key,ScrapedDataset>
 	 * @throws ScraperError When scraping fails or when caching fails after scraping the content.
-	 * @template ScrapedDataset
+	 * @template Scraper of Scrapable
 	 */
 	public function generateDataIterator( Scrapable $scraper, ?array $actions = null, bool $ignoreCache = false ): Iterator {
 		if ( null !== ( $iterator = $this->fromCacheOrInvalidate( $scraper, $ignoreCache ) ) ) {
@@ -42,9 +43,9 @@ class Factory {
 	}
 
 	/**
-	 * @param Scrapable<Iterator<array-key,ScrapedDataset>> $scraper
+	 * @param Scraper $scraper
 	 * @return ?Iterator<array-key,ScrapedDataset>
-	 * @template ScrapedDataset
+	 * @template Scraper of Scrapable
 	 */
 	private function fromCacheOrInvalidate( Scrapable $scraper, bool $ignoreCache ): ?Iterator {
 		if ( ! $ignoreCache ) {

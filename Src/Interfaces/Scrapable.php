@@ -7,7 +7,10 @@ use Iterator;
 use TheWebSolver\Codegarage\Scraper\Error\ScraperError;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
-/** @template ScrapedKeyValue of Iterator */
+/**
+ * @template ScrapedKeyValue of Iterator
+ * @template TTracer of Traceable
+ */
 interface Scrapable {
 	/**
 	 * Scrapes content from the source.
@@ -70,6 +73,13 @@ interface Scrapable {
 	 * Gets absolute path to the cache filename (with extension).
 	 */
 	public function getCachePath(): string;
+
+	/**
+	 * Gets the tracer instance for tracing scraped data.
+	 *
+	 * @return TTracer
+	 */
+	public function getTracer(): Traceable;
 
 	/**
 	 * Clears any garbage collected data during scraping.

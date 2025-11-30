@@ -3,8 +3,10 @@ declare( strict_types = 1 );
 
 namespace TheWebSolver\Codegarage\Test\Fixture\Table;
 
+use Iterator;
+use ArrayObject;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
-use TheWebSolver\Codegarage\Scraper\Interfaces\ScrapeTraceableTable;
 use TheWebSolver\Codegarage\Test\Fixture\Table\TableScrapingService;
 use TheWebSolver\Codegarage\Scraper\Integration\Cli\TableConsole as CliTableConsole;
 
@@ -12,8 +14,8 @@ class TableConsoleTraitStub {
 	/** @use CliTableConsole<string> */
 	use CliTableConsole;
 
-	/** @return ScrapeTraceableTable<string,TableTracer<string>> */
-	public function scraper(): ScrapeTraceableTable {
+	/** @return Scrapable<Iterator<array-key,ArrayObject<array-key,string>>,TableTracer<string>> */
+	public function scraper(): Scrapable {
 		return new TableScrapingService( new StringTableTracer(), null );
 	}
 

@@ -58,7 +58,7 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 
 			$service
 				->withCachePath( DOMDocumentFactoryTest::RESOURCE_PATH, 'single-table.html' )
-				->getTableTracer()
+				->getTracer()
 				->addTransformer( $marshaller, Table::Row ); // @phpstan-ignore-line
 
 			$iterator = $service->parse();
