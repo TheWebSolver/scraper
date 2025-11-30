@@ -36,7 +36,6 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 			$this->expectExceptionMessage( sprintf( $invalidCountMsg, 4, 'name", "title", "address", "age' ) );
 		}
 
-		// @phpstan-ignore-next-line
 		$tracer->addTransformer( $marshaller, Table::Row )->inferFrom( self::TABLE_INVALID_COUNT, normalize: false );
 
 		$iterator = $tracer->getTableData()[ $tracer->getTableId( true ) ];
@@ -59,7 +58,7 @@ class TraceTableWithRowMarshallerTest extends TestCase {
 			$service
 				->withCachePath( DOMDocumentFactoryTest::RESOURCE_PATH, 'single-table.html' )
 				->getTracer()
-				->addTransformer( $marshaller, Table::Row ); // @phpstan-ignore-line
+				->addTransformer( $marshaller, Table::Row );
 
 			$iterator = $service->parse();
 

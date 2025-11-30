@@ -10,7 +10,6 @@ use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /**
- * @template TracedValue
  * @template TracedDataset
  * @template TracedEvent of object
  */
@@ -18,8 +17,8 @@ interface Traceable {
 	/**
 	 * Registers transformer for the targeted data structure.
 	 *
-	 * @param Transformer<contravariant static<TracedValue,TracedDataset,TracedEvent>,TracedValue> $transformer Transformer to transform traced data.
-	 * @param ?BackedEnum                                                                          $structure   The Structure to target, or null if traceable data has no structure.
+	 * @param Transformer $transformer Transformer to transform traced data.
+	 * @param ?BackedEnum $structure   The Structure to target, or null if traceable data has no structure.
 	 */
 	public function addTransformer( Transformer $transformer, ?BackedEnum $structure = null ): static;
 

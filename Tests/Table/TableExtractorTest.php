@@ -713,7 +713,7 @@ class TableExtractorTest extends TestCase {
 		$tracer
 			->addEventListener( static fn( $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( $indexKeys ) ), Table::Row )
 			->addTransformer( $transformer, Table::Column )
-			->addTransformer( new MarshallTableRow( 'Fails if could not verify count [%1$s] "%2$s"' ), Table::Row ) // @phpstan-ignore-line
+			->addTransformer( new MarshallTableRow( 'Fails if could not verify count [%1$s] "%2$s"' ), Table::Row )
 			->inferFrom( file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . '/table-spanned.html' ) ?: '', true );
 
 		$iterator = $tracer->getTableData()[ $tracer->getTableId( true ) ];

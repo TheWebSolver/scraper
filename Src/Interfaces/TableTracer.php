@@ -12,7 +12,7 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
 /**
  * @template TableColumnValue
- * @template-extends Traceable<TableColumnValue,ArrayObject<array-key,TableColumnValue>,TableTraced>
+ * @template-extends Traceable<ArrayObject<array-key,TableColumnValue>,TableTraced>
  */
 interface TableTracer extends Traceable, Indexable {
 	/** @placeholder `1:` static::methodName, `2:` Table::caseName, `3`: EventAt::caseName, `4:` reason. */

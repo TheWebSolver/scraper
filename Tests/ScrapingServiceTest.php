@@ -12,7 +12,7 @@ use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
 
 class ScrapingServiceTest extends TestCase {
-	/** @var Scrapable<Iterator<array-key,mixed>,Traceable<mixed,mixed,object>> */
+	/** @var Scrapable<Iterator<array-key,mixed>,Traceable<mixed,object>> */
 	private Scrapable $service;
 
 	protected function setUp(): void {
@@ -22,7 +22,7 @@ class ScrapingServiceTest extends TestCase {
 		// @phpstan-ignore-next-line
 		$this->service = new #[ScrapeFrom( 'scrape service', 'https://scrapeService.test', 'full-content.html' )] class( $iterator, $tracer )
 		extends ScrapingService {
-			/** @param Traceable<mixed,mixed,object> $tracer */
+			/** @param Traceable<mixed,object> $tracer */
 			public function __construct( private Iterator $iterator, Traceable $tracer ) {
 				parent::__construct( $tracer );
 			}
