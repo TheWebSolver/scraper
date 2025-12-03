@@ -8,6 +8,8 @@ use ArrayObject;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Indexable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Traceable;
+use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Validatable;
 use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
@@ -21,23 +23,21 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
  * @template-extends ScrapingService<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>,TTracer>
  */
 abstract class TableScrapingService extends ScrapingService {
-	public function parse(): Iterator {
-		$this->getTracer()->addEventListener( $this->hydrateWithDefaultTransformers( ... ), Table::Row );
+	/** @param TTracer $tracer */
+	public function __construct( Traceable $tracer, ?ScrapeFrom $scrapeFrom = null ) {
+		parent::__construct( $tracer->addEventListener( $this->hydrateWithDefaultTransformers( ... ), Table::Row ), $scrapeFrom );
+	}
 
-		yield from $this->currentTableIterator();
+	public function parse(): Iterator {
+		( $tracer = $this->getTracer() )->withAllTables( false )->inferFrom( $this->fromCache(), normalize: true );
+
+		yield from $tracer->getData();
 	}
 
 	public function flush(): void {
 		parent::flush();
 		$this->getTracer()->resetTraced();
 		$this->getTracer()->resetHooks();
-	}
-
-	/** @return Iterator<array-key,ArrayObject<array-key,TableColumnValue>> */
-	protected function currentTableIterator( bool $normalize = true ): Iterator {
-		$this->getTracer()->withAllTables( false )->inferFrom( $this->fromCache(), $normalize );
-
-		return $this->getTracer()->getData();
 	}
 
 	protected function hydrateWithDefaultTransformers( TableTraced $event ): void {
