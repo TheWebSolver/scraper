@@ -8,6 +8,9 @@ use RuntimeException;
 use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 
 class ScraperError extends RuntimeException {
+	/** @placeholder: `1:` Mismatch context, `2:` Pattern to apply to the subject, `2:` The subject. */
+	final public const PATTERN_MISMATCH = '%1$s only supports defined pattern "%2$s". Cannot match pattern to given subject: "%3$s"';
+
 	private static ?ScrapeFrom $source = null;
 
 	/**
@@ -43,5 +46,9 @@ class ScraperError extends RuntimeException {
 		$source = self::getSource();
 
 		throw self::trigger( sprintf( $msg, ...$args ) . ( $source ? " {$source->errorMsg()}" : '' ) );
+	}
+
+	public static function patternMismatch( string $context, string $pattern, string $subject ): never {
+		throw self::trigger( self::PATTERN_MISMATCH, $context, $pattern, $subject );
 	}
 }
