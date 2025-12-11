@@ -23,15 +23,12 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
  * @template-extends ScrapingService<Iterator<array-key,ArrayObject<array-key,TableColumnValue>>,TTracer>
  */
 abstract class TableScrapingService extends ScrapingService {
-	/** @param TTracer $tracer */
-	public function __construct( Traceable $tracer, ?ScrapeFrom $scrapeFrom = null ) {
-		parent::__construct( $tracer->addEventListener( $this->hydrateWithDefaultTransformers( ... ), structure: Table::Row ), $scrapeFrom );
-	}
-
 	public function parse(): Iterator {
-		( $tracer = $this->getTracer() )->withAllTables( false )->inferFrom( $this->fromCache(), normalize: true );
+		$this->getTracer()->withAllTables( false )
+			->addEventListener( $this->hydrateWithDefaultTransformers( ... ), structure: Table::Row )
+			->inferFrom( $this->fromCache(), normalize: true );
 
-		yield from $tracer->getData();
+		yield from $this->getTracer()->getData();
 	}
 
 	public function flush(): void {
