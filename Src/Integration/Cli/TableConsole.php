@@ -120,7 +120,7 @@ trait TableConsole {
 
 		$this->setAccentOperationTypeFromInput();
 
-		$scraper->getTracer()->addEventListener( $this->setIndicesSourceFromInput( ... ), Table::Row );
+		$scraper->getTracer()->addEventListener( $this->setIndicesSourceFromInput( ... ), structure: Table::Row );
 
 		$actions = $this->getScraperActions( $outputWriter );
 		$rows    = iterator_to_array( $this->tableFactory()->generateDataIterator( $scraper, $actions, $ignoreCache ) );

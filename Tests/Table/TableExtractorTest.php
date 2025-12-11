@@ -265,7 +265,7 @@ class TableExtractorTest extends TestCase {
 				// @phpstan-ignore-next-line
 				CollectUsing::listOf( $e->tracer->getTableHead()[ $e->tracer->getTableId( true ) ]->toArray() )
 			),
-			Table::Row
+			structure: Table::Row
 		)->inferFrom( $source );
 
 		$tableIds = $stringTracer->getTableId();
@@ -338,48 +338,14 @@ class TableExtractorTest extends TestCase {
 			[
 				'inferFrom',
 				[ $table ],
-				( new NodeTableTracer() )->addEventListener( $listener, Table::TBody ),
+				( new NodeTableTracer() )->addEventListener( $listener, structure: Table::TBody ),
 				'setIndicesSource',
 			],
 			[
 				'inferFrom',
 				[ $table ],
-				( new NodeTableTracer() )->addEventListener( $listener, Table::THead, EventAt::End ),
+				( new NodeTableTracer() )->addEventListener( $listener, EventAt::End, Table::THead ),
 				'setIndicesSource',
-			],
-		];
-	}
-
-	/** @param mixed[] $args */
-	#[Test]
-	#[DataProvider( 'provideCasesWhenTableStructureNotProvided' )]
-	public function itThrowsExceptionWhenTableStructureNotProvided( string $condition, string $methodName, array $args ): void {
-		foreach ( [ StringTableTracer::class, NodeTableTracer::class ] as $tracerClass ) {
-			$tracer = new $tracerClass();
-			$this->expectException( LogicException::class );
-			$this->expectExceptionMessage( sprintf( TableTracer::NO_TABLE_STRUCTURE_PROVIDED, $condition ) );
-
-			$tracer->{$methodName}( ...$args );
-		}
-	}
-
-	/** @return mixed[] */
-	public static function provideCasesWhenTableStructureNotProvided(): array {
-		return [
-			[
-				'adding transformer',
-				'addTransformer',
-				[ new StripTags(), null ],
-			],
-			[
-				'adding event listener',
-				'addEventListener',
-				[ fn() => null, null, EventAt::Start ],
-			],
-			[
-				'checking transformer',
-				'hasTransformer',
-				[ null ],
 			],
 		];
 	}
@@ -400,7 +366,7 @@ class TableExtractorTest extends TestCase {
 			$tracer
 				->addTransformer( $stripTags, Table::Head )
 				->addTransformer( $stripTags, Table::Column )
-				->addEventListener( $listener, Table::Row )
+				->addEventListener( $listener, structure: Table::Row )
 				->withAllTables()
 				->inferFrom( $this->getTableContent() );
 
@@ -422,7 +388,7 @@ class TableExtractorTest extends TestCase {
 
 			$tracer->addEventListener(
 				static fn( TableTraced $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( [ 'finalAddress' ] ) ),
-				Table::Row
+				structure: Table::Row
 			);
 
 			$devTable->next();
@@ -711,7 +677,7 @@ class TableExtractorTest extends TestCase {
 		};
 
 		$tracer
-			->addEventListener( static fn( $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( $indexKeys ) ), Table::Row )
+			->addEventListener( static fn( $e ) => $e->tracer->setIndicesSource( CollectUsing::listOf( $indexKeys ) ), structure: Table::Row )
 			->addTransformer( $transformer, Table::Column )
 			->addTransformer( new MarshallTableRow( 'Fails if could not verify count [%1$s] "%2$s"' ), Table::Row )
 			->inferFrom( file_get_contents( DOMDocumentFactoryTest::RESOURCE_PATH . '/table-spanned.html' ) ?: '', true );

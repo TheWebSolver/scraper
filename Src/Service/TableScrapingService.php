@@ -25,7 +25,7 @@ use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 abstract class TableScrapingService extends ScrapingService {
 	/** @param TTracer $tracer */
 	public function __construct( Traceable $tracer, ?ScrapeFrom $scrapeFrom = null ) {
-		parent::__construct( $tracer->addEventListener( $this->hydrateWithDefaultTransformers( ... ), Table::Row ), $scrapeFrom );
+		parent::__construct( $tracer->addEventListener( $this->hydrateWithDefaultTransformers( ... ), structure: Table::Row ), $scrapeFrom );
 	}
 
 	public function parse(): Iterator {

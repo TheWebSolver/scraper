@@ -10,7 +10,6 @@ use BackedEnum;
 use DOMElement;
 use ArrayObject;
 use SplFixedArray;
-use LogicException;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Data\EmptyItem;
@@ -89,23 +88,17 @@ trait TableExtractor {
 		return $this;
 	}
 
-	public function addTransformer( Transformer $transformer, ?BackedEnum $structure = null ): static {
-		$this->assertIsTable( $structure, 'adding transformer' );
-
+	public function addTransformer( Transformer $transformer, Table $structure = Table::Column ): static {
 		$this->discoveredTable__transformers[ $structure->value ] = $transformer;
 
 		return $this;
 	}
 
-	public function hasTransformer( ?BackedEnum $structure = null ): bool {
-		$this->assertIsTable( $structure, 'checking transformer' );
-
+	public function hasTransformer( Table $structure = Table::Column ): bool {
 		return isset( $this->discoveredTable__transformers[ $structure->value ] );
 	}
 
-	public function addEventListener( callable $listener, ?BackedEnum $structure = null, EventAt $eventAt = EventAt::Start ): static {
-		$this->assertIsTable( $structure, 'adding event listener' );
-
+	public function addEventListener( callable $listener, EventAt $eventAt = EventAt::Start, Table $structure = Table::Column ): static {
 		$this->discoveredTable__eventListeners[ $structure->value ][ $eventAt->name ][] = $listener( ... );
 
 		return $this;
@@ -564,14 +557,5 @@ trait TableExtractor {
 		throw new InvalidSource(
 			sprintf( 'Unsupported type: "%1$s" provided when using trait "%2$s".', get_debug_type( $type ), $exhibit )
 		);
-	}
-
-	/**
-	 * @param ?BackedEnum<string|int> $structure
-	 * @throws LogicException When given structure is not table.
-	 * @phpstan-assert =Table $structure
-	 */
-	private function assertIsTable( ?BackedEnum $structure, string $condition ): void {
-		$structure instanceof Table || throw new LogicException( sprintf( TableTracer::NO_TABLE_STRUCTURE_PROVIDED, $condition ) );
 	}
 }

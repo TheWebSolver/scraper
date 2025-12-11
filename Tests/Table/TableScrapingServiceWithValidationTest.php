@@ -59,7 +59,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 					public function __construct() {
 						$this->addEventListener(
 							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) ),
-							Table::Row
+							structure: Table::Row
 						);
 					}
 
@@ -127,7 +127,7 @@ class TableScrapingServiceWithValidationTest extends TestCase {
 					public function __construct() {
 						$this->addEventListener(
 							static fn( TableTraced $e ) => $e->tracer->setIndicesSource( new CollectUsing( DevDetails::class ) ),
-							Table::Row
+							structure: Table::Row
 						);
 					}
 

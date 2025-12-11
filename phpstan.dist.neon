@@ -14,9 +14,6 @@ parameters:
 			identifier: generics.noParent
 			message: '#^Enum .*? has \@implements tag\, but does not implement any interface\.$#'
 		-
-			identifier: missingType.generics
-			message: '#^.*? generic interface BackedEnum but does not specify its types\: TBackedValue$#'
-		-
 			path: Src/Traits/Table/TableExtractor.php
 			message: '#^.*?\:\:useCurrentTableColumnDetails\(\) should return array\{.*?\} but returns array\{.*?MarshallItem\}\.$#'
 		- # Ignore DOMNodeList->childNodes->getIterator() not being an iterator.

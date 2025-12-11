@@ -7,6 +7,7 @@ use Iterator;
 use ArrayObject;
 use SplFixedArray;
 use TheWebSolver\Codegarage\Scraper\Enums\Table;
+use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Event\TableTraced;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
 
@@ -31,6 +32,21 @@ interface TableTracer extends Traceable, Indexable {
 	 * @no-named-arguments
 	 */
 	public function traceWithout( Table ...$structures ): static;
+
+	/**
+	 * @param Table $structure The table Structure to target.
+	 */
+	public function addTransformer( Transformer $transformer, Table $structure = Table::Column ): static;
+
+	/**
+	 * @param Table $structure The table structure to target.
+	 */
+	public function addEventListener( callable $listener, EventAt $eventAt = EventAt::Start, Table $structure = Table::Column ): static;
+
+	/**
+	 * @param Table $structure The table structure to target.
+	 */
+	public function hasTransformer( Table $structure = Table::Column ): bool;
 
 	/**
 	 * Infers table head content from the given element list.

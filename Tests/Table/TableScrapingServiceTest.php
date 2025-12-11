@@ -65,7 +65,7 @@ class TableScrapingServiceTest extends TestCase {
 						)
 					);
 				},
-				Table::Row
+				structure: Table::Row
 			);
 
 			$iterator = $service->parse();
@@ -111,7 +111,7 @@ class TableScrapingServiceTest extends TestCase {
 						CollectUsing::listOf( $event->tracer->getTableHead()[ $event->tracer->getTableId( true ) ]->toArray() )
 					);
 				},
-				Table::Row
+				structure: Table::Row
 			)->addTransformer( $stripTags, Table::Head )->addTransformer( $stripTags, Table::Column );
 
 			$iterator = $service->parse();
@@ -244,7 +244,7 @@ class TableScrapingServiceTest extends TestCase {
 							static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
 								new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )
 							),
-							Table::Row
+							structure: Table::Row
 						);
 					}
 				},
@@ -260,7 +260,7 @@ class TableScrapingServiceTest extends TestCase {
 							static fn( TableTraced $e ) => $e->tracer->setIndicesSource(
 								new CollectUsing( DevDetails::class, null, DevDetails::Name, null, DevDetails::Address )
 							),
-							Table::Row
+							structure: Table::Row
 						);
 					}
 				},

@@ -4,7 +4,6 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\Scraper\Interfaces;
 
 use Iterator;
-use BackedEnum;
 use DOMElement;
 use TheWebSolver\Codegarage\Scraper\Enums\EventAt;
 use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
@@ -15,21 +14,17 @@ use TheWebSolver\Codegarage\Scraper\Error\InvalidSource;
  */
 interface Traceable {
 	/**
-	 * Registers transformer for the targeted data structure.
-	 *
-	 * @param Transformer $transformer Transformer to transform traced data.
-	 * @param ?BackedEnum $structure   The Structure to target, or null if traceable data has no structure.
+	 * Registers transformer to transform traced data.
 	 */
-	public function addTransformer( Transformer $transformer, ?BackedEnum $structure = null ): static;
+	public function addTransformer( Transformer $transformer ): static;
 
 	/**
-	 * Registers event listener for the targeted structure and at the given event time.
+	 * Registers event listener at the given event time.
 	 *
-	 * @param callable(TracedEvent): void $listener  The event listener callback.
-	 * @param ?BackedEnum                 $structure The structure to target, or null if traceable data has no structure.
-	 * @param EventAt                     $eventAt   The event time to listen at.
+	 * @param callable(TracedEvent): void $listener The event listener.
+	 * @param EventAt                     $eventAt  The event time to listen at.
 	 */
-	public function addEventListener( callable $listener, ?BackedEnum $structure = null, EventAt $eventAt = EventAt::Start ): static;
+	public function addEventListener( callable $listener, EventAt $eventAt = EventAt::Start ): static;
 
 	/**
 	 * Infers data from traced source.
@@ -49,14 +44,12 @@ interface Traceable {
 	public function getData(): Iterator;
 
 	/**
-	 * Ensures whether transformer has been added for the given structure.
-	 *
-	 * @param ?BackedEnum $structure The structure to target, or null if traceable data has no structure.
+	 * Ensures whether transformer has been registered.
 	 */
-	public function hasTransformer( ?BackedEnum $structure = null ): bool;
+	public function hasTransformer(): bool;
 
 	/**
-	 * Resets traced structures' details.
+	 * Resets traced data.
 	 *
 	 * This may only be invoked after retrieving traced and inferred data Iterator
 	 * and no further tracing is required of any remaining traceable data.
