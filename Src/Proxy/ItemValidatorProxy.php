@@ -12,7 +12,7 @@ use TheWebSolver\Codegarage\Scraper\Decorator\HtmlEntityDecode;
 use TheWebSolver\Codegarage\Scraper\Interfaces\AccentedIndexableItem;
 use TheWebSolver\Codegarage\Scraper\Decorator\TranslitAccentedIndexableItem;
 
-/** @template-implements Transformer<AccentedIndexableItem&Validatable<string>,string> */
+/** @template-implements Transformer<AccentedIndexableItem&Validatable,string> */
 class ItemValidatorProxy implements Transformer {
 	private bool $hydrated = false;
 	/** @var Transformer<contravariant AccentedIndexableItem,string> */
